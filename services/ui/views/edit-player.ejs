@@ -1,0 +1,281 @@
+<%- include('partials/head'); -%>
+<title>Modifica Player</title>
+<%- include('partials/header'); -%>
+
+<!-- Barra di ricerca -->
+<div
+  class="search-container"
+  style="max-width: 600px; margin: 20px auto; position: relative"
+>
+  <input
+    type="text"
+    id="playerSearch"
+    placeholder="Cerca giocatore per nome, cognome o paese..."
+    style="
+      width: 100%;
+      padding: 10px;
+      font-size: 16px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    "
+  />
+  <div
+    id="searchResults"
+    style="
+      position: absolute;
+      width: 100%;
+      background: white;
+      border: 1px solid #ccc;
+      max-height: 200px;
+      overflow-y: auto;
+      display: none;
+      z-index: 1000;
+    "
+  ></div>
+</div>
+
+<div style="width: 100">
+  <h1 style="text-align: center"><%= player.name %></h1>
+
+  <h3><%= player.country %></h3>
+  <img src="<%= player.image_src %>" alt="<%= player.image_alt %>" />
+
+  <div id="rankingsContainer"></div>
+</div>
+<form id="form">
+  <fieldset>
+    <input
+      type="hidden"
+      id="player-id"
+      name="id"
+      value="<%= player.id %>"
+    /><br />
+
+    <label for="player-name">Nome:</label>
+    <input
+      type="text"
+      id="player-name"
+      name="name"
+      value="<%= player.name %>"
+      required
+    /><br />
+    <label for="player-first_name">Nome:</label>
+    <input
+      type="text"
+      id="player-first_name"
+      name="name"
+      value="<%= player.first_name %>"
+      required
+    /><br />
+    <label for="player-second_name">Cognome:</label>
+    <input
+      type="text"
+      id="player-second_name"
+      name="name"
+      value="<%= player.second_name %>"
+      required
+    /><br />
+    <label for="player-country">Nazione:</label>
+    <input
+      type="text"
+      id="player-country"
+      name="country"
+      value="<%= player.country %>"
+    /><br />
+
+    <label for="player-profile-url">Profilo URL:</label>
+    <input
+      type="url"
+      id="player-profile-url"
+      name="profile_url"
+      value="<%= player.profile_url %>"
+    /><br />
+
+    <label for="player-image-src">Immagine (src):</label>
+    <input
+      type="text"
+      id="player-image-src"
+      name="image_src"
+      value="<%= player.image_src %>"
+    /><br />
+    <label for="player-image-alt">Immagine (alt):</label>
+    <input
+      type="text"
+      id="player-image-alt"
+      name="image_alt"
+      value="<%= player.image_alt %>"
+    /><br />
+
+    <button type="submit">Salva</button>
+  </fieldset>
+</form>
+<script>
+  console.log("<%-player.Rankings %>");
+  document.getElementById("form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const form = e.target;
+    const data = Object.fromEntries(new FormData(form));
+
+    try {
+      const response = await fetch(`<%- apiUrl%>/players/${data.id}`, {
+        method: "PUT",
+        //credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        const err = await response.json();
+        alert("Errore: " + (err.message || response.status));
+        return;
+      }
+      alert("Giocatore aggiornato con successo!");
+    } catch (error) {
+      alert("Errore durante l'invio della richiesta.");
+      console.error(error);
+    }
+  });
+
+  function createRankingList(data) {
+    // Ordina l'array per data (dalla più recente alla più vecchia)
+    const sortedData = [...data].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    // Crea gli elementi HTML
+    const container = document.getElementById('rankingsContainer');
+    const title = document.createElement('h2');
+    title.textContent = 'Storico Ranking';
+    container.appendChild(title);
+
+    // Crea la tabella
+    const table = document.createElement('table');
+    table.style.borderCollapse = 'collapse';
+    table.style.width = '100%';
+
+    // Crea l'intestazione della tabella
+    const thead = document.createElement('thead');
+    const headerRow = document.createElement('tr');
+
+    const dateHeader = document.createElement('th');
+    dateHeader.textContent = 'Data';
+
+    const rankHeader = document.createElement('th');
+    rankHeader.textContent = 'Posizione';
+
+    headerRow.appendChild(dateHeader);
+    headerRow.appendChild(rankHeader);
+    thead.appendChild(headerRow);
+    table.appendChild(thead);
+
+    // Crea il corpo della tabella
+    const tbody = document.createElement('tbody');
+
+    sortedData.forEach(item => {
+      const row = document.createElement('tr');
+
+      // Converti la data da YYYY-MM-DD a DD/MM/YYYY
+      const [year, month, day] = item.date.split('-');
+      const formattedDate = `${day}/${month}/${year}`;
+
+      const dateCell = document.createElement('td');
+      dateCell.textContent = formattedDate;
+
+      const rankCell = document.createElement('td');
+      rankCell.textContent = item.ranking;
+
+      row.appendChild(dateCell);
+      row.appendChild(rankCell);
+      tbody.appendChild(row);
+    });
+
+    table.appendChild(tbody);
+    container.appendChild(table);
+  }
+
+  // Funzionalità di ricerca
+  const searchInput = document.getElementById('playerSearch');
+  const searchResults = document.getElementById('searchResults');
+
+  searchInput.addEventListener('input', debounce(async (e) => {
+    const query = e.target.value.trim();
+
+    if (query.length < 2) {
+      searchResults.style.display = 'none';
+      return;
+    }
+
+    try {
+      const response = await fetch(`<%- apiUrl%>/players/search?q=${encodeURIComponent(query)}`);
+      const players = await response.json();
+
+      displaySearchResults(players);
+    } catch (error) {
+      console.error('Errore nella ricerca:', error);
+    }
+  }, 300));
+
+  function displaySearchResults(players) {
+    if (players.length === 0) {
+      searchResults.innerHTML = '<div style="padding: 10px;">Nessun giocatore trovato</div>';
+      searchResults.style.display = 'block';
+      return;
+    }
+
+    searchResults.innerHTML = '';
+    players.forEach(player => {
+      const div = document.createElement('div');
+      div.style.padding = '10px';
+      div.style.borderBottom = '1px solid #eee';
+      div.style.cursor = 'pointer';
+
+      div.innerHTML = `
+        <strong>${player.name}</strong> (${player.country})
+      `;
+
+      div.addEventListener('click', () => {
+        window.location.href = `/admin/players/${player.id}/edit`;
+      });
+
+      // Effetto hover
+      div.addEventListener('mouseover', () => {
+        div.style.backgroundColor = '#f0f0f0';
+      });
+
+      div.addEventListener('mouseout', () => {
+        div.style.backgroundColor = 'white';
+      });
+
+      searchResults.appendChild(div);
+    });
+
+    searchResults.style.display = 'block';
+  }
+
+  // Chiudi i risultati quando si clicca fuori
+  document.addEventListener('click', (e) => {
+    if (!searchResults.contains(e.target) && e.target !== searchInput) {
+      searchResults.style.display = 'none';
+    }
+  });
+
+  // Funzione debounce per limitare le richieste
+  function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+      const later = () => {
+        clearTimeout(timeout);
+        func(...args);
+      };
+      clearTimeout(timeout);
+      timeout = setTimeout(later, wait);
+    };
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const rankingsData = <%- JSON.stringify(player.Rankings) %>;
+    createRankingList(rankingsData);
+  });
+</script>
+<%- include('partials/footer'); -%>

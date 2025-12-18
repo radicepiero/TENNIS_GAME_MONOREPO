@@ -1,0 +1,107 @@
+<%- include('partials/head'); -%>
+<link rel="stylesheet" href="css/tornei.css" />
+<link rel="stylesheet" href="css/hamburger.css" />
+<%- include('partials/header'); -%>
+<header>
+  <div class="hamburger-menu">
+    <button class="menu-toggle" aria-label="Toggle menu">☰</button>
+    <nav class="menu">
+      <ul>
+        <li><a href="/">Home</a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+<h1>Tornei ATP</h1>
+<!-- Griglia dei tornei -->
+<div class="tournament-grid" id="tournament-grid">
+  <!-- I bottoni dei tornei verranno generati qui tramite JavaScript -->
+</div>
+<script type="module"></script>
+<script>
+  // Funzione per ottenere il nome del mese da una data
+  function getMonthName(dateString) {
+    const date = new Date(dateString);
+    const months = [
+      "Gen",
+      "Feb",
+      "Mar",
+      "Apr",
+      "Mag",
+      "Giu",
+      "Lug",
+      "Ago",
+      "Set",
+      "Ott",
+      "Nov",
+      "Dic",
+    ];
+    return months[date.getMonth()];
+  }
+  // Funzione per caricare i dati dei tornei dal file JSON
+  async function loadTournaments() {
+    try {
+      // Effettua una richiesta per ottenere il file JSON
+      const url = `<%= apiUrl %>/tournaments`;
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error("Errore nel caricamento dei dati dei tornei");
+      }
+
+      // Converte la risposta in JSON
+      const tournaments = await response.json();
+
+      // Ottieni il contenitore della griglia
+      const tournamentGrid = document.getElementById("tournament-grid");
+
+      // Genera i bottoni per ogni torneo
+      // Genera i bottoni per ogni torneo
+      tournaments.forEach((tournament) => {
+        const tournamentContainer = document.createElement("div");
+        tournamentContainer.className = "tournament-container";
+
+        const button = document.createElement("a");
+        button.href = tournament.href;
+        button.className = `tournament-button ${tournament.status}`; // Applica la classe corretta
+        button.style.backgroundImage = `url('${tournament.image}')`;
+        button.textContent = tournament.name;
+        tournamentContainer.appendChild(button);
+        // Aggiungi il bottone del pronostico solo se lo status è "upcoming"
+        if (tournament.status === "upcoming") {
+          const pronosticoButton = document.createElement("button");
+          pronosticoButton.className = "pronostico-button";
+          pronosticoButton.textContent = "Pronostico";
+
+          pronosticoButton.addEventListener("click", () => {
+            window.location.href = `/tornei/${tournament.id}/pronostico`;
+          });
+          tournamentContainer.appendChild(pronosticoButton);
+        }
+        //aggiungi il bottone per creare albero
+        if (tournament.status === "upcoming") {
+          const alberoButton = document.createElement("button");
+          alberoButton.className = "pronostico-button";
+          alberoButton.textContent = "Crea l'albero del torneo";
+          alberoButton.addEventListener("click", () => {
+            window.location.href = `/tornei/${tournament.id}/genera-albero`;
+          });
+          tournamentContainer.appendChild(alberoButton);
+        }
+        //aggiungi bottone per editare il torneo
+        const editButton = document.createElement("button");
+        editButton.className = "pronostico-button";
+        editButton.textContent = "Modifica";
+        editButton.addEventListener("click", () => {
+          window.location.href = `/tornei/${tournament.id}/edit`;
+        });
+        tournamentContainer.appendChild(editButton);
+        tournamentGrid.appendChild(tournamentContainer);
+      });
+    } catch (error) {
+      console.error("Si è verificato un errore:", error);
+    }
+  }
+  // Carica i tornei quando la pagina è pronta
+  document.addEventListener("DOMContentLoaded", loadTournaments);
+</script>
+<%- include('partials/footer'); -%>

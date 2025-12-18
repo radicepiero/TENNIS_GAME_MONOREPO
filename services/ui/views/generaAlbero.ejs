@@ -1,0 +1,133 @@
+<%- include('partials/head'); -%>
+<link rel="stylesheet" href="https://fperucic.github.io/treant-js/Treant.css" />
+<link rel="stylesheet" href="/css/treantTree.css" />
+<title id="title"></title>
+<link rel="stylesheet" href="/css/hamburger.css" />
+<%- include('partials/header'); -%> <%- include('partials/hamburger'); -%>
+
+<h1 id="nome-torneo"><%= tournamentId %></h1>
+
+<div id="elenco alberi"><button id="newButton">NUOVO</button></div>
+
+<div id="filter-bar" class="hidden">
+  <label class="filter-label">
+    <span class="label-text">Da:</span>
+    <select id="fromRound"></select>
+  </label>
+  <label class="filter-label">
+    <span class="label-text">A:</span>
+    <select id="toRound"></select>
+  </label>
+  <button id="filterButton" class="hidden">FILTRA</button>
+  <button id="saveButton">SALVA</button>
+  <button id="deleteButton">SCANCELLA</button>
+</div>
+
+<div id="scroll-container">
+  <div id="chart-container">
+    <div id="tree-simple" class="Treant"></div>
+  </div>
+</div>
+
+<div id="dialogContainer"></div>
+
+<script src="https://fperucic.github.io/treant-js/vendor/raphael.js"></script>
+<script src="https://fperucic.github.io/treant-js/Treant.js"></script>
+
+<script type="module">
+  const user = <%- JSON.stringify(user) %>;
+  import { Tournament } from "/js/Tournament.js";
+  import { APP_ICONS } from "/js/icons.js";
+  const apiUrl = "<%= apiUrl %>";
+  const tournamentId = "<%= tournamentId %>";
+  const tournament = (await Tournament.fetchTournament(tournamentId, apiUrl))
+    .data[0];
+
+  import {
+    setup,
+    renderTree,
+    roundLabels,
+    populateRoundSelects,
+    saveAlbero,
+    saveNewAlbero,
+    deleteAlbero,
+    genera,
+    getAlberoMatches,
+    getAlberi,
+  } from "/js/alberoTorneo.js";
+
+  document.title = `programma ${tournament.name}`;
+  document.getElementById("nome-torneo").textContent = tournament.name;
+
+  populateRoundSelects(tournament, roundLabels);
+
+  setup(tournament, user, apiUrl);
+
+  const containerElencolberi = document.getElementById("elenco alberi");
+
+  const alberi = await getAlberi(tournament);
+  let i = 0;
+
+  while (alberi[i]) {
+    const divRiga = document.createElement("div");
+    const albero = document.createElement("div");
+    const nomeAlberoSpan = document.createElement("span");
+    nomeAlberoSpan.textContent = alberi[i].name;
+    const nomeUserAlberoSpan = document.createElement("span");
+    const bottoneAlbero = document.createElement("button");
+    if (user.uuid === alberi[i].ownerId) {
+      
+        nomeUserAlberoSpan.textContent = user.soprannome
+      } else{
+      nomeUserAlberoSpan.textContent = "PoPoSTaPo";
+    }
+    albero.append(nomeAlberoSpan, nomeUserAlberoSpan);
+    albero.id = alberi[i].id;
+    albero.addEventListener("click", async (e) => {
+      document.getElementById("filter-bar").classList.add("visible");
+      const albero = await getAlberoMatches(e.target.parentNode.id);
+      renderTree(tournament.rounds, 1);
+      //modifica click bottone salva
+      const sb = document.getElementById("saveButton");
+      const nuovoSb = sb.cloneNode(true);
+      sb.parentNode.replaceChild(nuovoSb, sb);
+      nuovoSb.addEventListener("click", () => {
+        saveAlbero(apiUrl);
+      });
+    });
+    bottoneAlbero.textContent = APP_ICONS.EDIT;
+
+    divRiga.append(bottoneAlbero, albero);
+    containerElencolberi.appendChild(divRiga);
+    i++;
+  }
+
+  document.getElementById("filterButton").addEventListener("click", () => {
+    const fromRound = parseInt(document.getElementById("fromRound").value);
+    const toRound = parseInt(document.getElementById("toRound").value);
+    renderTree(fromRound, toRound);
+  });
+  document.getElementById("saveButton").addEventListener("click", () => {
+    saveAlbero(apiUrl);
+  });
+  document.getElementById("newButton").addEventListener("click", () => {
+    genera();
+    const sb = document.getElementById("saveButton");
+    const nuovoSb = sb.cloneNode(true);
+    sb.parentNode.replaceChild(nuovoSb, sb);
+    nuovoSb.addEventListener("click", async () => {
+      await saveNewAlbero(apiUrl);
+      location.reload();
+    });
+    document.getElementById("filter-bar").classList.add("visible");
+  });
+  document
+    .getElementById("deleteButton")
+    .addEventListener("click", async () => {
+      await deleteAlbero();
+      location.reload();
+      //document.getElementById("filter-bar").classList.remove("hidden");
+    });
+</script>
+
+<%- include('partials/footer'); -%>

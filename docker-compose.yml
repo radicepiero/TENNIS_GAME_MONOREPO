@@ -1,0 +1,60 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: tennis-postgres
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=utenticoi_1
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d utenticoi_1"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  api:
+    build:
+      context: ./services/api
+    container_name: tennis-api
+    environment:
+      - PORT=9000
+      - CORS_ORIGIN=http://localhost
+      - DATABASE=utenticoi_1
+      - DB_USER=postgres
+      - DB_PSSW=postgres
+      - DB_CONNESSIONE=postgres
+    depends_on:
+      postgres:
+        condition: service_healthy
+    expose:
+      - "9000"
+
+  ui:
+    build:
+      context: ./services/ui
+    container_name: tennis-ui
+    environment:
+      - PORT=3000
+      - API=http://api:9000/api
+    depends_on:
+      - api
+    expose:
+      - "3000"
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: tennis-proxy
+    depends_on:
+      - ui
+      - api
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+
+volumes:
+  postgres_data:

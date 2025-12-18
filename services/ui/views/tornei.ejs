@@ -1,0 +1,14 @@
+<%- include('partials/head'); -%>
+<link rel="stylesheet" href="css/tornei.css" />
+<link rel="stylesheet" href="css/hamburger.css" />
+<%- include('partials/header'); -%> <%- include('partials/hamburger'); -%>
+<h1>Tornei ATP</h1>
+<!-- Griglia dei tornei -->
+<div class="tournament-grid" id="tournament-grid">
+  <!-- I bottoni dei tornei verranno generati qui tramite JavaScript -->
+</div>
+<script>
+  document.documentElement.dataset.apiUrl = "<%= apiUrl %>";
+</script>
+<script src="/js/tornei.js"></script>
+<%- include('partials/footer'); -%>

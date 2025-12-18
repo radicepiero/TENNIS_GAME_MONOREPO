@@ -1,0 +1,149 @@
+body {
+  font-family: Arial, sans-serif;
+  margin: 20px;
+}
+h1 {
+  color: #333;
+  text-align: center;
+}
+.table-container {
+  overflow-x: auto;
+
+  overflow-y: auto;
+}
+table {
+  border-collapse: collapse;
+  width: 100%;
+  margin-top: 20px;
+}
+th,
+td {
+  border: 1px solid #ddd;
+  padding: 8px;
+  text-align: center;
+}
+th {
+  background-color: #f2f2f2;
+  position: sticky;
+  top: 0;
+}
+tr:nth-child(even) {
+  background-color: #f9f9f9;
+}
+tr:hover {
+  background-color: #f1f1f1;
+}
+.rank-col {
+  font-weight: bold;
+  background-color: #e6f3ff;
+  position: sticky;
+  left: 0;
+}
+.date-header {
+  white-space: nowrap;
+  transform: rotate(-45deg);
+  transform-origin: left bottom;
+  height: 150px;
+  vertical-align: bottom;
+  padding-bottom: 20px;
+}
+.player-cell {
+  min-width: 120px;
+}
+.player-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.player-toggle-checkbox {
+  margin-right: 5px;
+}
+
+.player-avatar {
+  max-width: 50px;
+  max-height: 50px;
+  vertical-align: middle;
+  transition: all 0.3s ease;
+}
+
+.player-avatar[style*="none"] {
+  display: none !important;
+}
+
+/* Stili per la tabella */
+.table-container {
+  overflow-x: auto;
+  margin: 20px 0;
+}
+
+#rankingTable {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  padding: 8px 12px;
+  text-align: left;
+  border-bottom: 1px solid #ddd;
+}
+
+.player-col {
+  min-width: 200px;
+  position: sticky;
+  left: 0;
+  background: white;
+  z-index: 10;
+}
+
+.rank-col {
+  width: 50px;
+  text-align: center;
+  font-weight: bold;
+}
+
+.date-header {
+  min-width: 120px;
+  text-align: center;
+}
+
+/* Stili per i giocatori */
+.player-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.player-toggle-checkbox {
+  margin-right: 5px;
+}
+
+.player-avatar {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  object-fit: cover;
+  vertical-align: middle;
+  transition: all 0.3s ease;
+}
+
+.player-name {
+  margin-left: 5px;
+  vertical-align: middle;
+  display: inline; /* Mostra i nomi inizialmente */
+}
+
+.player-cell img {
+  margin-right: 5px;
+}
+
+/* Sticky header */
+thead tr {
+  position: sticky;
+  top: 0;
+  background: white;
+  box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.1);
+}

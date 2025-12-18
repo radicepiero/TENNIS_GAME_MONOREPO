@@ -1,0 +1,121 @@
+<%- include('partials/head'); -%> 
+  <title>Modifica Torneo</title>
+<%- include('partials/header'); -%>
+  <h1 style="text-align: center;">Modifica Torneo <%= tournament.name %></h1>
+  <form id="form">
+    <input type="hidden" name="id" value="<%= tournament.id %>">
+
+    <label>
+      Nome:
+      <input type="text" name="name" value="<%= tournament.name %>" required/>
+    </label>
+
+    <label>
+      URL (href):
+      <input type="text" name="href" value="<%= tournament.href %>" required>
+    </label>
+
+    <label>
+      Categoria:
+      <input type="text" name="category" value="<%= tournament.category || '' %>">
+    </label>
+
+    <label>
+      Luogo:
+      <input type="text" name="location" value="<%= tournament.location %>" required>
+    </label>
+
+    <label>
+      Paese:
+      <input type="text" name="country" value="<%= tournament.country %>" required>
+    </label>
+
+    <label>
+      Superficie:
+      <input type="text" name="surface" value="<%= tournament.surface %>" required>
+    </label>
+
+    <label>
+      Montepremi:
+      <input type="number" name="prizemoney" value="<%= tournament.prizemoney %>" required>
+    </label>
+
+    <label>
+      Valuta:
+      <select name="currency" required>
+        <option value="€" <%= tournament.currency === "€" ? "selected" : "" %>>Euro (€)</option>
+        <option value="$" <%= tournament.currency === "$" ? "selected" : "" %>>Dollaro ($)</option>
+      </select>
+    </label>
+
+    <label>
+      Data Inizio:
+      <input type="date" name="datainizio" value="<%= tournament.datainizio %>" required>
+    </label>
+
+    <label>
+      Data Fine:
+      <input type="date" name="datafine" value="<%= tournament.datafine %>" required>
+    </label>
+
+    <label>
+      Stato:
+      <select name="status" required>
+        <option value="upcoming" <%= tournament.status === "upcoming" ? "selected" : "" %>>In Arrivo</option>
+        <option value="in-progress" <%= tournament.status === "in-progress" ? "selected" : "" %>>In Corso</option>
+        <option value="completed" <%= tournament.status === "completed" ? "selected" : "" %>>Completato</option>
+      </select>
+    </label>
+    <label>
+      Data Ranking:
+      <input type="date" name="ranking_date" value="<%= tournament.ranking_date || '' %>">
+    </label>
+
+    <label>
+      Round Totali:
+      <input type="number" name="rounds" value="<%= tournament.rounds || '' %>">
+    </label>
+<div style="display: flex; justify-content: space-between; align-items: center; margin: 2em 0; font-size: 2em; ">
+  <% if (tournament.id > 1) { %>
+    <a href="/tornei/<%= tournament.id - 1 %>/edit">&lt;</a>
+  <% } else { %>
+    <span></span>
+  <% } %>
+  
+  <button type="submit">Salva</button>
+  <a href="/tornei/<%= tournament.id + 1 %>/edit">&gt;</a>
+</div>
+    
+  </form>
+
+  <script>
+    
+    document.getElementById("form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const form = e.target;
+      const data = Object.fromEntries(new FormData(form));
+
+      try {
+        const response = await fetch(`<%- apiUrl%>/tournaments/${data.id}`, {
+          method: "PUT",
+          //credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(data),
+        });
+
+        if (!response.ok) {
+          const err = await response.json();
+          alert("Errore: " + (err.message || response.status));
+          return;
+        }
+        alert("Torneo aggiornato con successo!");
+      } catch (error) {
+        alert("Errore durante l'invio della richiesta.");
+        console.error(error);
+      }
+    });
+  </script>
+<%- include('partials/footer'); -%>
