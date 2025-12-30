@@ -8,6 +8,9 @@
 <h1 id="nome-torneo"><%= tournamentId %></h1>
 
 <div id="elenco alberi"><button id="newButton">NUOVO</button></div>
+<div id="excludedWarning" class="hidden" style="margin: 10px 0; padding: 10px; border: 1px solid #f5c2c7; background: #f8d7da; color: #842029;">
+  Torneo escluso: non è possibile generare un nuovo albero.
+</div>
 
 <div id="filter-bar" class="hidden">
   <label class="filter-label">
@@ -18,7 +21,6 @@
     <span class="label-text">A:</span>
     <select id="toRound"></select>
   </label>
-  <button id="filterButton" class="hidden">FILTRA</button>
   <button id="saveButton">SALVA</button>
   <button id="deleteButton">SCANCELLA</button>
 </div>
@@ -35,13 +37,21 @@
 <script src="https://fperucic.github.io/treant-js/Treant.js"></script>
 
 <script type="module">
-  const user = <%- JSON.stringify(user) %>;
+  const user = <%- JSON.stringify(user || null) %>;
   import { Tournament } from "/js/Tournament.js";
   import { APP_ICONS } from "/js/icons.js";
   const apiUrl = "<%= apiUrl %>";
   const tournamentId = "<%= tournamentId %>";
   const tournament = (await Tournament.fetchTournament(tournamentId, apiUrl))
     .data[0];
+
+  const effectiveRounds = (() => {
+    const n = Number(tournament && tournament.roundopen);
+    return Number.isFinite(n) && n > 0 ? n : 6;
+  })();
+
+  const isAdmin =
+    user && (user.level === "admin" || user.level === "super");
 
   import {
     setup,
@@ -54,7 +64,8 @@
     genera,
     getAlberoMatches,
     getAlberi,
-  } from "/js/alberoTorneo.js";
+    setEditable,
+  } from "/js/alberoTorneo.js?v=<%= Date.now() %>";
 
   document.title = `programma ${tournament.name}`;
   document.getElementById("nome-torneo").textContent = tournament.name;
@@ -63,71 +74,139 @@
 
   setup(tournament, user, apiUrl);
 
+  const filterBar = document.getElementById("filter-bar");
+  const saveBtn = document.getElementById("saveButton");
+  const deleteBtn = document.getElementById("deleteButton");
+  const newBtn = document.getElementById("newButton");
+  const excludedWarning = document.getElementById("excludedWarning");
+  const fromRoundSelect = document.getElementById("fromRound");
+  const toRoundSelect = document.getElementById("toRound");
+
+  const isExcludedTournament =
+    tournament && String(tournament.status).toLowerCase() === "excluded";
+  if (isExcludedTournament) {
+    if (newBtn) newBtn.classList.add("hidden");
+    if (excludedWarning) excludedWarning.classList.remove("hidden");
+  }
+
+  let mode = "none"; // none | new | existing
+  let canEdit = false;
+
+  async function selectTree(treeId) {
+    const selected = await getAlberoMatches(treeId);
+    const editable = Boolean(isAdmin || user.uuid === selected.ownerId);
+    setEditable(editable);
+    setUiState({ visible: true, _mode: "existing", _canEdit: editable });
+    renderTree(effectiveRounds, 1);
+  }
+
+  function setUiState({ visible = false, _mode = "none", _canEdit = false } = {}) {
+    mode = _mode;
+    canEdit = Boolean(_canEdit);
+    filterBar.classList.toggle("hidden", !visible);
+    filterBar.classList.toggle("visible", visible);
+
+    // bottoni azione
+    saveBtn.classList.toggle("hidden", !visible || !canEdit);
+    deleteBtn.classList.toggle("hidden", !visible || mode !== "existing" || !canEdit);
+  }
+
+  function renderFromDropdowns() {
+    const fromRound = parseInt(fromRoundSelect.value);
+    const toRound = parseInt(toRoundSelect.value);
+    if (!Number.isFinite(fromRound) || !Number.isFinite(toRound)) return;
+
+    // Garantiamo un range valido: from >= to
+    if (toRound > fromRound) {
+      toRoundSelect.value = String(fromRound);
+      renderTree(fromRound, fromRound);
+      return;
+    }
+    renderTree(fromRound, toRound);
+  }
+
   const containerElencolberi = document.getElementById("elenco alberi");
 
   const alberi = await getAlberi(tournament);
-  let i = 0;
+  const dedupById = new Map();
+  for (const tr of alberi || []) {
+    if (!tr || !tr.id) continue;
+    if (!dedupById.has(tr.id)) dedupById.set(tr.id, tr);
+  }
 
-  while (alberi[i]) {
+  // 1 albero per torneo: se l'API restituisce sia quello dell'utente che quello del SUPERUSER,
+  // scegliamo una sola entry, preferendo l'albero dell'utente.
+  const alberiUnici = Array.from(dedupById.values());
+  const alberoPreferito =
+    alberiUnici.find((t) => t && t.ownerId === user.uuid) || alberiUnici[0] || null;
+
+  const alberiDaMostrare = alberoPreferito ? [alberoPreferito] : [];
+
+  if (alberiDaMostrare.length > 0) {
+    // un albero solo per torneo: se esiste, non permettiamo NUOVO
+    newBtn.classList.add("hidden");
+  }
+
+  for (const treeRow of alberiDaMostrare) {
     const divRiga = document.createElement("div");
     const albero = document.createElement("div");
     const nomeAlberoSpan = document.createElement("span");
-    nomeAlberoSpan.textContent = alberi[i].name;
+    nomeAlberoSpan.textContent = treeRow.name;
     const nomeUserAlberoSpan = document.createElement("span");
     const bottoneAlbero = document.createElement("button");
-    if (user.uuid === alberi[i].ownerId) {
+    if (user.uuid === treeRow.ownerId) {
       
         nomeUserAlberoSpan.textContent = user.soprannome
       } else{
       nomeUserAlberoSpan.textContent = "PoPoSTaPo";
     }
     albero.append(nomeAlberoSpan, nomeUserAlberoSpan);
-    albero.id = alberi[i].id;
+    albero.id = treeRow.id;
     albero.addEventListener("click", async (e) => {
-      document.getElementById("filter-bar").classList.add("visible");
-      const albero = await getAlberoMatches(e.target.parentNode.id);
-      renderTree(tournament.rounds, 1);
-      //modifica click bottone salva
-      const sb = document.getElementById("saveButton");
-      const nuovoSb = sb.cloneNode(true);
-      sb.parentNode.replaceChild(nuovoSb, sb);
-      nuovoSb.addEventListener("click", () => {
-        saveAlbero(apiUrl);
-      });
+      const treeId = e.currentTarget.id;
+      await selectTree(treeId);
     });
     bottoneAlbero.textContent = APP_ICONS.EDIT;
+    bottoneAlbero.type = "button";
+    bottoneAlbero.addEventListener("click", async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      await selectTree(treeRow.id);
+    });
 
     divRiga.append(bottoneAlbero, albero);
     containerElencolberi.appendChild(divRiga);
-    i++;
   }
 
-  document.getElementById("filterButton").addEventListener("click", () => {
-    const fromRound = parseInt(document.getElementById("fromRound").value);
-    const toRound = parseInt(document.getElementById("toRound").value);
-    renderTree(fromRound, toRound);
-  });
-  document.getElementById("saveButton").addEventListener("click", () => {
-    saveAlbero(apiUrl);
-  });
-  document.getElementById("newButton").addEventListener("click", () => {
-    genera();
-    const sb = document.getElementById("saveButton");
-    const nuovoSb = sb.cloneNode(true);
-    sb.parentNode.replaceChild(nuovoSb, sb);
-    nuovoSb.addEventListener("click", async () => {
+  fromRoundSelect.addEventListener("change", renderFromDropdowns);
+  toRoundSelect.addEventListener("change", renderFromDropdowns);
+
+  saveBtn.addEventListener("click", async () => {
+    if (!canEdit) return;
+    if (mode === "new") {
       await saveNewAlbero(apiUrl);
       location.reload();
-    });
-    document.getElementById("filter-bar").classList.add("visible");
+      return;
+    }
+    await saveAlbero(apiUrl);
   });
-  document
-    .getElementById("deleteButton")
-    .addEventListener("click", async () => {
-      await deleteAlbero();
-      location.reload();
-      //document.getElementById("filter-bar").classList.remove("hidden");
-    });
+
+  newBtn.addEventListener("click", () => {
+    if (isExcludedTournament) return;
+    genera();
+    setEditable(true);
+    setUiState({ visible: true, _mode: "new", _canEdit: true });
+  });
+
+  deleteBtn.addEventListener("click", async () => {
+    if (!canEdit || mode !== "existing") return;
+    await deleteAlbero();
+    location.reload();
+  });
+
+  // stato iniziale
+  setEditable(false);
+  setUiState({ visible: false, _mode: "none", _canEdit: false });
 </script>
 
 <%- include('partials/footer'); -%>

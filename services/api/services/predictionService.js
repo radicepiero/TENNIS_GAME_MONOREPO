@@ -4,6 +4,7 @@ const Prediction = db.Prediction;
 const PredictionRow = db.PredictionRow;
 const User = db.User;
 const Tournament = db.Tournament;
+const { fn, col } = require("sequelize");
 
 /*
 const esempio_prediction = {
@@ -19,6 +20,28 @@ const esempio_prediction = {
   ],
 };
 */
+
+const countPredictionsByTournament = async () => {
+  try {
+    const rows = await Prediction.findAll({
+      attributes: ["tournament_id", [fn("COUNT", col("id")), "count"]],
+      group: ["tournament_id"],
+      raw: true,
+    });
+
+    return (rows || []).map((r) => ({
+      tournament_id: r.tournament_id,
+      count: Number(r.count) || 0,
+    }));
+  } catch (error) {
+    console.error(
+      "Errore durante il conteggio delle predictions per torneo:",
+      error
+    );
+    throw error;
+  }
+};
+
 const readPredictionRow = async (prediction_id) => {
   try {
     return await PredictionRow.findAll({
@@ -58,6 +81,8 @@ const readPredictions = async (user_uuid, tournament_id, prediction_id) => {
       const _prediction = {
         id: prediction.id,
         img: prediction.img,
+        created_at: prediction.createdAt,
+        updated_at: prediction.updatedAt,
         user_uuid: prediction.user_uuid,
         user_email: User.email,
         user_soprannome: User.soprannome,
@@ -312,4 +337,5 @@ module.exports = {
   updatePrediction,
   deletePrediction,
   patchPrediction,
+  countPredictionsByTournament,
 };

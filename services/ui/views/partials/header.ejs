@@ -8,6 +8,15 @@
           <li>
             Welcome, <%= user.soprannome ? user.soprannome : user.email %>
           </li>
+          <li>
+            <a href="/profilo" aria-label="Profilo" title="Profilo" style="display: inline-flex; align-items: center;">
+              <img
+                src="<%= user && user.image_url ? user.image_url : '/immagini/apple-touch-icon.png' %>"
+                alt="Profilo"
+                style="width: 32px; height: 32px; border-radius: 999px; object-fit: cover; border: 1px solid #ddd;"
+              />
+            </a>
+          </li>
           <li><a href="/logout">Log out</a></li>
           <% } else { %>
           <li><a href="/login">Log in</a></li>

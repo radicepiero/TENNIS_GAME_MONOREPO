@@ -12,6 +12,47 @@ let dialog = {};
 let tournament = {};
 let user = {};
 let apiUrl = "";
+let editable = true;
+
+let lastScrollSnapshot = null;
+
+function getEffectiveTournamentRounds(t) {
+  const v = t && (t.roundopen ?? t.roundOpen ?? t.round_open);
+  const n = Number(v);
+  return Number.isFinite(n) && n > 0 ? n : 6;
+}
+
+function getScrollableAncestor(startEl) {
+  let el = startEl;
+  while (el && el !== document.body && el !== document.documentElement) {
+    if (el instanceof HTMLElement) {
+      const style = window.getComputedStyle(el);
+      const overflowY = style.overflowY;
+      const overflowX = style.overflowX;
+      const canScrollY =
+        (overflowY === "auto" || overflowY === "scroll") &&
+        el.scrollHeight > el.clientHeight;
+      const canScrollX =
+        (overflowX === "auto" || overflowX === "scroll") &&
+        el.scrollWidth > el.clientWidth;
+      if (canScrollY || canScrollX) return el;
+    }
+    el = el.parentElement;
+  }
+  return document.getElementById("scroll-container");
+}
+
+function captureScrollSnapshot(sourceEl = null) {
+  const scroller = getScrollableAncestor(sourceEl);
+  const scrollerId = scroller && scroller.id ? scroller.id : "scroll-container";
+  lastScrollSnapshot = {
+    scrollerId,
+    containerTop: scroller ? scroller.scrollTop : 0,
+    containerLeft: scroller ? scroller.scrollLeft : 0,
+    windowX: window.scrollX,
+    windowY: window.scrollY,
+  };
+}
 
 export const roundLabels = [
   "128-esimi",
@@ -36,6 +77,7 @@ export async function setup(torneo, utente, _apiUrl) {
   giocatoreNull.createInfoElement = function () {
     const playerDiv = document.createElement("div");
     playerDiv.id = this.id;
+    playerDiv.dataset.playerid = this.id;
     playerDiv.className = "player";
     const nameDiv = document.createElement("span");
     nameDiv.textContent = this.name;
@@ -43,17 +85,32 @@ export async function setup(torneo, utente, _apiUrl) {
     return playerDiv;
   };
   players.push(giocatoreNull);
+
+  // La modale (PennaDialogo) serve anche quando si modifica un albero esistente.
+  // In precedenza veniva inizializzata solo in genera(), quindi il click sui giocatori
+  // non apriva nulla sugli alberi già creati.
+  dialog = new PennaDialogo("#dialogContainer", { options: players });
+}
+
+export function setEditable(isEditable) {
+  editable = Boolean(isEditable);
 }
 
 export function genera() {
+  if (tournament && String(tournament.status).toLowerCase() === "excluded") {
+    alert("Torneo escluso: non è possibile generare l'albero.");
+    return;
+  }
+  const effectiveRounds = getEffectiveTournamentRounds(tournament);
+  editable = true;
   albero = Tree.generate({
     name: `${new Date()} ${user.soprannome || user.email}`,
     tournament: tournament,
     ownerId: user.uuid,
-    numPlayers: 2 ** tournament.rounds,
+    numPlayers: 2 ** effectiveRounds,
   });
   dialog = new PennaDialogo("#dialogContainer", { options: players });
-  renderTree(tournament.rounds, 1);
+  renderTree(effectiveRounds, 1);
 }
 
 export async function getAlberoMatches(treeId) {
@@ -99,40 +156,77 @@ export function setupPlayerElement(player) {
 
 function handlePlayerClick(event) {
   event.stopPropagation();
+  if (!editable) return;
+  captureScrollSnapshot(event.target);
   // Verifica il round PRIMA di aprire il dialog
   const clickedRound = getRoundTreantNode(
     event.currentTarget.parentElement.parentElement.parentElement
   );
+  const effectiveRounds = getEffectiveTournamentRounds(tournament);
   console.log("clickedRound", clickedRound);
-  console.log("tournament.rounds", tournament.rounds);
-  if (clickedRound !== tournament.rounds) {
+  console.log("tournament.roundopen", tournament && tournament.roundopen);
+  console.log("effectiveRounds", effectiveRounds);
+  if (clickedRound !== effectiveRounds) {
     return; // Esci subito se non è il round giusto
   }
+
+  const getPlayerIdFromEl = (el) => {
+    if (!el) return 0;
+    const raw = el.dataset && typeof el.dataset.playerid !== "undefined" ? el.dataset.playerid : el.id;
+    const n = Number(raw);
+    return Number.isFinite(n) ? n : 0;
+  };
+
+  const clearPlayerFromFutureRounds = (playerId, treantNodeId) => {
+    if (!playerId) return;
+    const startMatch = albero.matches.find((el) => el.uuid === treantNodeId);
+    if (!startMatch) return;
+    let parentId = startMatch.fatherId;
+    while (parentId) {
+      const parent = albero.matches.find((el) => el.uuid === parentId);
+      if (!parent) break;
+      if (parent.player1 === playerId) parent.player1 = 0;
+      if (parent.player2 === playerId) parent.player2 = 0;
+      parent.p1Wins = false;
+      parent.p2Wins = false;
+      parentId = parent.fatherId;
+    }
+  };
+
   dialog.open({
     operazione: ((clickedElement) => {
       return function (selectedPlayer) {
         if (
           getRoundTreantNode(
             clickedElement.parentElement.parentElement.parentElement
-          ) !== tournament.rounds
+          ) !== getEffectiveTournamentRounds(tournament)
         )
           return;
         const container = clickedElement.parentElement;
+        const oldPlayerId = getPlayerIdFromEl(clickedElement);
         const newElement = setupPlayerElement(selectedPlayer);
         container.replaceChild(newElement, clickedElement);
         const matchInCorso = albero.matches.find(
           (el) => el.uuid === container.parentElement.parentElement.id
         );
+        if (!matchInCorso) return;
+        const newPlayerId = getPlayerIdFromEl(newElement);
         if (parseInt(container.dataset.posizione) === 1) {
-          matchInCorso.player1 = parseInt(
-            container.firstChild.dataset.playerid
-          );
+          matchInCorso.player1 = newPlayerId;
         }
         if (parseInt(container.dataset.posizione) === 2) {
-          matchInCorso.player2 = parseInt(
-            container.firstChild.dataset.playerid
-          );
+          matchInCorso.player2 = newPlayerId;
         }
+
+        matchInCorso.p1Wins = false;
+        matchInCorso.p2Wins = false;
+        if (oldPlayerId !== newPlayerId) {
+          clearPlayerFromFutureRounds(oldPlayerId, matchInCorso.uuid);
+        }
+
+        const fromRoundSelect = document.getElementById("fromRound").value;
+        const toRoundSelect = document.getElementById("toRound").value;
+        renderTree(fromRoundSelect, toRoundSelect);
       };
     })(event.currentTarget),
   });
@@ -214,6 +308,9 @@ function cancellaPerdenteDaiTurniSuccessivi(looser, treantNodeId) {
 
 function aggiornaVincitore(comodino1, comodino2) {
   return (e) => {
+    if (e && typeof e.preventDefault === "function") e.preventDefault();
+    if (e && typeof e.stopPropagation === "function") e.stopPropagation();
+    captureScrollSnapshot(e.target);
     const playerCliccato = parseInt(e.target.parentElement.firstChild.id);
     if (playerCliccato < 1) return;
 
@@ -256,15 +353,27 @@ function aggiornaVincitore(comodino1, comodino2) {
     }
     match.p1Wins = player1.wins;
     match.p2Wins = player2.wins;
+
+    const fromRoundSelect = document.getElementById("fromRound").value;
+    const toRoundSelect = document.getElementById("toRound").value;
+
+    // Se siamo in finale (o comunque non c'è un match padre), non c'è nulla da propagare.
+    // In precedenza qui si usciva senza re-render e la grafica non si aggiornava.
+    if (!match.fatherId) {
+      renderTree(fromRoundSelect, toRoundSelect);
+      return;
+    }
+
     //trasferisco il vincete al match successivo
     const destinazione = treantNode.dataset.fatherPosizione;
     const matchPadre = albero.matches.find((el) => el.uuid === match.fatherId);
     if (!matchPadre) {
-      console.error("Parent match not found for", match.fatherId);
+      renderTree(fromRoundSelect, toRoundSelect);
       return;
     }
     if (!destinazione) {
       console.log("destinazione mancante");
+      renderTree(fromRoundSelect, toRoundSelect);
       return;
     }
     let winner = 0;
@@ -288,9 +397,6 @@ function aggiornaVincitore(comodino1, comodino2) {
     matchPadre.p2Wins = false;
 
     if (looser > 0) cancellaPerdenteDaiTurniSuccessivi(looser, treantNode.id);
-
-    const fromRoundSelect = document.getElementById("fromRound").value;
-    const toRoundSelect = document.getElementById("toRound").value;
 
     renderTree(fromRoundSelect, toRoundSelect);
   };
@@ -332,6 +438,33 @@ export function arreda(piano, abita = true) {
 }
 // Funzione per costruire e arredare l'albero
 export function renderTree(fromRound, toRound) {
+  const effectiveRounds = getEffectiveTournamentRounds(tournament);
+  const snapshotScrollerId =
+    lastScrollSnapshot && lastScrollSnapshot.scrollerId
+      ? lastScrollSnapshot.scrollerId
+      : "scroll-container";
+  const scrollContainer = document.getElementById(snapshotScrollerId);
+  const prevScrollTop =
+    lastScrollSnapshot && typeof lastScrollSnapshot.containerTop === "number"
+      ? lastScrollSnapshot.containerTop
+      : scrollContainer
+      ? scrollContainer.scrollTop
+      : 0;
+  const prevScrollLeft =
+    lastScrollSnapshot && typeof lastScrollSnapshot.containerLeft === "number"
+      ? lastScrollSnapshot.containerLeft
+      : scrollContainer
+      ? scrollContainer.scrollLeft
+      : 0;
+  const prevWindowScrollX =
+    lastScrollSnapshot && typeof lastScrollSnapshot.windowX === "number"
+      ? lastScrollSnapshot.windowX
+      : window.scrollX;
+  const prevWindowScrollY =
+    lastScrollSnapshot && typeof lastScrollSnapshot.windowY === "number"
+      ? lastScrollSnapshot.windowY
+      : window.scrollY;
+
   const container = document.getElementById("tree-simple");
   container.innerHTML = "";
   const struttura = toTreantNodeStructure(albero, fromRound, toRound);
@@ -354,8 +487,30 @@ export function renderTree(fromRound, toRound) {
   new Treant(chart_config);
 
   for (let j = fromRound; j >= toRound; j--) {
-    arreda(j, j === tournament.rounds);
+    arreda(j, j === effectiveRounds);
   }
+
+  const restoreScroll = () => {
+    if (scrollContainer) {
+      scrollContainer.scrollTop = prevScrollTop;
+      scrollContainer.scrollLeft = prevScrollLeft;
+    }
+    window.scrollTo(prevWindowScrollX, prevWindowScrollY);
+  };
+
+  // Treant può fare ulteriori reflow/aggiornamenti dopo il nostro render.
+  // Ripristiniamo lo scroll più volte per evitare che la pagina torni in alto.
+  requestAnimationFrame(() => {
+    restoreScroll();
+    requestAnimationFrame(() => {
+      restoreScroll();
+    });
+  });
+  setTimeout(restoreScroll, 0);
+  setTimeout(restoreScroll, 50);
+  setTimeout(restoreScroll, 200);
+
+  lastScrollSnapshot = null;
 }
 
 export function populateRoundSelects(tournament, roundLabels) {
@@ -366,7 +521,9 @@ export function populateRoundSelects(tournament, roundLabels) {
   fromRoundSelect.innerHTML = "";
   toRoundSelect.innerHTML = "";
 
-  for (let i = tournament.rounds; i >= 1; i--) {
+  const effectiveRounds = getEffectiveTournamentRounds(tournament);
+
+  for (let i = effectiveRounds; i >= 1; i--) {
     const label = roundLabels[roundLabels.length - i] || `Round ${i}`;
 
     const optionFrom = document.createElement("option");
@@ -381,10 +538,8 @@ export function populateRoundSelects(tournament, roundLabels) {
   }
 
   // Imposta valori di default (ultimo round per "from", primo round per "to")
-  if (tournament.rounds > 0) {
-    fromRoundSelect.value = tournament.rounds;
+  if (effectiveRounds > 0) {
+    fromRoundSelect.value = effectiveRounds;
     toRoundSelect.value = 1;
   }
-  fromRoundSelect.value = tournament.rounds;
-  toRoundSelect.value = 1;
 }

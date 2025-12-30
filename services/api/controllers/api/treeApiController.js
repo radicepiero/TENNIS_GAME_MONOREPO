@@ -1,4 +1,5 @@
 const TreeService = require("../../services/treeService");
+const db = require("../../models");
 
 async function create(req, res) {
   try {
@@ -44,6 +45,41 @@ async function getAll(req, res) {
     res.json(trees);
   } catch (error) {
     console.log(error);
+    res.status(500).json({
+      error: "Fetch failed",
+      details: error.message,
+    });
+  }
+}
+
+async function getSuperuserByTournament(req, res) {
+  try {
+    const tournamentId = req.params.tournamentId;
+    if (!tournamentId) {
+      return res.status(400).json({ error: "Bad Request", details: "tournamentId è obbligatorio" });
+    }
+
+    let superuserId = process.env.SUPERUSER;
+    if (!superuserId) {
+      const superUser = await db.User.findOne({ where: { level: "super" } });
+      superuserId = superUser ? superUser.uuid : null;
+    }
+    if (!superuserId) {
+      return res.status(404).json({ error: "Not found", details: "Utente super non trovato" });
+    }
+
+    const trees = await TreeService.getTree({
+      tournamentId,
+      ownerId: superuserId,
+      includeMatches: req.query.includeMatches,
+    });
+
+    if (!trees || trees.length === 0) {
+      return res.status(404).json({ error: "Not found" });
+    }
+
+    res.json(trees[0]);
+  } catch (error) {
     res.status(500).json({
       error: "Fetch failed",
       details: error.message,
@@ -166,4 +202,5 @@ module.exports = {
   deleteOne,
   getById,
   getAll,
+  getSuperuserByTournament,
 };

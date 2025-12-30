@@ -1,5 +1,36 @@
 const predictionService = require("../../services/predictionService");
 const jwt = require("jsonwebtoken");
+const tournamentService = require("../../services/tournamentService");
+
+const isTournamentLockedForPredictions = (status) => {
+  return ["completed", "in-progress", "excluded"].includes(String(status));
+};
+
+const assertTournamentEditable = async (tournamentId, res) => {
+  if (!tournamentId) {
+    res.status(400).json({ success: false, message: "tournament_id mancante" });
+    return false;
+  }
+
+  try {
+    const tournament = await tournamentService.getTournament(tournamentId);
+    if (!tournament) {
+      res.status(404).json({ success: false, message: "Torneo non trovato" });
+      return false;
+    }
+    if (isTournamentLockedForPredictions(tournament.status)) {
+      res.status(400).json({
+        success: false,
+        message: `Pronostici bloccati: torneo ${tournament.status}`,
+      });
+      return false;
+    }
+    return true;
+  } catch (e) {
+    res.status(500).json({ success: false, message: "Errore nel recupero del torneo" });
+    return false;
+  }
+};
 
 const getPredictions = async (req, res) => {
   try {
@@ -8,6 +39,16 @@ const getPredictions = async (req, res) => {
   } catch (error) {
     console.error("Errore nel recupero delle predictions:", error);
     res.status(500).json({ error: "Errore nel recupero dei dati" });
+  }
+};
+
+const getPredictionCountsByTournament = async (req, res) => {
+  try {
+    const rows = await predictionService.countPredictionsByTournament();
+    res.status(200).json({ success: true, data: rows });
+  } catch (error) {
+    console.error("Errore nel conteggio delle predictions:", error);
+    res.status(500).json({ success: false, message: "Errore nel recupero dei dati" });
   }
 };
 
@@ -95,6 +136,9 @@ const postPrediction = async (req, res) => {
 
   console.log(req.cookies.jwt, "prediction.user_uuid", prediction.user_uuid);
   try {
+    const ok = await assertTournamentEditable(prediction.tournament_id, res);
+    if (!ok) return;
+
     const esistePrediction =
       await predictionService.readPredictionByUserIdTournamentId(
         prediction.user_uuid,
@@ -119,6 +163,9 @@ const deletePredictionById = async (req, res) => {
   console.log("req.cookies.jwt", req.cookies.jwt);
   let user_uuid = res.locals.user.dataValues.uuid;
   try {
+    const ok = await assertTournamentEditable(_prediction.tournament_id, res);
+    if (!ok) return;
+
     pred = await predictionService.readPredictionByUserIdTournamentId(
       user_uuid,
       _prediction.tournament_id
@@ -136,6 +183,7 @@ const deletePredictionById = async (req, res) => {
 
 module.exports = {
   getPredictions,
+  getPredictionCountsByTournament,
   getPredictionById,
   getPredictionsByTournamentId,
   getPredictionByUserIdTournamentId,

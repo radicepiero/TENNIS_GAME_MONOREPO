@@ -3,13 +3,22 @@ const path = require("path");
 const { JSDOM } = require("jsdom");
 
 const creaFileRanking = (pathToDataFile, dataRanking) => {
-  const html = fs.readFileSync(pathToDataFile, "utf-8");
+  const inputPath = path.isAbsolute(pathToDataFile)
+    ? pathToDataFile
+    : path.resolve(process.cwd(), pathToDataFile);
+  const html = fs.readFileSync(inputPath, "utf-8");
   const dom = new JSDOM(html);
   const document = dom.window.document;
 
-  const elems = document
-    .getElementsByClassName("mega-table desktop-table non-live")[0]
-    .getElementsByClassName("lower-row");
+  const table = document.getElementsByClassName(
+    "mega-table desktop-table non-live"
+  )[0];
+  if (!table) {
+    throw new Error(
+      "Tabella ranking non trovata: classe 'mega-table desktop-table non-live'"
+    );
+  }
+  const elems = table.getElementsByClassName("lower-row");
   const players = [];
 
   for (let i = 0; i < Math.min(600, elems.length); i++) {
@@ -17,7 +26,6 @@ const creaFileRanking = (pathToDataFile, dataRanking) => {
     const player = {};
 
     // Rank
-    const rankElem = row.querySelector("td.rank.bold.heavy.tiny-cell");
     player.rank = elems[i].getElementsByClassName(
       "rank bold heavy tiny-cell"
     )[0].innerHTML;
@@ -36,7 +44,9 @@ const creaFileRanking = (pathToDataFile, dataRanking) => {
   });
 
   const csvContent = csvLines.join("\n");
-  const outputPath = path.join(__dirname, dataRanking);
+  const outputPath = path.isAbsolute(dataRanking)
+    ? dataRanking
+    : path.resolve(process.cwd(), dataRanking);
   fs.writeFileSync(outputPath, csvContent, "utf-8");
 
   console.log(`✅ File CSV creato con successo: ${outputPath}`);
@@ -45,7 +55,13 @@ const creaFileRanking = (pathToDataFile, dataRanking) => {
 // Esempio di utilizzo:
 // creaFileRanking("./pagina.html", "classifica.csv");
 
-creaFileRanking(
-  "./zzTOOLS/rankingManagement/2025-11-10.html",
-  "2025-11-17.csv"
-);
+if (require.main === module) {
+  const [, , htmlPath, csvOutPath] = process.argv;
+  if (!htmlPath || !csvOutPath) {
+    console.error("Uso: node creaFileRanking.js <ranking.html> <output.csv>");
+    process.exit(1);
+  }
+  creaFileRanking(htmlPath, csvOutPath);
+}
+
+module.exports = { creaFileRanking };

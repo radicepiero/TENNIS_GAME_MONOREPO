@@ -1,13 +1,13 @@
 <%- include('partials/head'); -%>
 <link rel="stylesheet" href="/css/australian-open-2025-pronostico.css" />
-<link rel="stylesheet" href="/css/hamburger.css?v=1.0" />
+<!--<link rel="stylesheet" href="/css/hamburger.css?v=1.0" />-->
 <%- include('partials/header'); -%>
-<header>
+<h1 id = "titolo"><%= tournamentId %></h1>
+<header class="hamburger-header">
   <div class="hamburger-menu">
     <button class="menu-toggle" aria-label="Toggle menu">☰</button>
     <nav class="menu">
       <ul>
-        <li><a href="/">Home</a></li>
         <li><a href="#" data-source="0">Pronostici</a></li>
         <li><a href="#" data-source="1">Primo turno</a></li>
         <li><a href="#" data-source="2">Secondo turno</a></li>
@@ -19,59 +19,71 @@
     </nav>
   </div>
 </header>
-<h1><%= tournamentId %></h1>
+
 <div class="column-container" id="columns"></div>
 <script type="module">
-  // Importa la funzione per costruire la tabella
-  import { creaColonne } from "/js/creaColonne.js";
+  console.log("sviluppoTorneo init", {
+    tournamentId: "<%= tournamentId %>",
+    tournamentName: "<%= tournamentName || '' %>",
+    apiUrl: "<%= apiUrl %>",
+  });
 
-  // Seleziona gli elementi del menu e associa eventi click
-  const menuToggle = document.querySelector(".menu-toggle");
-  const menu = document.querySelector(".menu");
-  const menuLinks = document.querySelectorAll(".menu a");
-  const titleElement = document.querySelector("h1"); // Seleziona l'h1
-  menuLinks.forEach((link) => {
-    if (link.getAttribute("href") === "/") {
-      return; // Salta il link "Home"
-    }
-    if (link.getAttribute("href") === "../../index.html") {
-      return; // Salta questo link e passa al prossimo
-    }
-    link.addEventListener("click", async (event) => {
-      event.preventDefault(); // Evita il comportamento predefinito del link
+  const showError = (msg) => {
+    const el = document.getElementById("columns");
+    if (!el) return;
+    el.innerHTML = `<div style="padding:12px;border:1px solid #f99;background:#fff0f0;color:#900;max-width:720px;margin:12px auto;">${msg}</div>`;
+  };
 
-      // Ottieni il file di dati specificato nell'attributo data-source
+  (async () => {
+    let creaColonne;
+    try {
+      ({ creaColonne } = await import("/js/creaColonne.js"));
+    } catch (e) {
+      console.error("Import creaColonne failed", e);
+      showError("Errore caricamento script sviluppo (creaColonne.js)");
+      return;
+    }
+
+    const menuToggle = document.querySelector(".menu-toggle");
+    const menu = document.querySelector(".menu");
+    const menuLinks = document.querySelectorAll(".menu a");
+    const titleElement = document.getElementById("titolo");
+
+    const onSelect = async (event) => {
+      event.preventDefault();
       const dataSource = event.target.dataset.source;
       try {
-        // Chiama la funzione creaColonne con i nuovi dati
         const columnContainer = document.getElementById("columns");
-        columnContainer.innerHTML = ""; // Resetta le colonne esistenti
+        columnContainer.innerHTML = "";
         const apiUrl = "<%= apiUrl %>";
-        creaColonne("<%= tournamentId %>", dataSource, apiUrl);
-
-        // Modifica il contenuto dell'h1 con il testo dell'opzione selezionata
-        const selectedOptionText = event.target.textContent; // Testo dell'opzione
-        titleElement.textContent = `${selectedOptionText.toUpperCase()} MIAMI OPEN 2025`;
-
-        // Chiudi il menu
+        await creaColonne("<%= tournamentId %>", dataSource, apiUrl, "<%= (user && user.uuid) ? user.uuid : '' %>");
+        const selectedOptionText = event.target.textContent;
+        titleElement.textContent = `${selectedOptionText.toUpperCase()} <%= tournamentName || '' %>`;
         menu.classList.remove("open");
       } catch (error) {
-        console.error("Errore durante l'importazione dei dati:", error);
+        console.error("Errore durante lo sviluppo:", error);
+        showError("Errore durante il caricamento dati sviluppo");
       }
-    });
-  });
+    };
 
-  // Toggle del menu
-  menuToggle.addEventListener("click", () => {
-    menu.classList.toggle("open");
-  });
+    menuLinks.forEach((link) => link.addEventListener("click", onSelect));
 
-  // Simula il clic sull'ultima opzione del menu al caricamento della pagina
-  window.addEventListener("DOMContentLoaded", () => {
-    const lastMenuLink = menuLinks[menuLinks.length - 1]; // Seleziona l'ultima opzione del menu
-    if (lastMenuLink) {
-      lastMenuLink.click(); // Simula il clic sull'ultima opzione
+    if (menuToggle) {
+      menuToggle.addEventListener("click", () => menu.classList.toggle("open"));
     }
-  });
+
+    const runInitial = () => {
+      const lastMenuLink = menuLinks[menuLinks.length - 1];
+      if (!lastMenuLink) return;
+      // let styles/layout settle
+      requestAnimationFrame(() => lastMenuLink.click());
+    };
+
+    if (document.readyState === "loading") {
+      window.addEventListener("DOMContentLoaded", runInitial);
+    } else {
+      runInitial();
+    }
+  })();
 </script>
 <%- include('partials/footer'); -%>

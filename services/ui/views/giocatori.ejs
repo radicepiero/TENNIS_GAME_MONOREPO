@@ -1,17 +1,8 @@
 <%- include('partials/head'); -%>
-<link rel="stylesheet" href="css/tornei.css" />
-<link rel="stylesheet" href="css/hamburger.css" />
+<link rel="stylesheet" href="/css/tornei.css" />
+<link rel="stylesheet" href="/css/hamburger.css" />
 <%- include('partials/header'); -%>
-<header>
-  <div class="hamburger-menu">
-    <button class="menu-toggle" aria-label="Toggle menu">☰</button>
-    <nav class="menu">
-      <ul>
-        <li><a href="/">Home</a></li>
-      </ul>
-    </nav>
-  </div>
-</header>
+<%- include('partials/hamburger'); -%>
 <h1>Tornei ATP</h1>
 <!-- Griglia dei tornei -->
 <div class="tournament-grid" id="tournament-grid">
@@ -66,8 +57,8 @@
         button.style.backgroundImage = `url('${tournament.image}')`;
         button.textContent = tournament.name;
         tournamentContainer.appendChild(button);
-        // Aggiungi il bottone del pronostico solo se lo status è "upcoming"
-        if (tournament.status === "upcoming") {
+        // Aggiungi il bottone del pronostico solo se lo status è "open"
+        if (tournament.status === "open") {
           const pronosticoButton = document.createElement("button");
           pronosticoButton.className = "pronostico-button";
           pronosticoButton.textContent = "Pronostico";
@@ -78,7 +69,7 @@
           tournamentContainer.appendChild(pronosticoButton);
         }
         //aggiungi il bottone per creare albero
-        if (tournament.status === "upcoming") {
+        if (tournament.status === "open") {
           const alberoButton = document.createElement("button");
           alberoButton.className = "pronostico-button";
           alberoButton.textContent = "Crea l'albero del torneo";

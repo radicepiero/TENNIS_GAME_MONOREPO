@@ -5,12 +5,15 @@
 const jwt = require("jsonwebtoken");
 const db = require("../models");
 const User = db.User;
+
+const JWT_SECRET = process.env.JWT_SECRET || "un segreto generato a caso";
+
 const requireAuth = (req, res, next) => {
   const token = req.cookies.jwt;
 
   // verifica dell'esistenza del cookie jwt e verifica della validità
   if (token) {
-    jwt.verify(token, "un segreto generato a caso", (err, decodedToken) => {
+    jwt.verify(token, JWT_SECRET, (err, decodedToken) => {
       if (err) {
         console.log(err.message);
         res.redirect("/login");
@@ -35,7 +38,7 @@ const checkUser = async (req, res, next) => {
   try {
     // Verifica il token in modo asincrono
     const decodedToken = await new Promise((resolve, reject) => {
-      jwt.verify(token, "un segreto generato a caso", (err, decoded) => {
+      jwt.verify(token, JWT_SECRET, (err, decoded) => {
         if (err) reject(err);
         else resolve(decoded);
       });
@@ -54,4 +57,11 @@ const checkUser = async (req, res, next) => {
   next();
 };
 
-module.exports = { requireAuth, checkUser };
+const requireAdmin = (req, res, next) => {
+  const user = res.locals.user;
+  if (!user) return res.status(401).json({ error: "Unauthorized" });
+  if (user.level === "admin" || user.level === "super") return next();
+  return res.status(403).json({ error: "Forbidden" });
+};
+
+module.exports = { requireAuth, checkUser, requireAdmin };

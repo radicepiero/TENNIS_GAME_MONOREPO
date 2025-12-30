@@ -52,6 +52,19 @@ const updateActiveUser = async (uuid) => {
   }
 };
 
+const updateUserProfile = async (uuid, { soprannome, image_url }) => {
+  try {
+    const payload = {};
+    if (typeof soprannome !== "undefined") payload.soprannome = soprannome;
+    if (typeof image_url !== "undefined") payload.image_url = image_url;
+
+    await User.update(payload, { where: { uuid } });
+    return await User.findByPk(uuid);
+  } catch (error) {
+    console.error("errore durante l'aggiornamento del profilo");
+  }
+};
+
 const UsersTournaments = db.UserTournament;
 const Tournaments = db.Tournaments;
 
@@ -102,4 +115,5 @@ module.exports = {
   getUserByMail,
   postUser,
   updateActiveUser,
+  updateUserProfile,
 };

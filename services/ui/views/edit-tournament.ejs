@@ -2,8 +2,32 @@
   <title>Modifica Torneo</title>
 <%- include('partials/header'); -%>
   <h1 style="text-align: center;">Modifica Torneo <%= tournament.name %></h1>
-  <form id="form">
-    <input type="hidden" name="id" value="<%= tournament.id %>">
+  <% const roundLabels = ["128-esimi","64-esimi","32-esimi","16-esimi","Ottavi","Quarti","Semifinali","Finali"]; %>
+  <% const roundLabel = (n) => (roundLabels[roundLabels.length - Number(n)] || `Round ${n}`); %>
+  <div style="display: flex; justify-content: space-between; align-items: center; margin: 2em 0; font-size: 2em; ">
+    <% if (tournament.id > 1) { %>
+      <a href="/tornei/<%= tournament.id - 1 %>/edit">&lt;</a>
+    <% } else { %>
+      <span></span>
+    <% } %>
+    
+    <div style="display: flex; flex-direction: column; gap: 10px; align-items: center; flex-wrap: nowrap; font-size: 0.5em; white-space: nowrap;">
+      <a href="/admin/tornei" id="back-admin" style="display: inline-flex; align-items: center; justify-content: center; width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 10px; background: #fff; text-decoration: none; color: inherit;">Torna a Admin</a>
+      <a href="/tornei/<%= tournament.id %>/genera-albero" id="tree-link" style="display: inline-flex; align-items: center; justify-content: center; width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 10px; background: #fff; text-decoration: none; color: inherit;">Apri albero</a>
+      <button id="open-edit-modal" type="button" style="padding: 8px 14px; border-radius: 999px; width: 100%;">Modifica torneo</button>
+      <button id="open-players-modal" type="button" style="padding: 8px 14px; border-radius: 999px; width: 100%;">Punteggi giocatori</button>
+    </div>
+    <a href="/tornei/<%= tournament.id + 1 %>/edit">&gt;</a>
+  </div>
+
+  <dialog id="edit-modal" style="width: min(900px, 92vw); border: 1px solid #ddd; border-radius: 12px; padding: 0;">
+    <div style="padding: 16px; border-bottom: 1px solid #eee; display:flex; justify-content: space-between; align-items: center; gap: 12px;">
+      <div style="font-size: 18px; font-weight: 600;">Modifica Torneo</div>
+      <button id="close-edit-modal" type="button" style="padding: 6px 10px; border-radius: 10px;">Chiudi</button>
+    </div>
+    <div style="padding: 16px;">
+      <form id="form">
+        <input type="hidden" name="id" value="<%= tournament.id %>">
 
     <label>
       Nome:
@@ -27,12 +51,43 @@
 
     <label>
       Paese:
-      <input type="text" name="country" value="<%= tournament.country %>" required>
+      <input type="text" name="country" list="countries" value="<%= tournament.country %>" required>
+      <datalist id="countries">
+        <option value="Australia"></option>
+        <option value="Austria"></option>
+        <option value="Belgium"></option>
+        <option value="Brazil"></option>
+        <option value="Canada"></option>
+        <option value="China"></option>
+        <option value="Croatia"></option>
+        <option value="Czech Republic"></option>
+        <option value="Denmark"></option>
+        <option value="France"></option>
+        <option value="Germany"></option>
+        <option value="Great Britain"></option>
+        <option value="India"></option>
+        <option value="Italy"></option>
+        <option value="Japan"></option>
+        <option value="Mexico"></option>
+        <option value="Monaco"></option>
+        <option value="Netherlands"></option>
+        <option value="Qatar"></option>
+        <option value="Spain"></option>
+        <option value="Sweden"></option>
+        <option value="Switzerland"></option>
+        <option value="United Arab Emirates"></option>
+        <option value="United States"></option>
+      </datalist>
     </label>
 
     <label>
       Superficie:
-      <input type="text" name="surface" value="<%= tournament.surface %>" required>
+      <select name="surface" required>
+        <option value="Hard" <%= tournament.surface === "Hard" ? "selected" : "" %>>Hard</option>
+        <option value="Clay" <%= tournament.surface === "Clay" ? "selected" : "" %>>Clay</option>
+        <option value="Grass" <%= tournament.surface === "Grass" ? "selected" : "" %>>Grass</option>
+        <option value="Carpet" <%= tournament.surface === "Carpet" ? "selected" : "" %>>Carpet</option>
+      </select>
     </label>
 
     <label>
@@ -61,7 +116,9 @@
     <label>
       Stato:
       <select name="status" required>
+        <option value="excluded" <%= tournament.status === "excluded" ? "selected" : "" %>>Escluso</option>
         <option value="upcoming" <%= tournament.status === "upcoming" ? "selected" : "" %>>In Arrivo</option>
+        <option value="open" <%= tournament.status === "open" ? "selected" : "" %>>Open</option>
         <option value="in-progress" <%= tournament.status === "in-progress" ? "selected" : "" %>>In Corso</option>
         <option value="completed" <%= tournament.status === "completed" ? "selected" : "" %>>Completato</option>
       </select>
@@ -72,29 +129,216 @@
     </label>
 
     <label>
-      Round Totali:
-      <input type="number" name="rounds" value="<%= tournament.rounds || '' %>">
+      Data Open:
+      <input type="date" name="dataopen" value="<%= tournament.dataopen || '' %>">
     </label>
-<div style="display: flex; justify-content: space-between; align-items: center; margin: 2em 0; font-size: 2em; ">
-  <% if (tournament.id > 1) { %>
-    <a href="/tornei/<%= tournament.id - 1 %>/edit">&lt;</a>
-  <% } else { %>
-    <span></span>
-  <% } %>
-  
-  <button type="submit">Salva</button>
-  <a href="/tornei/<%= tournament.id + 1 %>/edit">&gt;</a>
-</div>
-    
-  </form>
+
+    <label>
+      Round Totali:
+      <select name="rounds">
+        <option value="" <%= !tournament.rounds ? "selected" : "" %>>(vuoto)</option>
+        <option value="1" <%= String(tournament.rounds) === "1" ? "selected" : "" %>><%= roundLabel(1) %> (1)</option>
+        <option value="2" <%= String(tournament.rounds) === "2" ? "selected" : "" %>><%= roundLabel(2) %> (2)</option>
+        <option value="3" <%= String(tournament.rounds) === "3" ? "selected" : "" %>><%= roundLabel(3) %> (3)</option>
+        <option value="4" <%= String(tournament.rounds) === "4" ? "selected" : "" %>><%= roundLabel(4) %> (4)</option>
+        <option value="5" <%= String(tournament.rounds) === "5" ? "selected" : "" %>><%= roundLabel(5) %> (5)</option>
+        <option value="6" <%= String(tournament.rounds) === "6" ? "selected" : "" %>><%= roundLabel(6) %> (6)</option>
+        <option value="7" <%= String(tournament.rounds) === "7" ? "selected" : "" %>><%= roundLabel(7) %> (7)</option>
+        <option value="8" <%= String(tournament.rounds) === "8" ? "selected" : "" %>><%= roundLabel(8) %> (8)</option>
+      </select>
+    </label>
+
+    <label>
+      Round Open:
+      <select name="roundopen">
+        <option value="" <%= (tournament.roundopen === null || typeof tournament.roundopen === "undefined" || tournament.roundopen === "") ? "selected" : "" %>>(vuoto)</option>
+        <option value="1" <%= String(tournament.roundopen) === "1" ? "selected" : "" %>><%= roundLabel(1) %> (1)</option>
+        <option value="2" <%= String(tournament.roundopen) === "2" ? "selected" : "" %>><%= roundLabel(2) %> (2)</option>
+        <option value="3" <%= String(tournament.roundopen) === "3" ? "selected" : "" %>><%= roundLabel(3) %> (3)</option>
+        <option value="4" <%= String(tournament.roundopen) === "4" ? "selected" : "" %>><%= roundLabel(4) %> (4)</option>
+        <option value="5" <%= String(tournament.roundopen) === "5" ? "selected" : "" %>><%= roundLabel(5) %> (5)</option>
+        <option value="6" <%= String(tournament.roundopen) === "6" ? "selected" : "" %>><%= roundLabel(6) %> (6)</option>
+        <option value="7" <%= String(tournament.roundopen) === "7" ? "selected" : "" %>><%= roundLabel(7) %> (7)</option>
+        <option value="8" <%= String(tournament.roundopen) === "8" ? "selected" : "" %>><%= roundLabel(8) %> (8)</option>
+      </select>
+    </label>
+
+        <fieldset id="scripts-fieldset" style="margin: 16px 0; padding: 12px; border: 1px solid #ddd; border-radius: 10px;">
+          <legend>Scripts</legend>
+          <div id="scripts-list" style="display: grid; grid-template-columns: 1fr; gap: 8px;"></div>
+        </fieldset>
+
+        <div style="display:flex; justify-content:flex-end; gap: 10px; margin-top: 12px;">
+          <button id="cancel-edit" type="button" style="padding: 8px 14px; border-radius: 999px;">Annulla</button>
+          <button type="submit" style="padding: 8px 14px; border-radius: 999px;">Salva</button>
+        </div>
+      </form>
+    </div>
+  </dialog>
+
+  <dialog id="players-modal" style="width: min(900px, 92vw); border: 1px solid #ddd; border-radius: 12px; padding: 0;">
+    <div style="padding: 16px; border-bottom: 1px solid #eee; display:flex; justify-content: space-between; align-items: center; gap: 12px;">
+      <div style="font-size: 18px; font-weight: 600;">Punteggi giocatori</div>
+      <button id="close-players-modal" type="button" style="padding: 6px 10px; border-radius: 10px;">Chiudi</button>
+    </div>
+    <div style="padding: 16px;">
+      <% const pwp = (typeof playersWithPoints !== 'undefined' && playersWithPoints) ? playersWithPoints : []; %>
+      <% if (!pwp.length) { %>
+        <div>Nessun giocatore disponibile.</div>
+      <% } else { %>
+        <div style="overflow:auto; max-width: 100%; max-height: 70vh;">
+          <table style="width:100%; border-collapse: collapse;">
+            <thead>
+              <tr>
+                <th style="text-align:left; border-bottom: 1px solid #ddd; padding: 8px;">Ranking</th>
+                <th style="text-align:left; border-bottom: 1px solid #ddd; padding: 8px;">Giocatore</th>
+                <th style="text-align:left; border-bottom: 1px solid #ddd; padding: 8px;">Paese</th>
+                <th style="text-align:left; border-bottom: 1px solid #ddd; padding: 8px;">Semifinalist</th>
+                <th style="text-align:left; border-bottom: 1px solid #ddd; padding: 8px;">Winner</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% pwp.forEach((pl) => { %>
+                <tr>
+                  <td style="border-bottom: 1px solid #eee; padding: 8px; white-space: nowrap;"><%= (pl && pl.ranking) ? pl.ranking : '' %></td>
+                  <td style="border-bottom: 1px solid #eee; padding: 8px;"><%= (pl && pl.name) ? pl.name : '' %></td>
+                  <td style="border-bottom: 1px solid #eee; padding: 8px; white-space: nowrap;"><%= (pl && pl.country) ? pl.country : '' %></td>
+                  <td style="border-bottom: 1px solid #eee; padding: 8px; white-space: nowrap;"><%= (pl && typeof pl.puntiSemifinalist !== 'undefined') ? pl.puntiSemifinalist : '' %></td>
+                  <td style="border-bottom: 1px solid #eee; padding: 8px; white-space: nowrap;"><%= (pl && typeof pl.puntiWinner !== 'undefined') ? pl.puntiWinner : '' %></td>
+                </tr>
+              <% }); %>
+            </tbody>
+          </table>
+        </div>
+      <% } %>
+    </div>
+  </dialog>
+
+  <div id="predictions-container" style="margin: 16px 0;">
+    <fieldset style="padding: 12px; border: 1px solid #ddd; border-radius: 10px;">
+      <legend>Pronostici</legend>
+      <% const pt = (typeof predictionsTable !== 'undefined' && predictionsTable) ? predictionsTable : []; %>
+      <% const fmtTs = (v) => {
+        if (!v) return '';
+        const d = new Date(v);
+        if (isNaN(d.getTime())) return String(v);
+        const pad = (n) => String(n).padStart(2, '0');
+        return `${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+      }; %>
+
+      <% if (!pt.length) { %>
+        <div>Nessun pronostico presente per questo torneo.</div>
+      <% } else { %>
+        <div style="overflow:auto; max-width: 100%;">
+          <table style="width:100%; border-collapse: collapse;">
+            <thead>
+              <tr>
+                <th style="text-align:left; border-bottom: 1px solid #ddd; padding: 8px;">Informazioni cronologiche</th>
+                <th style="text-align:left; border-bottom: 1px solid #ddd; padding: 8px;">Indirizzo email</th>
+                <th style="text-align:left; border-bottom: 1px solid #ddd; padding: 8px;">VINCITORE</th>
+                <th style="text-align:left; border-bottom: 1px solid #ddd; padding: 8px;">ALTRO SEMIFINALISTA 1</th>
+                <th style="text-align:left; border-bottom: 1px solid #ddd; padding: 8px;">ALTRO SEMIFINALISTA 2</th>
+                <th style="text-align:left; border-bottom: 1px solid #ddd; padding: 8px;">ALTRO SEMIFINALISTA 3</th>
+                <th style="text-align:left; border-bottom: 1px solid #ddd; padding: 8px;">TOTALE</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% pt.forEach((row) => { %>
+                <% const s = (row && row.semifinalists) ? row.semifinalists : []; %>
+                <% const semiCell = (idx) => {
+                  const sp = s[idx];
+                  if (!sp) return '';
+                  const pts = (typeof sp.puntiSemifinalist !== 'undefined') ? ` (${sp.puntiSemifinalist})` : '';
+                  return `${sp.name}${pts}`;
+                }; %>
+                <tr>
+                  <td style="border-bottom: 1px solid #eee; padding: 8px; white-space: nowrap;"><%= fmtTs(row.created_at) %></td>
+                  <td style="border-bottom: 1px solid #eee; padding: 8px;"><%= row.user_email || '' %></td>
+                  <td style="border-bottom: 1px solid #eee; padding: 8px; white-space: nowrap;">
+                    <% if (row.winner) { %>
+                      <%= row.winner.name %> (<%= row.winner.puntiWinner %>)
+                    <% } %>
+                  </td>
+                  <td style="border-bottom: 1px solid #eee; padding: 8px; white-space: nowrap;"><%= semiCell(0) %></td>
+                  <td style="border-bottom: 1px solid #eee; padding: 8px; white-space: nowrap;"><%= semiCell(1) %></td>
+                  <td style="border-bottom: 1px solid #eee; padding: 8px; white-space: nowrap;"><%= semiCell(2) %></td>
+                  <td style="border-bottom: 1px solid #eee; padding: 8px; white-space: nowrap;"><%= (typeof row.totalPoints !== 'undefined') ? row.totalPoints : '' %></td>
+                </tr>
+              <% }); %>
+            </tbody>
+          </table>
+        </div>
+      <% } %>
+    </fieldset>
+  </div>
 
   <script>
+    const editModal = document.getElementById("edit-modal");
+    const playersModal = document.getElementById("players-modal");
+
+    const openEditBtn = document.getElementById("open-edit-modal");
+    const closeEditBtn = document.getElementById("close-edit-modal");
+    const cancelEditBtn = document.getElementById("cancel-edit");
+
+    const openPlayersBtn = document.getElementById("open-players-modal");
+    const closePlayersBtn = document.getElementById("close-players-modal");
+
+    if (openEditBtn && editModal) {
+      openEditBtn.addEventListener("click", () => editModal.showModal());
+    }
+    if (closeEditBtn && editModal) {
+      closeEditBtn.addEventListener("click", () => editModal.close());
+    }
+    if (cancelEditBtn && editModal) {
+      cancelEditBtn.addEventListener("click", () => editModal.close());
+    }
+
+    if (openPlayersBtn && playersModal) {
+      openPlayersBtn.addEventListener("click", () => playersModal.showModal());
+    }
+    if (closePlayersBtn && playersModal) {
+      closePlayersBtn.addEventListener("click", () => playersModal.close());
+    }
     
     document.getElementById("form").addEventListener("submit", async (e) => {
       e.preventDefault();
 
       const form = e.target;
       const data = Object.fromEntries(new FormData(form));
+
+      const toYmd = (v) => (v ? String(v).slice(0, 10) : "");
+      const start = toYmd(data.datainizio);
+      const end = toYmd(data.datafine);
+      const open = toYmd(data.dataopen);
+      if (open) {
+        if (start && open < start) {
+          alert("Data Open deve essere compresa tra Data Inizio e Data Fine");
+          return;
+        }
+        if (end && open > end) {
+          alert("Data Open deve essere compresa tra Data Inizio e Data Fine");
+          return;
+        }
+      }
+
+      if (data.rounds === "") delete data.rounds;
+      if (data.roundopen === "") delete data.roundopen;
+      if (data.ranking_date === "") delete data.ranking_date;
+      if (data.dataopen === "") delete data.dataopen;
+
+      if (typeof data.rounds !== "undefined") data.rounds = Number(data.rounds);
+      if (typeof data.roundopen !== "undefined") data.roundopen = Number(data.roundopen);
+
+      if (
+        typeof data.roundopen !== "undefined" &&
+        typeof data.rounds !== "undefined" &&
+        Number.isFinite(data.roundopen) &&
+        Number.isFinite(data.rounds) &&
+        data.roundopen > data.rounds
+      ) {
+        alert("Round Open deve essere minore o uguale a Round Totali");
+        return;
+      }
 
       try {
         const response = await fetch(`<%- apiUrl%>/tournaments/${data.id}`, {
@@ -111,11 +355,121 @@
           alert("Errore: " + (err.message || response.status));
           return;
         }
+
+        const selectedScriptNames = Array.from(
+          document.querySelectorAll("input[name='scriptNames']:checked")
+        ).map((el) => el.value);
+
+        const scriptsRes = await fetch(`<%- apiUrl%>/tournaments/${data.id}/scripts`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ scriptNames: selectedScriptNames }),
+        });
+
+        if (!scriptsRes.ok) {
+          const err = await scriptsRes.json().catch(() => ({}));
+          alert("Errore salvataggio scripts: " + (err.message || err.error || scriptsRes.status));
+          return;
+        }
         alert("Torneo aggiornato con successo!");
+        if (editModal) editModal.close();
       } catch (error) {
         alert("Errore durante l'invio della richiesta.");
         console.error(error);
       }
     });
+
+    (async () => {
+      const dl = document.getElementById("countries");
+      if (!dl) return;
+
+      try {
+        const response = await fetch(`<%- apiUrl%>/tournaments`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+        if (!response.ok) return;
+        const tournaments = await response.json();
+
+        const countries = Array.from(
+          new Set(
+            (tournaments || [])
+              .map((t) => (t && t.country ? String(t.country).trim() : ""))
+              .filter(Boolean)
+          )
+        ).sort((a, b) => a.localeCompare(b));
+
+        dl.innerHTML = countries.map((c) => `<option value="${c}"></option>`).join("");
+      } catch (e) {}
+    })();
+
+    (async () => {
+      const treeLink = document.getElementById("tree-link");
+      if (!treeLink) return;
+
+      try {
+        const res = await fetch(`<%- apiUrl%>/trees?includeMatches=false`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+        if (!res.ok) return;
+        const trees = await res.json();
+
+        const tournamentId = "<%= tournament.id %>";
+        const hasTree = Boolean(
+          (trees || []).find((tr) => String(tr && (tr.tournament || tr.tournamentId)) === String(tournamentId))
+        );
+
+        treeLink.textContent = hasTree ? "Genera albero" : "Apri albero";
+      } catch (e) {}
+    })();
+
+    (async () => {
+      const listEl = document.getElementById("scripts-list");
+      if (!listEl) return;
+
+      try {
+        const [scriptsRes, tournamentScriptsRes] = await Promise.all([
+          fetch(`<%- apiUrl%>/scripts`, {
+            method: "GET",
+            headers: { "Content-Type": "application/json" },
+          }),
+          fetch(`<%- apiUrl%>/tournaments/<%= tournament.id %>/scripts/`, {
+            method: "GET",
+            headers: { "Content-Type": "application/json" },
+          }),
+        ]);
+
+        if (!scriptsRes.ok || !tournamentScriptsRes.ok) return;
+
+        const allScriptsJson = await scriptsRes.json();
+        const tournamentScriptsJson = await tournamentScriptsRes.json();
+
+        const allScripts = allScriptsJson.data || [];
+        const tournament = (tournamentScriptsJson.data && tournamentScriptsJson.data[0]) || null;
+        const selected = new Set(
+          ((tournament && tournament.Scripts) || []).map((s) => String(s && s.name))
+        );
+
+        listEl.innerHTML = (allScripts || [])
+          .map((s) => {
+            const name = String(s && s.name);
+            const checked = selected.has(name) ? "checked" : "";
+            return `
+              <label style="display:flex; gap: 8px; align-items:center;">
+                <input type="checkbox" name="scriptNames" value="${name}" ${checked} />
+                <span>${name}</span>
+              </label>
+            `;
+          })
+          .join("");
+      } catch (e) {}
+    })();
   </script>
 <%- include('partials/footer'); -%>

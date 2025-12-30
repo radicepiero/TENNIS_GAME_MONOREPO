@@ -10,6 +10,9 @@ async function loadTournaments({ apiUrl }) {
     const tournamentGrid = document.getElementById("tournament-grid");
     if (!tournamentGrid) return;
 
+    const viewMode = document.documentElement.dataset.viewMode || "";
+    const isFriendsView = viewMode === "friends";
+
     tournaments.forEach((tournament) => {
       const tournamentContainer = document.createElement("div");
       tournamentContainer.className = "tournament-container";
@@ -21,7 +24,11 @@ async function loadTournaments({ apiUrl }) {
       button.textContent = tournament.name;
       tournamentContainer.appendChild(button);
 
-      if (tournament.status === "upcoming") {
+      const canShowPronostico = isFriendsView
+        ? tournament.status === "open" || tournament.status === "upcoming"
+        : tournament.status === "open";
+
+      if (canShowPronostico) {
         const pronosticoButton = document.createElement("button");
         pronosticoButton.className = "pronostico-button";
         pronosticoButton.textContent = "Pronostico";
@@ -31,7 +38,7 @@ async function loadTournaments({ apiUrl }) {
         tournamentContainer.appendChild(pronosticoButton);
       }
 
-      if (tournament.status === "upcoming") {
+      if (tournament.status === "open") {
         const alberoButton = document.createElement("button");
         alberoButton.className = "pronostico-button";
         alberoButton.textContent = "Crea l'albero del torneo";
@@ -41,13 +48,15 @@ async function loadTournaments({ apiUrl }) {
         tournamentContainer.appendChild(alberoButton);
       }
 
-      const editButton = document.createElement("button");
-      editButton.className = "pronostico-button";
-      editButton.textContent = "Modifica";
-      editButton.addEventListener("click", () => {
-        window.location.href = `/tornei/${tournament.id}/edit`;
-      });
-      tournamentContainer.appendChild(editButton);
+      if (!isFriendsView) {
+        const editButton = document.createElement("button");
+        editButton.className = "pronostico-button";
+        editButton.textContent = "Modifica";
+        editButton.addEventListener("click", () => {
+          window.location.href = `/tornei/${tournament.id}/edit`;
+        });
+        tournamentContainer.appendChild(editButton);
+      }
 
       tournamentGrid.appendChild(tournamentContainer);
     });

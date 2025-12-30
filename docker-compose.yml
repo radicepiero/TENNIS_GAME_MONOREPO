@@ -27,6 +27,7 @@ services:
       - DB_USER=postgres
       - DB_PSSW=postgres
       - DB_CONNESSIONE=postgres
+      - SUPERUSER=1430d132-d7ce-49d2-a9ec-cfc8c5c8bd30
     depends_on:
       postgres:
         condition: service_healthy

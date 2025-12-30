@@ -1,6 +1,12 @@
 /* google fonts */
 @import url("https://fonts.googleapis.com/css2?family=Quicksand:wght@300;400;500;600;700&display=swap");
 
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
 body {
   margin: 20px 40px;
   font-size: 1.2rem;
@@ -70,6 +76,33 @@ form {
   box-shadow: 1px 2px 3px rgba(0, 0, 0, 0.1);
   border-radius: 10px;
   background: white;
+}
+
+#admin-tournaments form {
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+  box-shadow: none;
+  border-radius: 0;
+  background: transparent;
+}
+
+#admin-tournaments label {
+  min-width: 0;
+}
+
+#admin-tournaments input,
+#admin-tournaments select,
+#admin-tournaments textarea {
+  width: 100%;
+  max-width: 100%;
+}
+
+#create-modal > div:last-child {
+  width: calc(100% - 24px);
+  max-height: calc(100vh - 120px);
+  overflow: auto;
 }
 input {
   padding: 10px 12px;

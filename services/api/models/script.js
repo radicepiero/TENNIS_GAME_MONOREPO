@@ -21,8 +21,9 @@ module.exports = function (sequelize) {
   );
   Script.associate = (models) => {
     Script.belongsToMany(models.Tournament, {
-      through: "TournamentScript",
+      through: models.TournamentScript,
       foreignKey: "scriptName",
+      otherKey: "tournament_id",
     });
   };
   return Script;

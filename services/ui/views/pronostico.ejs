@@ -1,22 +1,12 @@
 <%- include('partials/head'); -%>
+<link rel="stylesheet" href="/css/pronostico.css" />
+<link rel="stylesheet" href="/css/hamburger.css" />
 <%- include('partials/header'); -%>
-
-    <link rel="stylesheet" href="/css/pronostico.css" />
-    <link rel="stylesheet" href="/css/hamburger.css" />
-  </head>
-    <header>
-      <div class="hamburger-menu">
-        <button class="menu-toggle" aria-label="Toggle menu">☰</button>
-        <nav class="menu">
-          <ul>
-            <li><a href="/">Home</a></li>
-          </ul>
-        </nav>
-      </div>
-    </header>
+<%- include('partials/hamburger'); -%>
     <h1 id="torneo"></h1>
     <h2>Seleziona il vincitore</h2>
     <div id="semifinalists-list" class="semifinalists-container"></div>
+    <h2>Totale punteggio: <span id="total-points">0</span></h2>
     <button id="submit-button" class="">Invia Pronostico</button>
     <button id="delete-button" class="">cancella Pronostico</button>
     <h2>Seleziona i semifinalisti (max 4)</h2>
@@ -46,7 +36,7 @@
           }
 
           const img = document.createElement("img");
-          img.src = this.player.image_src;
+          img.src = this.player.image_src || "default.jpg";
           img.alt = this.player.image_alt || this.player.name;
 
           const punteggio = document.createElement("div");
@@ -71,38 +61,74 @@
 
       async function fetchPlayers(rankingDate) {
         try {
+          const normalizeRankingDate = (v) => {
+            if (!v) return null;
+            const s = String(v);
+            if (s.length >= 10) return s.slice(0, 10);
+            return s;
+          };
+
+          const normalizedDate = normalizeRankingDate(rankingDate);
+
+          const url = normalizedDate
+            ? `<%= apiUrl %>/players/ranking/${encodeURIComponent(normalizedDate)}`
+            : `<%= apiUrl %>/players/ranking`;
+
           const response = await fetch(
-            `<%= apiUrl %>/players/ranking/${rankingDate}`,
+            url,
             {
               method: "GET",
               //credentials: "include", // <<< necessario
             }
           );
           if (!response.ok)
-            throw new Error("Errore nel caricamento dei giocatori");
-          const players = (await response.json()).data;
-          //console.log(players);
-          let _punteggioWinner = {};
-          let _punteggioSemifinalist = {};
-          if (tournament.Scripts.length) {
-            _punteggioWinner = tournament.Scripts.find((el) => {
-              return el.name === "punteggioWinner";
-            });
-            _punteggioSemifinalist = tournament.Scripts.find((el) => {
+          throw new Error("Errore nel caricamento dei giocatori");
+        const players = (await response.json()).data;
+        //console.log(players);
+        console.log("typeof punteggioSemifinalist",tournament.Scripts)
+        let _punteggioWinner = {};
+        let _punteggioSemifinalist = {};
+        if (tournament.Scripts.length) {
+          _punteggioWinner = tournament.Scripts.find((el) => {
+            return el.name === "punteggioWinner";
+          });
+          console.log(_punteggioWinner)
+          _punteggioSemifinalist = tournament.Scripts.find((el) => {
               return el.name === "punteggioSemifinalist";
             });
-            //console.log(_punteggioSemifinalist.script);
-            eval(_punteggioWinner.script);
-            eval(_punteggioSemifinalist.script);
+            if (_punteggioWinner && _punteggioWinner.script) {
+              eval(_punteggioWinner.script);
+            }
+            if (_punteggioSemifinalist && _punteggioSemifinalist.script) {
+              eval(_punteggioSemifinalist.script);
+            }
             players.forEach((player) => {
-              if (player.Rankings.length) {
-                player.puntiSemifinalist = punteggioSemifinalist(
-                  player.Rankings[0].ranking
-                );
-                player.puntiWinner = punteggioWinner(
-                  player.Rankings[0].ranking
-                );
+              player.puntiSemifinalist = 0;
+              player.puntiWinner = 0;
+
+              if (!player.Rankings || !player.Rankings.length) return;
+
+              const rawRanking = player.Rankings[0].ranking;
+              let ranking = Number(rawRanking);
+              if (!Number.isFinite(ranking)) {
+                const m = String(rawRanking).match(/\d+/);
+                ranking = m ? Number(m[0]) : NaN;
               }
+              if (!Number.isFinite(ranking)) return;
+
+              if (typeof punteggioSemifinalist === "function") {
+                const v = punteggioSemifinalist(ranking);
+                player.puntiSemifinalist = Number.isFinite(Number(v)) ? Number(v) : 0;
+              }
+              if (typeof punteggioWinner === "function") {
+                const v = punteggioWinner(ranking);
+                player.puntiWinner = Number.isFinite(Number(v)) ? Number(v) : 0;
+              }
+            });
+          } else {
+            players.forEach((player) => {
+              player.puntiSemifinalist = 0;
+              player.puntiWinner = 0;
             });
           }
           //console.log(players);
@@ -262,11 +288,22 @@
           semifinalistsList.appendChild(sem);
           //predictionEsiste? deleteButton.
         });
+
+        const totalEl = document.getElementById("total-points");
+        if (totalEl) {
+          const total = (semifinalists || []).reduce((acc, p) => {
+            if (!p) return acc;
+            if (p.prediction === "winner") return acc + (Number(p.puntiWinner) || 0);
+            return acc + (Number(p.puntiSemifinalist) || 0);
+          }, 0);
+          totalEl.textContent = String(total);
+        }
       }
       //-----------fine updateSemifinalsits
       //---------------------------------------------------------------
       let semifinalists = [];
       let predictionEsiste = false;
+      let isLockedTournament = false;
       const playersList = document.getElementById("players-list");
       const semifinalistsList = document.getElementById("semifinalists-list");
       //  const winnerName = document.getElementById("winner-name");
@@ -282,6 +319,7 @@
       const tournament_id = window.location.pathname.split("/")[2];
       // Caricamento giocatori e creazione elementi
       const tournament = (await fetchTournament(tournament_id)).data[0];
+      isLockedTournament = ["completed", "in-progress", "excluded"].includes(String(tournament.status));
       const titolo = document.getElementById("torneo");
       titolo.innerHTML = tournament.name;
       // console.log("tournament", tournament);
@@ -292,11 +330,20 @@
         await updateSemifinalists(prediction);
         deleteButton.className = "visible";
       }
+
+      if (isLockedTournament) {
+        submitButton.className = "hidden";
+        deleteButton.className = "hidden";
+      }
       //console.log("prediction", prediction);
 
       players.forEach((player) => {
         // Funzione per gestire la selezione del giocatore
         function checkBoxChange(event, player) {
+          if (isLockedTournament) {
+            event.target.checked = false;
+            return;
+          }
           if (event.target.checked) {
             if (semifinalists.length < 4) {
               player.prediction = "semifinalist";
@@ -329,6 +376,10 @@
 
       // Gestione invio pronostico
       submitButton.addEventListener("click", async () => {
+        if (isLockedTournament) {
+          alert("Pronostici bloccati per questo torneo");
+          return;
+        }
         const pronostico = {
           tournament_id: window.location.pathname.split("/")[2],
           rows: semifinalists.map((player) => ({
@@ -362,8 +413,12 @@
       });
 
       deleteButton.addEventListener("click", async () => {
+        if (isLockedTournament) {
+          alert("Pronostici bloccati per questo torneo");
+          return;
+        }
         const pronostico = {
-          //tournament_id: window.location.pathname.split("/")[2],
+          tournament_id: window.location.pathname.split("/")[2],
           rows: semifinalists.map((player) => ({
             player_id: player.id,
             prediction: player.prediction,

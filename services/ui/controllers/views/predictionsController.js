@@ -14,9 +14,15 @@ const postPronostico = async (req, res) => {
     }
   
     const torneo = await response.json();
-  
-    if (torneo.status === "completed" || torneo.status === "in-progress") {
-      return res.status(400).json({ error: "Torneo non in corso" });
+
+    const user = res.locals.user;
+    const isSuper = user && user.level === "super";
+
+    if (torneo.status === "in-progress" && !isSuper) {
+      return res.status(400).json({ error: "Torneo in corso: pronostici bloccati" });
+    }
+    if (torneo.status !== "open" && !(torneo.status === "in-progress" && isSuper)) {
+      return res.status(400).json({ error: "Torneo non aperto ai pronostici" });
     }
   
     const esisteGia = await predictionsService.getUserTournamentPredictions(

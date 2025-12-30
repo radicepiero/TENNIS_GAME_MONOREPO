@@ -1,28 +1,38 @@
 const fs = require("fs");
+const path = require("path");
 const csv = require("csv-parser");
-const { Sequelize, DataTypes } = require("sequelize");
-require("dotenv/config");
+const dotenv = require("dotenv");
+
+// opzionale: se esiste un .env (root o services/api), caricalo
+try {
+  const repoRoot = path.resolve(__dirname, "..", "..", "..", "..");
+  const candidates = [
+    path.join(repoRoot, ".env"),
+    path.join(repoRoot, "services", "api", ".env"),
+  ];
+  for (const p of candidates) {
+    dotenv.config({ path: p });
+  }
+} catch (e) {}
+
+// Defaults per esecuzione su host (docker-compose espone Postgres su 5432)
+if (!process.env.DATABASE) process.env.DATABASE = "utenticoi_1";
+if (!process.env.DB_USER) process.env.DB_USER = "postgres";
+if (typeof process.env.DB_PSSW === "undefined") process.env.DB_PSSW = "postgres";
+if (!process.env.DB_CONNESSIONE) process.env.DB_CONNESSIONE = "localhost";
+
+// assicurati che DB_PSSW sia una stringa
+process.env.DB_PSSW = String(process.env.DB_PSSW);
 
 const db = require("../../models");
 const Player = db.Player;
 const Ranking = db.Ranking;
-
-// Configurazione del database
-const sequelize = new Sequelize(
-  process.env.DATABASE,
-  process.env.DB_USER,
-  process.env.DB_PSSW,
-  {
-    host: process.env.DB_CONNESSIONE,
-    dialect: process.env.DIALECT,
-  }
-);
 // Funzione per connettersi al database
 async function connectDB() {
   try {
-    await sequelize.authenticate();
+    await db.sequelize.authenticate();
     console.log("Connessione al database riuscita");
-    await sequelize.sync();
+    await db.sequelize.sync();
   } catch (error) {
     console.error("Errore di connessione al database:", error);
     process.exit(1);
@@ -33,13 +43,15 @@ async function connectDB() {
 async function processCSV(filePath, rankingDate) {
   await connectDB();
   const results = [];
-  fs.createReadStream(filePath)
+  const resolvedCsv = path.isAbsolute(filePath)
+    ? filePath
+    : path.resolve(process.cwd(), filePath);
 
-    .pipe(csv({ headers: true, skipLines: 1, trim: true }, { separator: ", " }))
+  fs.createReadStream(resolvedCsv)
+    .pipe(csv({ headers: true, skipLines: 1, trim: true }))
     .on("data", (data) => {
       const name = data[Object.keys(data)[0]];
       const value = parseInt(data[Object.keys(data)[1]], 10);
-      //const value = data[Object.keys(data)[1]];
       results.push({ name, value });
     })
     .on("end", async () => {
@@ -59,8 +71,18 @@ async function processCSV(filePath, rankingDate) {
         });
       }
       console.log("Elaborazione completata");
+      await db.sequelize.close();
     });
 }
 
 // Esegui la funzione con il percorso del file CSV
-processCSV("zzTOOLS/rankingManagement/2025-11-17.csv", "2025-11-17");
+if (require.main === module) {
+  const [, , csvPath, rankingDate] = process.argv;
+  if (!csvPath || !rankingDate) {
+    console.error("Uso: node aggiungiRanking.js <file.csv> <YYYY-MM-DD>");
+    process.exit(1);
+  }
+  processCSV(csvPath, rankingDate);
+}
+
+module.exports = { processCSV };

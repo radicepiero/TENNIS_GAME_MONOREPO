@@ -1,10 +1,42 @@
-<header>
+<header class="hamburger-header">
   <div class="hamburger-menu">
     <button class="menu-toggle" aria-label="Toggle menu">☰</button>
     <nav class="menu">
       <ul>
         <li><a href="/">Home</a></li>
+        <li><a href="/tornei">Tornei</a></li>
+        <li><a href="/prediction">Pronostici</a></li>
+        <li><a href="/tennisti">Tennisti</a></li>
+        <li><a href="/tennisti/classifica">Classifica</a></li>
+        <% if (user && (user.level === "admin" || user.level === "super")) { %>
+          <li><a href="/admin/tornei">Admin Tornei</a></li>
+        <% } %>
+        <% if (!user) { %>
+          <li><a href="/login">Log in</a></li>
+          <li><a href="/signup">Sign up</a></li>
+        <% } %>
       </ul>
     </nav>
   </div>
 </header>
+
+<script>
+  (function () {
+    const root = document.currentScript && document.currentScript.parentElement
+      ? document.currentScript.parentElement
+      : document;
+    const menuToggle = root.querySelector(".menu-toggle");
+    const menu = root.querySelector(".menu");
+    if (!menuToggle || !menu) return;
+
+    menuToggle.addEventListener("click", () => {
+      menu.classList.toggle("open");
+    });
+
+    menu.addEventListener("click", (e) => {
+      const a = e.target && e.target.closest ? e.target.closest("a") : null;
+      if (!a) return;
+      menu.classList.remove("open");
+    });
+  })();
+</script>

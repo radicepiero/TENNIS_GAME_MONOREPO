@@ -134,16 +134,42 @@ export default class Player {
    */
   static async fetchByTournament(tournament, apiUrl) {
     try {
-      const response = await fetch(
-        `${apiUrl}/players/ranking/${tournament.ranking_date}`
-      );
-      if (!response.ok) {
-        throw new Error("Errore nel caricamento dei giocatori");
+      const rankingDate = tournament && tournament.ranking_date ? String(tournament.ranking_date).slice(0, 10) : null;
+
+      const [rankingRes, allRes] = await Promise.all([
+        fetch(
+          rankingDate
+            ? `${apiUrl}/players/ranking/${encodeURIComponent(rankingDate)}`
+            : `${apiUrl}/players/ranking`
+        ),
+        fetch(`${apiUrl}/players`),
+      ]);
+
+      if (!rankingRes.ok) {
+        throw new Error("Errore nel caricamento dei giocatori (ranking)");
       }
 
-      const players = (await response.json()).data.map((p) =>
-        Player.fromJSON(p)
-      );
+      const rankingJson = await rankingRes.json();
+      const rankingPlayers = (rankingJson && rankingJson.data ? rankingJson.data : []).map((p) => Player.fromJSON(p));
+
+      const allPlayers = [];
+      if (allRes.ok) {
+        const allJson = await allRes.json();
+        const rows = Array.isArray(allJson) ? allJson : (allJson && allJson.data) || [];
+        rows.forEach((p) => {
+          allPlayers.push(Player.fromJSON(p));
+        });
+      }
+
+      const byId = new Map();
+      // prefer rankingPlayers because they include Rankings
+      rankingPlayers.forEach((p) => byId.set(String(p.id), p));
+      allPlayers.forEach((p) => {
+        const key = String(p.id);
+        if (!byId.has(key)) byId.set(key, p);
+      });
+
+      const players = Array.from(byId.values());
 
       if (tournament.Scripts?.length) {
         const winnerScript = tournament.Scripts.find(
@@ -172,6 +198,9 @@ export default class Player {
             const ranking = player.Rankings[0].ranking;
             player.puntiSemifinalist = punteggioSemifinalist(ranking);
             player.puntiWinner = punteggioWinner(ranking);
+          } else {
+            player.puntiSemifinalist = 0;
+            player.puntiWinner = 0;
           }
         });
       }

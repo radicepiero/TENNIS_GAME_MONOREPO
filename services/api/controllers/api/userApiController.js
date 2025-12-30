@@ -61,6 +61,21 @@ const updateActiveUser = async (req, res) => {
     res.status(500).json({ error: "Errore nel modificare l'utente" });
   }
 };
+
+const updateUserProfile = async (req, res) => {
+  try {
+    const { soprannome, image_url } = req.body || {};
+
+    const updated = await serviceUser.updateUserProfile(req.params.uuid, {
+      soprannome,
+      image_url,
+    });
+    res.status(200).json(updated);
+  } catch (error) {
+    console.error("Errore nell'aggiornamento profilo:", error);
+    res.status(500).json({ error: "Errore nell'aggiornamento profilo" });
+  }
+};
 /*
 const patchUser = async (req, res) => {
   try {
@@ -117,6 +132,7 @@ module.exports = {
   postUser,
   deleteUser,
   updateActiveUser,
+  updateUserProfile,
   // patchUser,
 
   getUsersTournaments,

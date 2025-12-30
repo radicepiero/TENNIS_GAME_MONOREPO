@@ -48,14 +48,22 @@ module.exports = function (sequelize) {
         allowNull: false,
       },
       status: {
-        type: DataTypes.ENUM("completed", "upcoming", "in-progress"),
+        type: DataTypes.ENUM("excluded", "upcoming", "open", "in-progress", "completed"),
         allowNull: false,
       },
       ranking_date: {
         type: DataTypes.DATEONLY,
         allowNull: true,
       },
+      dataopen: {
+        type: DataTypes.DATEONLY,
+        allowNull: true,
+      },
       rounds: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+      },
+      roundopen: {
         type: DataTypes.INTEGER,
         allowNull: true,
       },
@@ -70,6 +78,24 @@ module.exports = function (sequelize) {
       tableName: "tournaments",
       schema: "public",
       timestamps: false,
+      validate: {
+        dataopenBetween() {
+          if (!this.dataopen || !this.datainizio || !this.datafine) return;
+          const dOpen = String(this.dataopen);
+          const dStart = String(this.datainizio);
+          const dEnd = String(this.datafine);
+          if (dOpen < dStart || dOpen > dEnd) {
+            throw new Error("dataopen must be between datainizio and datafine");
+          }
+        },
+        roundopenMaxRounds() {
+          if (this.roundopen === null || typeof this.roundopen === "undefined") return;
+          if (this.rounds === null || typeof this.rounds === "undefined") return;
+          if (Number(this.roundopen) > Number(this.rounds)) {
+            throw new Error("roundopen must be <= rounds");
+          }
+        },
+      },
       indexes: [
         {
           name: "tournaments_pkey",
@@ -93,8 +119,9 @@ module.exports = function (sequelize) {
       sourceKey: "id",
     });
     Tournament.belongsToMany(models.Script, {
-      through: "TournamentScript",
+      through: models.TournamentScript,
       foreignKey: "tournament_id",
+      otherKey: "scriptName",
     });
   };
   return Tournament;

@@ -1,4 +1,12 @@
 export class Tournament {
+  /*
+   * Significato dello status del torneo:
+   * excluded: il torneo è presente nel db ma non costituisce una campo per i pronostici
+   * upcoming: il torneo costituirà un campo di gara ma non è ancora possibile inserire pronostici tramite albero
+   * open: al torneo è stata assegnata una classifica ATP ed è possibile ottenere pronostico con punteggio
+   * in-progress: il torneo è in svolgimento e non possono più essere modificati e salvati i pronostici (tranne che dal superuser)
+   * completed: il torneo si è concluso e non è possibile presentare modificare cancellare ... i pronostici
+   */
   constructor({
     id,
     name,
@@ -43,12 +51,20 @@ export class Tournament {
     return this.status === "upcoming";
   }
 
+  isOpen() {
+    return this.status === "open";
+  }
+
   isInProgress() {
     return this.status === "in-progress";
   }
 
   isCompleted() {
     return this.status === "completed";
+  }
+
+  isExcluded() {
+    return this.status === "excluded";
   }
 
   getYear() {

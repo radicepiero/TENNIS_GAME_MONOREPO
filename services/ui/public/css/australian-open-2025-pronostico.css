@@ -1,12 +1,9 @@
 body {
-  text-align: center;
   font-family: Arial, sans-serif;
   margin: 10px;
 }
-h1,
-h2 {
+h1 {
   text-align: center;
-  margin: auto;
 }
 .column-container {
   display: flex;
@@ -15,15 +12,33 @@ h2 {
   justify-content: center;
   align-items: flex-start;
 }
+
+/* Isolamento layout sviluppo: evita che styles.css influenzi tipografia e wrapping nelle colonne */
+#columns {
+  font-family: Arial, sans-serif !important;
+  font-size: 16px !important;
+  letter-spacing: 0 !important;
+  line-height: normal !important;
+  text-transform: none !important;
+  text-align: initial;
+}
+
+#columns * {
+  font-family: Arial, sans-serif !important;
+  letter-spacing: 0 !important;
+  line-height: normal !important;
+  text-transform: none !important;
+  color: inherit;
+}
 .column {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   align-items: center;
   border: 1px solid #ddd;
-  padding: 5px;
+  padding: 2px;
   background-color: #f9f9f9;
-  width: 190px;
+  width: 200px;
   min-height: 900px;
   box-sizing: border-box;
 }
@@ -96,6 +111,9 @@ h2 {
   margin-bottom: 5px;
 }
 .hidden {
+  display: none;
+}
+.out {
   display: none;
 }
 .transparent {

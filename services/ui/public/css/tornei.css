@@ -43,6 +43,19 @@
   border-color: #4caf50;
   box-shadow: 0 0 10px #4caf50;
 }
+
+/* Stili per i tornei aperti ai pronostici */
+.tournament-button.open {
+  border-color: #1e90ff;
+  box-shadow: 0 0 10px #1e90ff;
+}
+
+/* Stili per i tornei esclusi */
+.tournament-button.excluded {
+  opacity: 0.35;
+  border-color: #bbb;
+  box-shadow: none;
+}
 /* Stili per il segnaposto */
 .tournament-button .timeline-marker {
   position: absolute;

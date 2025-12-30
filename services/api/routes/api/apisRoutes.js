@@ -8,6 +8,7 @@ router.use("/tournaments", require("./tournamentsApiRoutes"));
 router.use("/players", require("./playersApiRoutes"));
 router.use("/predictions", require("./predictionsApiRoutes"));
 router.use("/rankings", require("./rankingsApiRoutes"));
+router.use("/scripts", require("./scriptsApiRoutes"));
 router.use("/trees", require("./treesApiRoutes"));
 //router.use("/trees", require("./treesApiRoutes"));
 router.use("/matches", require("./matchesApiRoutes"));

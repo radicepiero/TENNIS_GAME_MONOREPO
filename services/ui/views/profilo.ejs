@@ -1,0 +1,37 @@
+<%- include('partials/head'); -%>
+<link rel="stylesheet" href="/css/hamburger.css" />
+<%- include('partials/header'); -%> <%- include('partials/hamburger'); -%>
+
+<h1>Profilo</h1>
+
+<div id="profile" data-api-url="<%= apiUrl %>" data-user-uuid="<%= user ? user.uuid : '' %>">
+  <div>
+    <strong>Email:</strong>
+    <span><%= user ? user.email : '' %></span>
+  </div>
+
+  <div style="margin-top: 12px;">
+    <label for="soprannome"><strong>Soprannome</strong></label>
+    <input id="soprannome" name="soprannome" type="text" value="<%= user && user.soprannome ? user.soprannome : '' %>" />
+  </div>
+
+  <div style="margin-top: 12px;">
+    <label for="image_url"><strong>Immagine (URL)</strong></label>
+    <input id="image_url" name="image_url" type="text" value="<%= user && user.image_url ? user.image_url : '' %>" />
+  </div>
+
+  <div style="margin-top: 12px;">
+    <strong>Anteprima</strong>
+    <div>
+      <img id="profile-preview" alt="profile" style="max-width: 160px; max-height: 160px; border-radius: 10px;" src="<%= user && user.image_url ? user.image_url : '' %>" />
+    </div>
+  </div>
+
+  <div style="margin-top: 16px;">
+    <button id="save-profile">Salva</button>
+    <span id="profile-status" style="margin-left: 10px;"></span>
+  </div>
+</div>
+
+<script src="/js/profilo.js"></script>
+<%- include('partials/footer'); -%>

@@ -5,6 +5,7 @@ const controller = require("../../controllers/api/predictionApiController"); //g
   console.log(req.url);
   next(); // Importante per far proseguire la richiesta
 });*/
+router.get("/counts/tournaments", controller.getPredictionCountsByTournament);
 router.get("/", controller.getPredictions); //get predictions
 router.get("/:id", controller.getPredictionById); //get player by ID
 router.get("/tournaments/:id", controller.getPredictionsByTournamentId);

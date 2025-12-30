@@ -60,4 +60,11 @@ const checkUser = async (req, res, next) => {
   next();
 };
 
-module.exports = { requireAuth, checkUser };
+const requireAdmin = (req, res, next) => {
+  const user = res.locals.user;
+  if (!user) return res.redirect("/login");
+  if (user.level === "admin" || user.level === "super") return next();
+  return res.status(403).send("Forbidden");
+};
+
+module.exports = { requireAuth, checkUser, requireAdmin };

@@ -1,4 +1,5 @@
 const serviceTournament = require("../../services/tournamentService");
+const db = require("../../models");
 
 const getTournaments = async (req, res) => {
   try {
@@ -31,6 +32,35 @@ const getTournamentsScripts = async (req, res) => {
     console.log("result", result);
     res.status(200).json({ success: true, data: result });
   } catch (error) {}
+};
+
+const putTournamentScripts = async (req, res) => {
+  const tournamentId = req.params.id;
+  try {
+    const { scriptNames } = req.body || {};
+    if (!Array.isArray(scriptNames)) {
+      return res.status(400).json({ error: "scriptNames must be an array" });
+    }
+
+    const tournament = await db.Tournament.findByPk(tournamentId);
+    if (!tournament) {
+      return res.status(404).json({ error: "Torneo non trovato" });
+    }
+
+    const scripts = await db.Script.findAll({
+      where: { name: scriptNames },
+    });
+
+    await tournament.setScripts(scripts);
+    const updated = await db.Tournament.findByPk(tournamentId, {
+      include: [{ model: db.Script, required: false }],
+    });
+
+    res.status(200).json({ success: true, data: updated });
+  } catch (error) {
+    console.error("Errore nel salvataggio degli script del torneo:", error);
+    res.status(500).json({ error: "Errore nel salvataggio degli script del torneo" });
+  }
 };
 
 const postTournament = async (req, res) => {
@@ -138,6 +168,7 @@ module.exports = {
   deleteTournament,
   putTournament,
   getTournamentsScripts,
+  putTournamentScripts,
   getTournamentsUsers,
   getTournamentUsers,
   getTournamentUser,

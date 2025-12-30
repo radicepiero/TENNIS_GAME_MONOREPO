@@ -2,6 +2,9 @@ const { Router } = require("express");
 const router = Router();
 const controller = require("../../controllers/api/playerApiController");
 router.get("/", controller.getPlayers);
+
+router.get("/ranking", controller.getPlayersWithRankingDate);
+
 router.get(
   "/ranking/:date",
   (req, res, next) => {
