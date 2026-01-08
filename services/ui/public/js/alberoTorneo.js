@@ -14,6 +14,23 @@ let user = {};
 let apiUrl = "";
 let editable = true;
 
+const treeChangeListeners = [];
+
+export function onTreeChanged(listener) {
+  if (typeof listener !== "function") return;
+  treeChangeListeners.push(listener);
+}
+
+function notifyTreeChanged() {
+  for (const fn of treeChangeListeners) {
+    try {
+      fn();
+    } catch (e) {
+      console.error("Errore listener onTreeChanged:", e);
+    }
+  }
+}
+
 let lastScrollSnapshot = null;
 
 function getEffectiveTournamentRounds(t) {
@@ -128,6 +145,10 @@ export async function getAlberi(tournament) {
 export async function deleteAlbero() {
   //console.log("albero.id", albero.uuid);
   return await treeApiClient.deleteTree(albero.uuid, apiUrl);
+}
+
+export function getCurrentTree() {
+  return albero;
 }
 
 export async function saveAlbero() {
@@ -351,6 +372,8 @@ function aggiornaVincitore(comodino1, comodino2) {
       console.error("Match not found for", treantNode.id);
       return;
     }
+    const prevP1Wins = match.p1Wins;
+    const prevP2Wins = match.p2Wins;
     match.p1Wins = player1.wins;
     match.p2Wins = player2.wins;
 
@@ -360,6 +383,7 @@ function aggiornaVincitore(comodino1, comodino2) {
     // Se siamo in finale (o comunque non c'è un match padre), non c'è nulla da propagare.
     // In precedenza qui si usciva senza re-render e la grafica non si aggiornava.
     if (!match.fatherId) {
+      if (prevP1Wins !== match.p1Wins || prevP2Wins !== match.p2Wins) notifyTreeChanged();
       renderTree(fromRoundSelect, toRoundSelect);
       return;
     }
@@ -368,11 +392,13 @@ function aggiornaVincitore(comodino1, comodino2) {
     const destinazione = treantNode.dataset.fatherPosizione;
     const matchPadre = albero.matches.find((el) => el.uuid === match.fatherId);
     if (!matchPadre) {
+      if (prevP1Wins !== match.p1Wins || prevP2Wins !== match.p2Wins) notifyTreeChanged();
       renderTree(fromRoundSelect, toRoundSelect);
       return;
     }
     if (!destinazione) {
       console.log("destinazione mancante");
+      if (prevP1Wins !== match.p1Wins || prevP2Wins !== match.p2Wins) notifyTreeChanged();
       renderTree(fromRoundSelect, toRoundSelect);
       return;
     }
@@ -398,6 +424,7 @@ function aggiornaVincitore(comodino1, comodino2) {
 
     if (looser > 0) cancellaPerdenteDaiTurniSuccessivi(looser, treantNode.id);
 
+    if (prevP1Wins !== match.p1Wins || prevP2Wins !== match.p2Wins) notifyTreeChanged();
     renderTree(fromRoundSelect, toRoundSelect);
   };
 }

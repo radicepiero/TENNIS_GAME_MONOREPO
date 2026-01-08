@@ -1,0 +1,67 @@
+<%- include('partials/head'); -%>
+<link rel="stylesheet" href="https://fperucic.github.io/treant-js/Treant.css" />
+<link rel="stylesheet" href="/css/treantTree.css" />
+<link rel="stylesheet" href="/css/hamburger.css" />
+<%- include('partials/header'); -%>
+<%- include('partials/hamburger'); -%>
+
+<h1 id="nome-torneo"><%= tournamentId %></h1>
+
+<div id="scroll-container">
+  <div id="chart-container">
+    <div id="tree-simple" class="Treant"></div>
+  </div>
+</div>
+
+<div id="dialogContainer"></div>
+
+<script src="https://fperucic.github.io/treant-js/vendor/raphael.js"></script>
+<script src="https://fperucic.github.io/treant-js/Treant.js"></script>
+
+<script type="module">
+  import { Tournament } from "/js/Tournament.js";
+  import { treeApiClient } from "/js/TreeApiClient.js";
+  import { setup, renderTree, roundLabels, populateRoundSelects, getAlberoMatches, setEditable } from "/js/alberoTorneo.js?v=<%= Date.now() %>";
+
+  const apiUrl = "<%= apiUrl %>";
+  const tournamentId = "<%= tournamentId %>";
+
+  const tournament = (await Tournament.fetchTournament(tournamentId, apiUrl)).data[0];
+  document.title = `albero superuser ${tournament.name}`;
+  document.getElementById("nome-torneo").textContent = `${tournament.name} (superuser)`;
+
+  const effectiveRounds = (() => {
+    const n = Number(tournament && tournament.roundopen);
+    return Number.isFinite(n) && n > 0 ? n : 6;
+  })();
+
+  // read-only
+  setEditable(false);
+
+  // setup needs a user, but for read-only we can pass a stub
+  await setup(tournament, { uuid: "superuser" }, apiUrl);
+
+  try {
+    const trees = await fetch(`${apiUrl}/trees/superuser/${encodeURIComponent(tournamentId)}?includeMatches=true`, {
+      credentials: "include",
+    });
+    if (!trees.ok) {
+      const txt = await trees.text().catch(() => "");
+      throw new Error(txt || `HTTP ${trees.status}`);
+    }
+    const tree = await trees.json();
+    const treeId = tree && (tree.id || tree.uuid);
+    if (!treeId) throw new Error("albero superuser non trovato");
+
+    // import in Tree instance and render
+    await getAlberoMatches(treeId);
+    renderTree(effectiveRounds, 1);
+  } catch (e) {
+    const container = document.getElementById("tree-simple");
+    if (container) {
+      container.innerHTML = `<div style="padding:12px;border:1px solid #f99;background:#fff0f0;color:#900;max-width:720px;margin:12px auto;">${e.message || e}</div>`;
+    }
+  }
+</script>
+
+<%- include('partials/footer'); -%>

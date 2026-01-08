@@ -28,12 +28,31 @@ const db = require("./models");
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+const ensureTournamentExtras = async () => {
+  try {
+    await db.sequelize.query(
+      "ALTER TABLE public.tournaments ADD COLUMN IF NOT EXISTS admin_notes TEXT;"
+    );
+  } catch (e) {
+    console.error("Errore aggiunta colonna tournaments.admin_notes:", e.message || e);
+  }
+  try {
+    await db.sequelize.query(
+      "ALTER TABLE public.tournaments ADD COLUMN IF NOT EXISTS admin_links JSONB;"
+    );
+  } catch (e) {
+    console.error("Errore aggiunta colonna tournaments.admin_links:", e.message || e);
+  }
+};
+
 const authenticateWithRetry = async ({ retries, delayMs }) => {
   let lastError;
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
       await db.sequelize.authenticate();
       console.log("Connessione al database riuscita!");
+
+      await ensureTournamentExtras();
       return;
     } catch (err) {
       lastError = err;

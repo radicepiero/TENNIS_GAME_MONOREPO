@@ -72,6 +72,14 @@ module.exports = function (sequelize) {
         allowNull: false,
         defaultValue: 5,
       },
+      admin_notes: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+      },
+      admin_links: {
+        type: DataTypes.JSONB,
+        allowNull: true,
+      },
     },
     {
       sequelize,

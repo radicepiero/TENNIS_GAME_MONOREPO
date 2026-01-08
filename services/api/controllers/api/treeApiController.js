@@ -1,5 +1,6 @@
 const TreeService = require("../../services/treeService");
 const db = require("../../models");
+const treeCloneService = require("../../services/treeCloneService");
 
 async function create(req, res) {
   try {
@@ -203,4 +204,15 @@ module.exports = {
   getById,
   getAll,
   getSuperuserByTournament,
+  cloneSuperuserTree: async (req, res) => {
+    try {
+      const user = res.locals.user;
+      const tournamentId = req.params.tournamentId;
+      const created = await treeCloneService.cloneSuperuserTreeToUser({ tournamentId, user });
+      res.status(201).json({ success: true, data: created });
+    } catch (error) {
+      const status = error.statusCode || 500;
+      res.status(status).json({ success: false, message: error.message || "Errore clonazione albero" });
+    }
+  },
 };

@@ -1,0 +1,17 @@
+<%- include('partials/head'); -%>
+<link rel="stylesheet" href="/css/australian-open-2025-pronostico.css" />
+<link rel="stylesheet" href="/css/pronostici-colonna.css" />
+<link rel="stylesheet" href="/css/hamburger.css" />
+<%- include('partials/header'); -%>
+<%- include('partials/hamburger'); -%>
+
+<h1 id="titolo">PRONOSTICI</h1>
+
+<div class="column-container" id="columns"></div>
+
+<script>
+  document.documentElement.dataset.apiUrl = "<%= apiUrl %>";
+</script>
+<script type="module" src="/js/pronosticiColonna.js?v=<%= Date.now() %>"></script>
+
+<%- include('partials/footer'); -%>

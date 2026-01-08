@@ -3,6 +3,12 @@
 <link rel="stylesheet" href="/css/hamburger.css" />
 <%- include('partials/header'); -%> <%- include('partials/hamburger'); -%>
 <h1>Tornei ATP</h1>
+<% if (typeof viewMode !== 'undefined' && viewMode === 'friends') { %>
+  <div class="friends-toolbar" id="friends-toolbar">
+    <label class="friends-toolbar__label" for="yearSelect">Anno</label>
+    <select id="yearSelect" class="friends-toolbar__select"></select>
+  </div>
+<% } %>
 <!-- Griglia dei tornei -->
 <div class="tournament-grid" id="tournament-grid">
   <!-- I bottoni dei tornei verranno generati qui tramite JavaScript -->

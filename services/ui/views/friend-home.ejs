@@ -1,0 +1,189 @@
+<%- include('partials/head'); -%>
+<link rel="stylesheet" href="/css/hamburger.css" />
+<link rel="stylesheet" href="/css/friend-home.css" />
+<title>Home</title>
+<%- include('partials/header'); -%>
+<%- include('partials/hamburger'); -%>
+
+<div class="friend-home">
+  <div class="friend-home__header">
+    <h1>Home</h1>
+    <div class="friend-home__sub">Tornei e pronostici</div>
+  </div>
+
+  <div id="warning" class="friend-home__warning hidden"></div>
+
+  <div class="friend-home__grid">
+    <section class="card" id="currentTournament"></section>
+    <section class="card" id="nextTournaments"></section>
+  </div>
+
+  <section class="card" id="recentTournaments"></section>
+
+  <section class="card" id="usefulLinks"></section>
+</div>
+
+<script>
+  (function () {
+    const apiUrl = "<%= apiUrl %>";
+
+    const warningEl = document.getElementById("warning");
+    const currentEl = document.getElementById("currentTournament");
+    const nextEl = document.getElementById("nextTournaments");
+    const recentEl = document.getElementById("recentTournaments");
+    const linksEl = document.getElementById("usefulLinks");
+
+    function showWarning(msg) {
+      warningEl.textContent = msg;
+      warningEl.classList.remove("hidden");
+    }
+
+    function fmtDate(v) {
+      if (!v) return "";
+      const s = String(v);
+      return s.length >= 10 ? s.slice(0, 10) : s;
+    }
+
+    function statusBadge(status) {
+      const st = status ? String(status).toLowerCase() : "";
+      return `<span class="badge badge--${st}">${st || ""}</span>`;
+    }
+
+    function tournamentCtas(t) {
+      const id = encodeURIComponent(t.id);
+      const st = t.status ? String(t.status).toLowerCase() : "";
+
+      const ctas = [];
+      if (st === "open") {
+        ctas.push(`<a class="btn btn--primary" href="/tornei/${id}/albero-pronostico">Compila albero</a>`);
+      }
+      ctas.push(`<a class="btn" href="/tornei/${id}/pronostico">Pronostico</a>`);
+      ctas.push(`<a class="btn" href="/tornei/${id}/sviluppo">Classifica</a>`);
+      return `<div class="cta-row">${ctas.join("")}</div>`;
+    }
+
+    function renderCurrent(t) {
+      if (!t) {
+        currentEl.innerHTML = `<div class="card__title">Torneo in corso</div><div class="card__empty">Nessun torneo in corso</div>`;
+        return;
+      }
+
+      const flags = [
+        t.hasTree ? `<span class="flag">albero ok</span>` : `<span class="flag flag--muted">albero mancante</span>`,
+        t.hasPrediction ? `<span class="flag">pronostico ok</span>` : `<span class="flag flag--warn">pronostico mancante</span>`,
+      ].join(" ");
+
+      currentEl.innerHTML = `
+        <div class="card__title">Torneo in corso</div>
+        <div class="tournament-row">
+          <div class="tournament-row__main">
+            <div class="tournament-row__name">${t.name || ""} ${statusBadge(t.status)}</div>
+            <div class="tournament-row__meta">open: ${fmtDate(t.dataopen)} | inizio: ${fmtDate(t.datainizio)} | fine: ${fmtDate(t.datafine)}</div>
+            <div class="tournament-row__meta">${flags}</div>
+          </div>
+        </div>
+        ${tournamentCtas(t)}
+      `;
+    }
+
+    function renderNext(list, year) {
+      const items = (list || []).map((t) => {
+        const id = encodeURIComponent(t.id);
+        const primary = t.status && String(t.status).toLowerCase() === "open";
+        const primaryCta = primary
+          ? `<a class="btn btn--primary" href="/tornei/${id}/albero-pronostico">Compila albero</a>`
+          : `<a class="btn" href="/tornei/${id}">Dettagli</a>`;
+
+        const flags = [
+          t.hasTree ? `<span class="flag">albero ok</span>` : `<span class="flag flag--muted">albero</span>`,
+          t.hasPrediction ? `<span class="flag">pronostico ok</span>` : `<span class="flag flag--muted">pronostico</span>`,
+        ].join(" ");
+
+        return `
+          <div class="mini-card">
+            <div class="mini-card__title">${t.name || ""} ${statusBadge(t.status)}</div>
+            <div class="mini-card__meta">open: ${fmtDate(t.dataopen)} | inizio: ${fmtDate(t.datainizio)} | fine: ${fmtDate(t.datafine)}</div>
+            <div class="mini-card__meta">${flags}</div>
+            <div class="cta-row">${primaryCta}<a class="btn" href="/tornei/${id}/pronostico">Pronostico</a></div>
+          </div>
+        `;
+      });
+
+      nextEl.innerHTML = `
+        <div class="card__title">Prossimi tornei</div>
+        <div class="mini-grid">${items.join("") || `<div class="card__empty">Nessun torneo disponibile</div>`}</div>
+      `;
+
+      linksEl.innerHTML = `
+        <div class="card__title">Link utili</div>
+        <div class="links">
+          <a class="link" href="/tornei/friends">Tutti i tornei</a>
+          <a class="link" href="/classifica-annuale/${encodeURIComponent(year)}">Classifica annuale ${year}</a>
+          <a class="link" href="/profilo">Profilo</a>
+        </div>
+      `;
+    }
+
+    function renderRecent(list) {
+      const rows = (list || []).map((t) => {
+        const id = encodeURIComponent(t.id);
+        return `
+          <tr>
+            <td class="td-name">${t.name || ""}</td>
+            <td>${fmtDate(t.datafine)}</td>
+            <td>${statusBadge(t.status)}</td>
+            <td class="td-actions">
+              <a class="btn btn--small" href="/tornei/${id}/sviluppo">Classifica</a>
+              <a class="btn btn--small" href="/tornei/${id}/pronostico">Pronostico</a>
+            </td>
+          </tr>
+        `;
+      });
+
+      recentEl.innerHTML = `
+        <div class="card__title">Tornei precedenti</div>
+        <div class="table-wrap">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Torneo</th>
+                <th>Fine</th>
+                <th>Status</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rows.join("") || `<tr><td colspan="4" class="td-empty">Nessun torneo</td></tr>`}
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    async function load() {
+      try {
+        const res = await fetch(`${apiUrl}/friend/dashboard`, { credentials: "include" });
+        if (!res.ok) {
+          const txt = await res.text().catch(() => "");
+          throw new Error(txt || `HTTP ${res.status}`);
+        }
+        const json = await res.json();
+        const data = json && json.data ? json.data : null;
+        if (!data) throw new Error("Dati dashboard non disponibili");
+
+        renderCurrent(data.currentTournament);
+        renderNext(data.nextTournaments, data.currentYear);
+        renderRecent(data.recentTournaments);
+      } catch (e) {
+        showWarning(e.message || "Errore caricamento dashboard");
+        renderCurrent(null);
+        renderNext([], new Date().getFullYear());
+        renderRecent([]);
+      }
+    }
+
+    load();
+  })();
+</script>
+
+<%- include('partials/footer'); -%>

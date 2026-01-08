@@ -72,6 +72,12 @@ function computeMatchWinnerId(match) {
   return null;
 }
 
+function computeChampionId(matches) {
+  const finalMatch = (matches || []).find((m) => m && Number(m.round) === 1);
+  if (!finalMatch) return null;
+  return computeMatchWinnerId(finalMatch);
+}
+
 function didPlayRound(playerId, round, matches) {
   return Boolean(
     (matches || []).find(
@@ -157,7 +163,7 @@ function computeDisplayStatusForPick({ pickType, playerId, selectedRound, matche
     const reachedSemifinal = didPlayRound(playerId, 2, matches);
     const inFinal = didPlayRound(playerId, 1, matches);
     if (reachedSemifinal && !inFinal) {
-      return "esce";
+      return "uscito";
     }
   }
 
@@ -301,25 +307,25 @@ export async function creaColonne(tournamentID, faseMenu, apiUrl, loggedUserUuid
   }
 
   // scoring functions from tournament scripts
-  let pointsWinnerFn = () => 0;
-  let pointsSemiFn = () => 0;
+  let pointsWinnerFn = null;
+  let pointsSemiFn = null;
   try {
     const scripts = (tournamentScripts && tournamentScripts.Scripts) || [];
-    const winnerScript = scripts.find((s) => s && s.name === "punteggioWinner");
-    const semiScript = scripts.find((s) => s && s.name === "punteggioSemifinalist");
-
-    if (winnerScript && winnerScript.script) {
-      const fn = new Function(`${winnerScript.script}; return (typeof punteggioWinner === 'function') ? punteggioWinner : null;`)();
-      if (typeof fn === "function") pointsWinnerFn = fn;
-    }
-
-    if (semiScript && semiScript.script) {
-      const fn = new Function(`${semiScript.script}; return (typeof punteggioSemifinalist === 'function') ? punteggioSemifinalist : null;`)();
-      if (typeof fn === "function") pointsSemiFn = fn;
+    for (const s of scripts) {
+      if (!s || !s.script) continue;
+      const compiled = new Function(
+        `${s.script}; return { w: (typeof punteggioWinner === 'function') ? punteggioWinner : null, sf: (typeof punteggioSemifinalist === 'function') ? punteggioSemifinalist : null };`
+      )();
+      if (!pointsWinnerFn && compiled && typeof compiled.w === "function") pointsWinnerFn = compiled.w;
+      if (!pointsSemiFn && compiled && typeof compiled.sf === "function") pointsSemiFn = compiled.sf;
+      if (pointsWinnerFn && pointsSemiFn) break;
     }
   } catch (e) {
     console.error("Errore compile scripts punteggio:", e);
   }
+
+  if (!pointsWinnerFn) pointsWinnerFn = () => 0;
+  if (!pointsSemiFn) pointsSemiFn = () => 0;
 
   predictions.forEach((prediction) => {
     //creazione header con dati dello scommettitore
@@ -376,17 +382,37 @@ export async function creaColonne(tournamentID, faseMenu, apiUrl, loggedUserUuid
     attachPoints(semi3, false);
     //vincitore
     if (winner && winner.name) {
+      const championId = isPronosticiOnly ? null : computeChampionId(matches);
       const status = isPronosticiOnly
         ? "inGara"
         : computeDisplayStatusForPick({ pickType: "winner", playerId: winner.id, selectedRound: round, matches });
+
+      const reachedSemifinal = didPlayRound(winner.id, 2, matches);
+      const shouldCountAsSemifinalist =
+        !isPronosticiOnly &&
+        round !== null &&
+        Number(round) <= 2 &&
+        reachedSemifinal &&
+        championId !== null &&
+        Number(championId) !== Number(winner.id);
+
+      const effectivePickType = shouldCountAsSemifinalist ? "semifinalist" : "winner";
+
+      // Per il caso speciale: winner pronosticato che non vince ma arriva in semifinale
+      // deve prendere il punteggio come semifinalista.
+      if (shouldCountAsSemifinalist && !winner._rankingIssue && typeof winner._ranking === "number") {
+        const base = shouldCountAsSemifinalist ? pointsSemiFn(winner._ranking) : pointsWinnerFn(winner._ranking);
+        winner._points = Number(base) || 0;
+      }
+
       punteggi[prediction.user_uuid] +=
         pointsCountForPick({
-          pickType: "winner",
+          pickType: effectivePickType,
           playerId: winner.id,
           status,
           selectedRound: round,
           matches,
-          reachedSemifinal: didPlayRound(winner.id, 2, matches),
+          reachedSemifinal,
         }) * (winner._points || 0);
       content.appendChild(
         createCell({

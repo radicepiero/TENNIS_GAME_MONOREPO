@@ -1,0 +1,283 @@
+<%- include('partials/head'); -%>
+<link rel="stylesheet" href="https://fperucic.github.io/treant-js/Treant.css" />
+<link rel="stylesheet" href="/css/treantTree.css" />
+<link rel="stylesheet" href="/css/hamburger.css" />
+<title id="title"></title>
+<%- include('partials/header'); -%>
+<%- include('partials/hamburger'); -%>
+
+<h1 id="nome-torneo"><%= tournamentId %></h1>
+
+<div id="actions" style="margin: 10px 0; display: flex; gap: 10px; align-items: center;">
+  <button id="cloneButton" class="hidden">COPIA ALBERO PoPoSTaPo</button>
+  <button id="saveButton" class="hidden">SALVA</button>
+  <button id="deleteButton" class="hidden">ELIMINA</button>
+  <button id="generatePredictionButton" class="hidden">GENERA PRONOSTICO</button>
+  <a id="goPronostico" class="hidden" href="/tornei/<%= tournamentId %>/pronostico">VAI AL PRONOSTICO</a>
+</div>
+
+<div id="filter-bar" class="hidden">
+  <label class="filter-label">
+    <span class="label-text">Da:</span>
+    <select id="fromRound"></select>
+  </label>
+  <label class="filter-label">
+    <span class="label-text">A:</span>
+    <select id="toRound"></select>
+  </label>
+</div>
+
+<div id="warning" class="hidden" style="margin: 10px 0; padding: 10px; border: 1px solid #f5c2c7; background: #f8d7da; color: #842029;"></div>
+
+<div id="scroll-container">
+  <div id="chart-container">
+    <div id="tree-simple" class="Treant"></div>
+  </div>
+</div>
+
+<div id="dialogContainer"></div>
+
+<script type="application/json" id="bootstrap-user"><%- JSON.stringify(user || null) %></script>
+
+<script src="https://fperucic.github.io/treant-js/vendor/raphael.js"></script>
+<script src="https://fperucic.github.io/treant-js/Treant.js"></script>
+
+<script type="module">
+  const user = JSON.parse(document.getElementById("bootstrap-user").textContent || "null");
+  import { Tournament } from "/js/Tournament.js";
+  import {
+    setup,
+    renderTree,
+    getAlberi,
+    getAlberoMatches,
+    saveAlbero,
+    deleteAlbero,
+    getCurrentTree,
+    roundLabels,
+    populateRoundSelects,
+    setEditable,
+    onTreeChanged,
+  } from "/js/alberoTorneo.js?v=<%= Date.now() %>";
+
+  const apiUrl = "<%= apiUrl %>";
+  const tournamentId = "<%= tournamentId %>";
+
+  const cloneBtn = document.getElementById("cloneButton");
+  const saveBtn = document.getElementById("saveButton");
+  const deleteBtn = document.getElementById("deleteButton");
+  const generatePredictionBtn = document.getElementById("generatePredictionButton");
+  const warn = document.getElementById("warning");
+  const goPronostico = document.getElementById("goPronostico");
+
+  let dirty = false;
+  function setDirty(next) {
+    dirty = Boolean(next);
+    if (dirty) saveBtn.classList.remove("hidden");
+    else saveBtn.classList.add("hidden");
+  }
+
+  function isMatchWon(match) {
+    return Boolean(match && ((match.p1Wins && !match.p2Wins) || (!match.p1Wins && match.p2Wins)));
+  }
+
+  function getWinnerPlayerId(match) {
+    if (!match) return 0;
+    if (match.p1Wins && !match.p2Wins) return Number(match.player1) || 0;
+    if (match.p2Wins && !match.p1Wins) return Number(match.player2) || 0;
+    return 0;
+  }
+
+  function computePredictionFromTree(tree) {
+    const matches = (tree && tree.matches) || [];
+    const finalMatch = matches.find((m) => Number(m.round) === 1) || null;
+    const semiMatches = matches.filter((m) => Number(m.round) === 2);
+
+    const finalReady = finalMatch && isMatchWon(finalMatch) && (Number(finalMatch.player1) || 0) > 0 && (Number(finalMatch.player2) || 0) > 0;
+    const semisReady = semiMatches.length === 2 && semiMatches.every((m) => isMatchWon(m) && (Number(m.player1) || 0) > 0 && (Number(m.player2) || 0) > 0);
+
+    if (!finalReady || !semisReady) {
+      return { ready: false, rows: [] };
+    }
+
+    const winnerId = getWinnerPlayerId(finalMatch);
+    const semifinalistIds = new Set();
+    for (const m of semiMatches) {
+      semifinalistIds.add(Number(m.player1) || 0);
+      semifinalistIds.add(Number(m.player2) || 0);
+    }
+    semifinalistIds.delete(0);
+
+    const rows = [];
+    for (const pid of semifinalistIds) {
+      if (pid === winnerId) continue;
+      rows.push({ player_id: pid, prediction: "semifinalist" });
+    }
+    if (winnerId) rows.push({ player_id: winnerId, prediction: "winner" });
+
+    return { ready: rows.length >= 2 && Boolean(winnerId), rows };
+  }
+
+  function updateGeneratePredictionVisibility() {
+    const tree = getCurrentTree();
+    const pred = computePredictionFromTree(tree);
+    if (pred.ready) generatePredictionBtn.classList.remove("hidden");
+    else generatePredictionBtn.classList.add("hidden");
+  }
+
+  onTreeChanged(() => {
+    setDirty(true);
+    updateGeneratePredictionVisibility();
+  });
+
+  const tournament = (await Tournament.fetchTournament(tournamentId, apiUrl)).data[0];
+  document.title = `pronostico ${tournament.name}`;
+  document.getElementById("nome-torneo").textContent = tournament.name;
+
+  populateRoundSelects(tournament, roundLabels);
+
+  const fromRoundSelect = document.getElementById("fromRound");
+  const toRoundSelect = document.getElementById("toRound");
+  const effectiveRounds = (() => {
+    const n = Number(tournament && tournament.roundopen);
+    return Number.isFinite(n) && n > 0 ? n : 6;
+  })();
+  if (fromRoundSelect) fromRoundSelect.value = String(effectiveRounds);
+  if (toRoundSelect) toRoundSelect.value = "1";
+
+  const filterBar = document.getElementById("filter-bar");
+  if (filterBar) filterBar.classList.remove("hidden");
+
+  // carica players + punteggi (winner/semifinalist) e prepara rendering
+  await setup(tournament, user, apiUrl);
+
+  function showWarning(msg) {
+    warn.textContent = msg;
+    warn.classList.remove("hidden");
+  }
+
+  async function fetchJson(url, options) {
+    const res = await fetch(url, options);
+    if (!res.ok) {
+      const txt = await res.text().catch(() => "");
+      throw new Error(txt || `HTTP ${res.status}`);
+    }
+    return await res.json();
+  }
+
+  async function ensureTreeOrOfferClone() {
+    const alberi = await getAlberi(tournament);
+    const mine = (alberi || []).find((t) => t && user && t.ownerId === user.uuid) || null;
+
+    if (mine) {
+      // friend può solo selezionare vincenti: disabilito modale giocatori
+      setEditable(false);
+      await getAlberoMatches(mine.id);
+      renderTree(Number(fromRoundSelect && fromRoundSelect.value ? fromRoundSelect.value : effectiveRounds), Number(toRoundSelect && toRoundSelect.value ? toRoundSelect.value : 1));
+      setDirty(false);
+      deleteBtn.classList.remove("hidden");
+      updateGeneratePredictionVisibility();
+      goPronostico.classList.remove("hidden");
+      return;
+    }
+
+    // se torneo non open, non permettere clone
+    const status = tournament && tournament.status ? String(tournament.status) : "";
+    if (status !== "open") {
+      showWarning("Puoi copiare/compilare l'albero solo quando il torneo è in stato OPEN.");
+      return;
+    }
+
+    // mostra clone button
+    cloneBtn.classList.remove("hidden");
+  }
+
+  cloneBtn.addEventListener("click", async () => {
+    try {
+      cloneBtn.disabled = true;
+      await fetchJson(`${apiUrl}/trees/clone/superuser/${encodeURIComponent(tournamentId)}`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+      });
+      location.reload();
+    } catch (e) {
+      cloneBtn.disabled = false;
+      showWarning(e.message || "Errore clonazione albero");
+    }
+  });
+
+  generatePredictionBtn.addEventListener("click", async () => {
+    try {
+      const tree = getCurrentTree();
+      const pred = computePredictionFromTree(tree);
+      if (!pred.ready) {
+        showWarning("Completa prima semifinali e finale (seleziona vincenti) per generare il pronostico.");
+        return;
+      }
+
+      // se esiste già un pronostico, avvisa che verrà sostituito
+      let alreadyExists = false;
+      try {
+        const existing = await fetchJson(
+          `${apiUrl}/predictions/tournaments/${encodeURIComponent(tournamentId)}/user`,
+          {
+            method: "GET",
+            credentials: "include",
+            headers: { "Content-Type": "application/json" },
+          }
+        );
+        const data = existing && existing.data ? existing.data : [];
+        alreadyExists = Array.isArray(data) && data.length > 0;
+      } catch (e) {
+        // 404 = non esiste
+        alreadyExists = false;
+      }
+
+      if (alreadyExists) {
+        const ok = confirm(
+          "Esiste già un pronostico per questo torneo. Continuando il nuovo pronostico sostituirà il precedente. Vuoi continuare?"
+        );
+        if (!ok) return;
+      }
+
+      generatePredictionBtn.disabled = true;
+      await fetchJson(`${apiUrl}/predictions`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tournament_id: tournamentId, rows: pred.rows }),
+      });
+      location.href = `/tornei/${encodeURIComponent(tournamentId)}/pronostico`;
+    } catch (e) {
+      generatePredictionBtn.disabled = false;
+      showWarning(e.message || "Errore generazione pronostico");
+    }
+  });
+
+  saveBtn.addEventListener("click", async () => {
+    try {
+      if (!dirty) return;
+      await saveAlbero(apiUrl);
+      setDirty(false);
+    } catch (e) {
+      showWarning(e.message || "Errore salvataggio");
+    }
+  });
+
+  deleteBtn.addEventListener("click", async () => {
+    try {
+      const ok = confirm("Confermi eliminazione albero?");
+      if (!ok) return;
+      deleteBtn.disabled = true;
+      await deleteAlbero(apiUrl);
+      location.reload();
+    } catch (e) {
+      deleteBtn.disabled = false;
+      showWarning(e.message || "Errore eliminazione");
+    }
+  });
+
+  ensureTreeOrOfferClone();
+</script>
+
+<%- include('partials/footer'); -%>

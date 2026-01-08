@@ -6,11 +6,42 @@ router.get("/prediction", (req, res) => {
 });
 
 router.get("/tornei", (req, res) => {
-  res.render("tornei");
+  res.render("tornei", {
+    apiUrl: req.app.locals.apiUrl || "/api",
+  });
 });
 
 router.get("/tornei/friends", (req, res) => {
-  res.render("tornei", { viewMode: "friends" });
+  res.render("tornei", {
+    viewMode: "friends",
+    apiUrl: req.app.locals.apiUrl || "/api",
+  });
+});
+
+router.get("/friend/home", (req, res) => {
+  res.render("friend-home", {
+    apiUrl: req.app.locals.apiUrl || "/api",
+  });
+});
+
+router.get("/pronostici/colonna", (req, res) => {
+  res.render("pronostici-colonna", {
+    apiUrl: req.app.locals.apiUrl || "/api",
+  });
+});
+
+router.get("/tornei/:id/albero-superuser", async (req, res) => {
+  res.render("albero-superuser", {
+    tournamentId: req.params.id,
+    apiUrl: req.app.locals.apiUrl || "/api",
+  });
+});
+
+router.get("/tornei/:id/albero_superuser", async (req, res) => {
+  res.render("albero-superuser", {
+    tournamentId: req.params.id,
+    apiUrl: req.app.locals.apiUrl || "/api",
+  });
 });
 
 router.get("/tornei/:id/edit", requireAdmin, async (req, res) => {
@@ -274,6 +305,15 @@ router.get("/tornei/:id/genera-albero", async (req, res) => {
   });
 });
 
+router.get("/tornei/:id/albero-pronostico", async (req, res) => {
+  const tournamentId = req.params.id;
+  const apiUrl = req.app.locals.apiUrl || "/api";
+  res.render("albero-pronostico", {
+    tournamentId,
+    apiUrl,
+  });
+});
+
 router.get("/tornei/:id/schedule", async (req, res) => {
   console.log("/tornei/:id/schedule");
   res.render("schedule.ejs", {
@@ -295,6 +335,14 @@ router.get("/tennisti", (req, res) => {
 
 router.get("/tennisti/classifica", (req, res) => {
   res.render("classifica");
+});
+
+router.get("/classifica-annuale/:year?", (req, res) => {
+  const apiUrl = req.app.locals.apiUrl || "/api";
+  const yNow = new Date().getFullYear();
+  const yearRaw = req.params.year;
+  const year = yearRaw ? Number(yearRaw) : yNow;
+  res.render("classifica-annuale", { apiUrl, year: Number.isFinite(year) ? year : yNow });
 });
 
 router.get("/tennisti/:id/edit", async (req, res) => {

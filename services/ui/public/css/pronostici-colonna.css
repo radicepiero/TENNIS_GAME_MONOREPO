@@ -1,0 +1,23 @@
+ .score-line {
+   font-weight: 700;
+   line-height: 1.2;
+ }
+ 
+ .score-line--ranking {
+   font-weight: 600;
+   opacity: 0.9;
+   margin-top: 2px;
+ }
+ 
+ .earned-points {
+   outline: 2px solid #2e7d32;
+   outline-offset: -2px;
+   box-shadow: 0 0 0 2px rgba(46, 125, 50, 0.15);
+ }
+ 
+ .eliminated-pick {
+   outline: 2px solid #c62828;
+   outline-offset: -2px;
+   filter: grayscale(0.2);
+   opacity: 0.9;
+ }

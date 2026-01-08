@@ -1,0 +1,93 @@
+body {
+  margin: inherit;
+}
+
+.annual-ranking-page {
+  padding: 12px;
+}
+
+h1 {
+  color: #333;
+  text-align: center;
+}
+
+.controls {
+  display: flex;
+  justify-content: center;
+  margin: 12px 0;
+}
+
+.table-container {
+  overflow-x: auto;
+  overflow-y: auto;
+  max-height: 75vh;
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  margin-top: 10px;
+}
+
+th,
+td {
+  border: 1px solid #ddd;
+  padding: 8px;
+  text-align: center;
+}
+
+th {
+  background-color: #f2f2f2;
+}
+
+thead th {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+
+.tournament-col {
+  position: sticky;
+  left: 0;
+  z-index: 6;
+  background: #f2f2f2;
+  text-align: left;
+  min-width: 220px;
+}
+
+.user-col {
+  min-width: 80px;
+}
+
+.row-max {
+  background-color: #00ff00;
+}
+
+tr.status-upcoming td,
+tr.status-upcoming th.tournament-col {
+  background-color: #f3f3f3;
+}
+
+tr.status-open td,
+tr.status-open th.tournament-col {
+  background-color: #e8f4ff;
+}
+
+tr.status-in-progress td,
+tr.status-in-progress th.tournament-col {
+  background-color: #fff4d6;
+}
+
+tr.status-completed td,
+tr.status-completed th.tournament-col {
+  background-color: #eaf9ea;
+}
+
+tfoot th,
+tfoot td {
+  font-weight: bold;
+}
+
+.total-cell {
+  font-weight: bold;
+}

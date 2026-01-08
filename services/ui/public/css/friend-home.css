@@ -1,0 +1,217 @@
+.friend-home {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 12px;
+}
+
+.friend-home__header {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.friend-home__sub {
+  opacity: 0.75;
+}
+
+.friend-home__warning {
+  margin: 10px 0;
+  padding: 10px;
+  border: 1px solid #f5c2c7;
+  background: #f8d7da;
+  color: #842029;
+  border-radius: 8px;
+}
+
+.hidden {
+  display: none;
+}
+
+.friend-home__grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+@media (min-width: 900px) {
+  .friend-home__grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.card {
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  border-radius: 10px;
+  padding: 12px;
+  background: #fff;
+}
+
+.card__title {
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+
+.card__empty {
+  opacity: 0.7;
+}
+
+.tournament-row__name {
+  font-size: 18px;
+  font-weight: 700;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.tournament-row__meta {
+  opacity: 0.8;
+  margin-top: 6px;
+}
+
+.mini-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.mini-card {
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 10px;
+  padding: 10px;
+  background: #fafafa;
+}
+
+.mini-card__title {
+  font-weight: 700;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.mini-card__meta {
+  opacity: 0.8;
+  margin-top: 6px;
+}
+
+.cta-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+
+.btn {
+  display: inline-block;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  text-decoration: none;
+  color: #111;
+  background: #fff;
+  font-weight: 600;
+}
+
+.btn--primary {
+  background: #111;
+  color: #fff;
+  border-color: #111;
+}
+
+.btn--small {
+  padding: 6px 8px;
+  border-radius: 8px;
+}
+
+.badge {
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  text-transform: uppercase;
+}
+
+.badge--open {
+  background: #d1e7dd;
+  border-color: #badbcc;
+  color: #0f5132;
+}
+
+.badge--upcoming {
+  background: #e2e3e5;
+  border-color: #d3d6d8;
+  color: #41464b;
+}
+
+.badge--in-progress {
+  background: #cff4fc;
+  border-color: #b6effb;
+  color: #055160;
+}
+
+.badge--completed {
+  background: #f8f9fa;
+  border-color: #d3d6d8;
+  color: #41464b;
+}
+
+.flag {
+  display: inline-block;
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #d1e7dd;
+  color: #0f5132;
+}
+
+.flag--muted {
+  background: #e2e3e5;
+  color: #41464b;
+}
+
+.flag--warn {
+  background: #fff3cd;
+  color: #664d03;
+}
+
+.links {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.link {
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.table-wrap {
+  overflow: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table th,
+.table td {
+  padding: 8px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+  text-align: left;
+  vertical-align: middle;
+}
+
+.td-actions {
+  white-space: nowrap;
+}
+
+.td-empty {
+  opacity: 0.7;
+}
+
+.td-name {
+  font-weight: 700;
+}

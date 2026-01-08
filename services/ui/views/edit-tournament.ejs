@@ -91,6 +91,20 @@
     </label>
 
     <label>
+      Note (admin):
+      <textarea name="admin_notes" rows="4" style="width: 100%;"><%= tournament.admin_notes || '' %></textarea>
+    </label>
+
+    <label>
+      Link (uno per riga):
+      <textarea name="admin_links" rows="4" style="width: 100%;"><%=
+        Array.isArray(tournament.admin_links)
+          ? tournament.admin_links.map((x) => (typeof x === 'string' ? x : (x && x.url ? x.url : ''))).filter(Boolean).join("\n")
+          : (tournament.admin_links ? JSON.stringify(tournament.admin_links) : '')
+      %></textarea>
+    </label>
+
+    <label>
       Montepremi:
       <input type="number" name="prizemoney" value="<%= tournament.prizemoney %>" required>
     </label>
@@ -305,6 +319,33 @@
 
       const form = e.target;
       const data = Object.fromEntries(new FormData(form));
+
+      // Normalizza links: textarea (uno per riga) -> array JSON
+      if (typeof data.admin_links === "string") {
+        const raw = data.admin_links.trim();
+        if (!raw) {
+          data.admin_links = [];
+        } else {
+          // Se l'admin incolla un JSON valido, lo accettiamo.
+          if (raw.startsWith("[") || raw.startsWith("{")) {
+            try {
+              data.admin_links = JSON.parse(raw);
+            } catch (e) {
+              data.admin_links = raw
+                .split(/\r?\n/)
+                .map((s) => s.trim())
+                .filter(Boolean)
+                .map((url) => ({ url }));
+            }
+          } else {
+            data.admin_links = raw
+              .split(/\r?\n/)
+              .map((s) => s.trim())
+              .filter(Boolean)
+              .map((url) => ({ url }));
+          }
+        }
+      }
 
       const toYmd = (v) => (v ? String(v).slice(0, 10) : "");
       const start = toYmd(data.datainizio);
