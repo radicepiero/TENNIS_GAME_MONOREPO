@@ -5,6 +5,8 @@ export const APP_ICONS = {
   ADD: "➕",
   SEARCH: "🔍",
   VIEW: "👁️",
+  CRYSTAL_BALL: "🔮",
+  RESULTS: "📊",
   CLOSE: "❌",
   SETTINGS: "⚙️",
 };
@@ -16,4 +18,6 @@ export const APP_BUTTONS = {
   ADD: "➕ Aggiungi",
   SEARCH: "🔍 Cerca",
   VIEW: "👁️ Visualizza",
+  CRYSTAL_BALL: "🔮 Pronostici",
+  RESULTS: "📊 Risultati",
 };

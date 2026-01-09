@@ -5,17 +5,17 @@
       <ul>
         <li><a href="/">Home</a></li>
         <% if (user && (user.level === "friend" || user.level === "admin" || user.level === "super")) { %>
-          <li><a href="/friend/home">Home Friend</a></li>
+          <li><a href="/friend/home">gioca</a></li>
         <% } %>
-        <li><a href="/tornei">Tornei</a></li>
-        <% if (user && user.level === "friend") { %>
-          <li><a href="/tornei/friends">Tornei Friends</a></li>
+        <li><a href="/tornei/friends">Tornei</a></li>
+        <% if (user && (user.level === "super"||user.level === "admin")) { %>
+          <li><a href="/tornei">Tornei Admin</a></li>
         <% } %>
         <% if (user) { %>
-          <li><a href="/pronostici/colonna">Pronostici (colonna)</a></li>
+          <li><a href="/pronostici/colonna">Pronostici</a></li>
         <% } %>
-        <li><a href="/classifica-annuale">Classifica annuale</a></li>
-        <li><a href="/tennisti">Tennisti</a></li>
+        <li><a href="/classifica-annuale">Classifica</a></li>
+        <li><a href="/tennisti">Classifica ATP</a></li>
         <% if (user && (user.level === "admin" || user.level === "super")) { %>
           <li><a href="/admin/tornei">Admin Tornei</a></li>
         <% } %>
