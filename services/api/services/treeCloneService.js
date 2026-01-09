@@ -40,8 +40,8 @@ const cloneSuperuserTreeToUser = async ({ tournamentId, user }) => {
 
   const existing = await db.Tree.findOne({
     where: {
-      tournament: String(tId),
       ownerId: String(user.uuid),
+      [db.Sequelize.Op.or]: [{ tournament_id: tId }, { tournament: String(tId) }],
     },
   });
   if (existing) {
@@ -59,8 +59,8 @@ const cloneSuperuserTreeToUser = async ({ tournamentId, user }) => {
 
   const superTree = await db.Tree.findOne({
     where: {
-      tournament: String(tId),
       ownerId: String(superuserId),
+      [db.Sequelize.Op.or]: [{ tournament_id: tId }, { tournament: String(tId) }],
     },
     include: [{ model: db.Match, as: "Matches", required: false }],
   });
@@ -103,6 +103,7 @@ const cloneSuperuserTreeToUser = async ({ tournamentId, user }) => {
       {
         id: newTreeId,
         name: `Pronostico ${user.soprannome || user.email || user.uuid}`,
+        tournament_id: tId,
         tournament: String(tId),
         ownerId: String(user.uuid),
         roundMax: superTree.roundMax,

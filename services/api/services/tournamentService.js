@@ -2,6 +2,7 @@ const db = require("../models");
 
 const Tournament = db.Tournament;
 const Script = db.Script;
+const { Op } = db.Sequelize;
 const getTournaments = async () => {
   try {
     return await Tournament.findAll({ order: [["datafine", "ASC"]] });
@@ -52,9 +53,92 @@ const postTournament = async (tournament) => {
 
 const deleteTournament = async (id) => {
   try {
-    await Tournament.destroy({
-      where: { id },
+    const tId = Number(id);
+    if (!Number.isFinite(tId)) {
+      const err = new Error("Invalid tournament id");
+      err.statusCode = 400;
+      throw err;
+    }
+
+    await db.sequelize.transaction(async (transaction) => {
+      const tournament = await Tournament.findByPk(tId, { transaction });
+      if (!tournament) {
+        const err = new Error("Tournament not found");
+        err.statusCode = 404;
+        throw err;
+      }
+
+      // 1) Join table TournamentScript
+      if (db.TournamentScript) {
+        await db.TournamentScript.destroy({
+          where: { tournament_id: tId },
+          transaction,
+        });
+      }
+
+      // 2) players_tournaments
+      if (db.PlayerTournament) {
+        await db.PlayerTournament.destroy({
+          where: { tournament_id: tId },
+          transaction,
+        });
+      }
+
+      // 3) Predictions + PredictionRows
+      if (db.Prediction) {
+        const predictions = await db.Prediction.findAll({
+          where: { tournament_id: tId },
+          attributes: ["id"],
+          transaction,
+        });
+        const predictionIds = predictions.map((p) => p.id);
+
+        if (predictionIds.length > 0 && db.PredictionRow) {
+          await db.PredictionRow.destroy({
+            where: { prediction_id: { [Op.in]: predictionIds } },
+            transaction,
+          });
+        }
+
+        await db.Prediction.destroy({
+          where: { tournament_id: tId },
+          transaction,
+        });
+      }
+
+      // 4) Trees + Matches (robust even if DB-level cascade isn't in place yet)
+      if (db.Tree) {
+        const trees = await db.Tree.findAll({
+          where: {
+            [Op.or]: [{ tournament_id: tId }, { tournament: String(tId) }],
+          },
+          attributes: ["id"],
+          transaction,
+        });
+        const treeIds = trees.map((t) => t.id);
+
+        if (treeIds.length > 0 && db.Match) {
+          await db.Match.destroy({
+            where: { treeId: { [Op.in]: treeIds } },
+            transaction,
+          });
+        }
+
+        await db.Tree.destroy({
+          where: {
+            [Op.or]: [{ tournament_id: tId }, { tournament: String(tId) }],
+          },
+          transaction,
+        });
+      }
+
+      // 5) Tournament
+      await Tournament.destroy({
+        where: { id: tId },
+        transaction,
+      });
     });
+
     return true;
   } catch (error) {
     console.error("Errore nel cancellare il torneo:", error);

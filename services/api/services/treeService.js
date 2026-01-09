@@ -5,10 +5,16 @@ async function createTree(treeData) {
   const transaction = await Tree.sequelize.transaction();
 
   try {
+    const tournamentIdNum =
+      typeof treeData.tournamentId === "number"
+        ? treeData.tournamentId
+        : Number(treeData.tournamentId);
+
     const treeToCreate = {
       id: treeData.uuid,
       name: treeData.name,
-      tournament: treeData.tournamentId.toString(),
+      tournament_id: Number.isFinite(tournamentIdNum) ? tournamentIdNum : null,
+      tournament: treeData.tournamentId != null ? String(treeData.tournamentId) : null,
       ownerId: treeData.ownerId,
       roundMax: treeData.roundMax,
     };
@@ -44,7 +50,14 @@ async function getTree(options = {}) {
   const where = {};
   if (treeId) where.id = treeId;
   if (ownerId) where.ownerId = ownerId;
-  if (tournamentId) where.tournament = tournamentId.toString();
+  if (tournamentId) {
+    const tIdNum = typeof tournamentId === "number" ? tournamentId : Number(tournamentId);
+    if (Number.isFinite(tIdNum)) {
+      where.tournament_id = tIdNum;
+    } else {
+      where.tournament = String(tournamentId);
+    }
+  }
 
   // Converti includeMatches in booleano
   const shouldIncludeMatches =
@@ -72,11 +85,17 @@ async function updateTree(id, treeData) {
   const transaction = await Tree.sequelize.transaction();
 
   try {
+    const tournamentIdNum =
+      typeof treeData.tournamentId === "number"
+        ? treeData.tournamentId
+        : Number(treeData.tournamentId);
+
     // Aggiorna il tree
     const [updated] = await Tree.update(
       {
         name: treeData.name,
-        tournament: treeData.tournamentId,
+        tournament_id: Number.isFinite(tournamentIdNum) ? tournamentIdNum : null,
+        tournament: treeData.tournamentId != null ? String(treeData.tournamentId) : null,
         roundMax: treeData.roundMax,
       },
       {
@@ -116,29 +135,15 @@ async function updateTree(id, treeData) {
 
 // DELETE
 async function deleteTree(id) {
-  
-  const transaction = await Tree.sequelize.transaction();
+  const deleted = await Tree.destroy({
+    where: { id },
+  });
 
-  try {
-    // Prima cancella i matches
-    await Match.destroy({ where: { treeId: id }, transaction });
-
-    // Poi cancella il tree
-    const deleted = await Tree.destroy({
-      where: { id },
-      transaction,
-    });
-
-    if (!deleted) {
-      throw new Error("Tree not found");
-    }
-
-    await transaction.commit();
-    return { id };
-  } catch (error) {
-    await transaction.rollback();
-    throw error;
+  if (!deleted) {
+    throw new Error("Tree not found");
   }
+
+  return { id };
 }
 module.exports = {
   createTree,

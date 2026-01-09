@@ -83,22 +83,114 @@
 }
 
 /* Tornei Friends */
-.friends-toolbar {
-  display: flex;
-  gap: 10px;
+
+.friends-title {
+  text-align: center;
+}
+
+.friends-title--clickable {
+  cursor: pointer;
+  user-select: none;
+}
+
+.friends-filter-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: none;
   align-items: center;
   justify-content: center;
-  padding: 0 20px 10px;
+  padding: 20px;
+  z-index: 2000;
 }
 
-.friends-toolbar__label {
-  font-weight: 700;
+.friends-filter-modal.is-open {
+  display: flex;
 }
 
-.friends-toolbar__select {
+.friends-filter-modal__content {
+  width: min(520px, 100%);
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+}
+
+.friends-filter-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+.friends-filter-modal__title {
+  font-weight: 800;
+}
+
+.friends-filter-modal__close {
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  background: #fff;
+  border-radius: 10px;
+  width: 38px;
+  height: 38px;
+  cursor: pointer;
+}
+
+.friends-filter-modal__body {
+  padding: 12px;
+  display: grid;
+  gap: 12px;
+}
+
+.friends-filter-row {
+  display: grid;
+  grid-template-columns: 90px 1fr;
+  gap: 10px;
+  align-items: start;
+}
+
+.friends-filter-label {
+  font-weight: 800;
+}
+
+.friends-filter-select {
   padding: 6px 10px;
-  border-radius: 8px;
-  border: 1px solid #ddd;
+  border-radius: 10px;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+}
+
+.friends-filter-status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.friends-filter-status__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  background: #fff;
+}
+
+.friends-filter-modal__footer {
+  padding: 10px 12px;
+  border-top: 1px solid rgba(0, 0, 0, 0.12);
+  display: flex;
+  justify-content: flex-end;
+}
+
+.friends-filter-apply {
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  background: #111;
+  color: #fff;
+  font-weight: 800;
+  cursor: pointer;
 }
 
 .tournament-card {
@@ -107,6 +199,39 @@
   border-radius: 12px;
   overflow: hidden;
   background: #fff;
+  transition: box-shadow 0.2s ease;
+}
+
+.tournament-card--shadow-upcoming {
+  box-shadow: 0 0 0 2px rgba(255, 214, 0, 0.55), 0 10px 22px rgba(0, 0, 0, 0.12);
+}
+
+.tournament-card--shadow-open {
+  box-shadow: 0 0 0 2px rgba(0, 180, 0, 0.45), 0 10px 22px rgba(0, 0, 0, 0.12);
+}
+
+.tournament-card--shadow-in-progress {
+  box-shadow: 0 0 0 2px rgba(220, 0, 0, 0.45), 0 10px 22px rgba(0, 0, 0, 0.12);
+}
+
+.tournament-card--surface-hard {
+  background: linear-gradient(180deg, rgba(21, 101, 192, 0.12), rgba(255, 255, 255, 1));
+}
+
+.tournament-card--surface-grass {
+  background: linear-gradient(180deg, rgba(46, 125, 50, 0.12), rgba(255, 255, 255, 1));
+}
+
+.tournament-card--surface-clay {
+  background: linear-gradient(180deg, rgba(198, 90, 30, 0.14), rgba(255, 255, 255, 1));
+}
+
+.tournament-card--surface-carpet {
+  background: linear-gradient(180deg, rgba(106, 27, 154, 0.12), rgba(255, 255, 255, 1));
+}
+
+.tournament-card--surface-other {
+  background: linear-gradient(180deg, rgba(69, 90, 100, 0.12), rgba(255, 255, 255, 1));
 }
 
 .tournament-card__header {
@@ -146,34 +271,6 @@
   border: 1px solid rgba(0, 0, 0, 0.12);
 }
 
-.surface-badge {
-  display: inline-block;
-  font-size: 0.75em;
-  padding: 2px 8px;
-  border-radius: 999px;
-  color: #fff;
-}
-
-.surface--hard {
-  background: #1565c0;
-}
-
-.surface--grass {
-  background: #2e7d32;
-}
-
-.surface--clay {
-  background: #c65a1e;
-}
-
-.surface--carpet {
-  background: #6a1b9a;
-}
-
-.surface--other {
-  background: #455a64;
-}
-
 .money-badge {
   display: inline-block;
   font-size: 0.75em;
@@ -201,6 +298,12 @@
   background: #fff;
   text-decoration: none;
   cursor: pointer;
+}
+
+.icon-btn--disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  filter: grayscale(1);
 }
 
 .icon-btn--primary {

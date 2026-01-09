@@ -2,11 +2,28 @@
 <link rel="stylesheet" href="/css/tornei.css" />
 <link rel="stylesheet" href="/css/hamburger.css" />
 <%- include('partials/header'); -%> <%- include('partials/hamburger'); -%>
-<h1>Tornei ATP</h1>
+<h1 id="friends-title" class="friends-title">Tornei ATP</h1>
 <% if (typeof viewMode !== 'undefined' && viewMode === 'friends') { %>
-  <div class="friends-toolbar" id="friends-toolbar">
-    <label class="friends-toolbar__label" for="yearSelect">Anno</label>
-    <select id="yearSelect" class="friends-toolbar__select"></select>
+  <div id="friends-filter-modal" class="friends-filter-modal" aria-hidden="true">
+    <div class="friends-filter-modal__content" role="dialog" aria-modal="true" aria-labelledby="friends-filter-title">
+      <div class="friends-filter-modal__header">
+        <div id="friends-filter-title" class="friends-filter-modal__title">Filtri</div>
+        <button type="button" id="friends-filter-close" class="friends-filter-modal__close" aria-label="Chiudi"></button>
+      </div>
+      <div class="friends-filter-modal__body">
+        <div class="friends-filter-row">
+          <label class="friends-filter-label" for="friendsYearSelect">Anno</label>
+          <select id="friendsYearSelect" class="friends-filter-select"></select>
+        </div>
+        <div class="friends-filter-row">
+          <div class="friends-filter-label">Status</div>
+          <div id="friendsStatusBox" class="friends-filter-status"></div>
+        </div>
+      </div>
+      <div class="friends-filter-modal__footer">
+        <button type="button" id="friends-filter-apply" class="friends-filter-apply">Applica</button>
+      </div>
+    </div>
   </div>
 <% } %>
 <!-- Griglia dei tornei -->
@@ -17,5 +34,5 @@
   document.documentElement.dataset.apiUrl = "<%= apiUrl %>";
   document.documentElement.dataset.viewMode = "<%= typeof viewMode !== 'undefined' ? viewMode : '' %>";
 </script>
-<script src="/js/tornei.js"></script>
+<script type="module" src="/js/tornei.js"></script>
 <%- include('partials/footer'); -%>

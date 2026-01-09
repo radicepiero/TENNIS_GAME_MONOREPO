@@ -126,6 +126,10 @@ module.exports = function (sequelize) {
       foreignKey: "tournament_id",
       sourceKey: "id",
     });
+    Tournament.hasMany(models.Tree, {
+      foreignKey: "tournament_id",
+      sourceKey: "id",
+    });
     Tournament.belongsToMany(models.Script, {
       through: models.TournamentScript,
       foreignKey: "tournament_id",

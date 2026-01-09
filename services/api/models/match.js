@@ -7,6 +7,11 @@ module.exports = (sequelize, DataTypes) => {
     treeId: {
       type: DataTypes.UUID,
       allowNull: false,
+      references: {
+        model: "Trees",
+        key: "id",
+      },
+      onDelete: "CASCADE",
     },
     round: DataTypes.INTEGER,
     player1Id: DataTypes.INTEGER,
@@ -18,7 +23,7 @@ module.exports = (sequelize, DataTypes) => {
   });
 
   Match.associate = (models) => {
-    Match.belongsTo(models.Tree, { foreignKey: "treeId" });
+    Match.belongsTo(models.Tree, { foreignKey: "treeId", onDelete: "CASCADE" });
   };
 
   return Match;

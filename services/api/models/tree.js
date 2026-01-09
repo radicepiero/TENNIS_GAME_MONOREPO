@@ -7,12 +7,21 @@ module.exports = (sequelize, DataTypes) => {
     },
     name: DataTypes.STRING,
     tournament: DataTypes.STRING,
+    tournament_id: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      references: {
+        model: "tournaments",
+        key: "id",
+      },
+    },
     ownerId: DataTypes.UUID,
     roundMax: DataTypes.INTEGER,
   });
 
   Tree.associate = (models) => {
     Tree.hasMany(models.Match, { foreignKey: "treeId" });
+    Tree.belongsTo(models.Tournament, { foreignKey: "tournament_id", targetKey: "id" });
   };
 
   return Tree;

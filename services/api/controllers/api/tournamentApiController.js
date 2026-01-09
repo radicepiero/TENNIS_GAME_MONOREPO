@@ -78,7 +78,11 @@ const deleteTournament = async (req, res) => {
     res.status(204).end();
   } catch (error) {
     console.error("Errore nel cancellare il torneo:", error);
-    res.status(500).json({ error: "Errore nel cancellare il torneo" });
+    const status = error.statusCode || 500;
+    res.status(status).json({
+      error: "Errore nel cancellare il torneo",
+      details: error.message,
+    });
   }
 };
 
