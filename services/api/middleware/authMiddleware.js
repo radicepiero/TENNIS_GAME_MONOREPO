@@ -11,18 +11,32 @@ const JWT_SECRET = process.env.JWT_SECRET || "un segreto generato a caso";
 const requireAuth = (req, res, next) => {
   const token = req.cookies.jwt;
 
+  const isApiRequest = () => {
+    // API service is mounted under /api, but keep this generic.
+    if (req.originalUrl && String(req.originalUrl).startsWith("/api")) return true;
+    const accept = String(req.headers.accept || "").toLowerCase();
+    return accept.includes("application/json");
+  };
+
+  const reject = () => {
+    if (isApiRequest()) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+    return res.redirect("/login");
+  };
+
   // verifica dell'esistenza del cookie jwt e verifica della validità
   if (token) {
     jwt.verify(token, JWT_SECRET, (err, decodedToken) => {
       if (err) {
         console.log(err.message);
-        res.redirect("/login");
+        reject();
       } else {
         next();
       }
     });
   } else {
-    res.redirect("/login");
+    reject();
   }
 };
 

@@ -94,19 +94,31 @@ const createToken = function (uuid) {
 };
 
 const checkLogin = async function (email, password) {
-  const url = `${process.env.API}/users/mail/${email}`;
-  console.log("cavavavav", url);
-  const user = await (await fetch(url)).json();
-  console.log(user);
-  if (user) {
-    const auth = await bcrypt.compare(password, user.password);
-    //console.log("auth--- " + auth);
-    if (auth) {
-      return user;
-    }
-    throw Error("incorrect password");
+  const url = `${process.env.API}/auth/login`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password }),
+  });
+
+  let json = null;
+  try {
+    json = await res.json();
+  } catch (e) {
+    json = null;
   }
-  throw Error("incorrect email");
+
+  if (!res.ok) {
+    const msg = (json && (json.message || json.error)) || "Errore login";
+    throw Error(msg);
+  }
+
+  if (!json || !json.uuid) {
+    throw Error("Errore login");
+  }
+
+  // Return minimal user object for token creation
+  return { uuid: json.uuid };
 };
 
 const getLogout = (req, res) => {

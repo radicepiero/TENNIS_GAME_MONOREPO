@@ -7,6 +7,7 @@ router.use((req, res, next) => {
   next(); // Importante per far proseguire la richiesta
 });
 
+router.get("/dates", controller.getRankingDates);
 router.get("/:date", controller.getRankingByDate); //get player by ID
 router.get("/", controller.getRanking);
 //router.get("/", controller.getFirstNPlayersOfAnyRankingDate);

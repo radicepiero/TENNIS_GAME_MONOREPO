@@ -9,7 +9,6 @@
 <h1 id="nome-torneo"><%= tournamentId %></h1>
 
 <div id="actions" style="margin: 10px 0; display: flex; gap: 10px; align-items: center;">
-  <button id="cloneButton" class="hidden">COPIA ALBERO PoPoSTaPo</button>
   <button id="saveButton" class="hidden">SALVA</button>
   <button id="deleteButton" class="hidden">ELIMINA</button>
   <button id="generatePredictionButton" class="hidden">GENERA PRONOSTICO</button>
@@ -62,7 +61,6 @@
   const apiUrl = "<%= apiUrl %>";
   const tournamentId = "<%= tournamentId %>";
 
-  const cloneBtn = document.getElementById("cloneButton");
   const saveBtn = document.getElementById("saveButton");
   const deleteBtn = document.getElementById("deleteButton");
   const generatePredictionBtn = document.getElementById("generatePredictionButton");
@@ -180,6 +178,13 @@
       return;
     }
 
+    const skipKey = `skipAutoClone:${String(tournamentId)}`;
+    if (window.sessionStorage && window.sessionStorage.getItem(skipKey) === "1") {
+      window.sessionStorage.removeItem(skipKey);
+      showWarning("Albero eliminato.");
+      return;
+    }
+
     // se torneo non open, non permettere clone
     const status = tournament && tournament.status ? String(tournament.status) : "";
     if (status !== "open") {
@@ -187,13 +192,18 @@
       return;
     }
 
-    // mostra clone button
-    cloneBtn.classList.remove("hidden");
-  }
-
-  cloneBtn.addEventListener("click", async () => {
+    // tenta auto-clone solo se esiste albero superuser
     try {
-      cloneBtn.disabled = true;
+      await fetchJson(`${apiUrl}/trees/superuser/${encodeURIComponent(tournamentId)}`, {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+      });
+    } catch (e) {
+      showWarning("Albero superuser non disponibile per questo torneo.");
+      return;
+    }
+
+    try {
       await fetchJson(`${apiUrl}/trees/clone/superuser/${encodeURIComponent(tournamentId)}`, {
         method: "POST",
         credentials: "include",
@@ -201,10 +211,15 @@
       });
       location.reload();
     } catch (e) {
-      cloneBtn.disabled = false;
+      // 409 = già creato in parallelo: ricarica e apri
+      if (String(e && e.message || "").includes("409")) {
+        location.reload();
+        return;
+      }
       showWarning(e.message || "Errore clonazione albero");
+      return;
     }
-  });
+  }
 
   generatePredictionBtn.addEventListener("click", async () => {
     try {
@@ -270,7 +285,11 @@
       if (!ok) return;
       deleteBtn.disabled = true;
       await deleteAlbero(apiUrl);
-      location.reload();
+      const skipKey = `skipAutoClone:${String(tournamentId)}`;
+      if (window.sessionStorage) {
+        window.sessionStorage.setItem(skipKey, "1");
+      }
+      location.href = "/tornei/friends";
     } catch (e) {
       deleteBtn.disabled = false;
       showWarning(e.message || "Errore eliminazione");

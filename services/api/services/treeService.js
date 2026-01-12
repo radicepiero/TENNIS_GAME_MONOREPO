@@ -1,4 +1,12 @@
-const { Tree, Match } = require("../models");
+const db = require("../models");
+const { Tree, Match } = db;
+
+const getSuperuserId = async () => {
+  let superuserId = process.env.SUPERUSER;
+  if (superuserId) return superuserId;
+  const superUser = await db.User.findOne({ where: { level: "super" } });
+  return superUser ? superUser.uuid : null;
+};
 
 // CREATE
 async function createTree(treeData) {
@@ -18,6 +26,32 @@ async function createTree(treeData) {
       ownerId: treeData.ownerId,
       roundMax: treeData.roundMax,
     };
+
+    const superuserId = await getSuperuserId();
+    if (superuserId && String(treeToCreate.ownerId) !== String(superuserId)) {
+      const tId = treeToCreate.tournament_id;
+      if (!Number.isFinite(tId)) {
+        const err = new Error("tournamentId non valido");
+        err.statusCode = 400;
+        throw err;
+      }
+
+      const superTree = await Tree.findOne({
+        where: {
+          ownerId: String(superuserId),
+          [db.Sequelize.Op.or]: [{ tournament_id: tId }, { tournament: String(tId) }],
+        },
+        transaction,
+      });
+
+      if (!superTree) {
+        const err = new Error(
+          "Impossibile creare l'albero: non esiste ancora l'albero del superuser per questo torneo"
+        );
+        err.statusCode = 404;
+        throw err;
+      }
+    }
 
     const tree = await Tree.create(treeToCreate, { transaction });
 
@@ -135,15 +169,26 @@ async function updateTree(id, treeData) {
 
 // DELETE
 async function deleteTree(id) {
-  const deleted = await Tree.destroy({
-    where: { id },
-  });
+  const transaction = await Tree.sequelize.transaction();
 
-  if (!deleted) {
-    throw new Error("Tree not found");
+  try {
+    await Match.destroy({ where: { treeId: id }, transaction });
+
+    const deleted = await Tree.destroy({
+      where: { id },
+      transaction,
+    });
+
+    if (!deleted) {
+      throw new Error("Tree not found");
+    }
+
+    await transaction.commit();
+    return { id };
+  } catch (error) {
+    await transaction.rollback();
+    throw error;
   }
-
-  return { id };
 }
 module.exports = {
   createTree,

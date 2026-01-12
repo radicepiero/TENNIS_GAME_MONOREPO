@@ -81,6 +81,7 @@ const readPredictions = async (user_uuid, tournament_id, prediction_id) => {
       const _prediction = {
         id: prediction.id,
         img: prediction.img,
+        avatar_url: prediction.avatar_url,
         created_at: prediction.createdAt,
         updated_at: prediction.updatedAt,
         user_uuid: prediction.user_uuid,
@@ -183,7 +184,7 @@ const getPredictions = async (filters) => {
 };
 
 const createPrediction = async (predictionData) => {
-  const { user_uuid, tournament_id, rows } = predictionData;
+  const { user_uuid, tournament_id, rows, avatar_url } = predictionData;
   console.log("Creazione di una nuova prediction:", predictionData);
 
   try {
@@ -194,6 +195,7 @@ const createPrediction = async (predictionData) => {
         {
           user_uuid: user_uuid,
           tournament_id: tournament_id,
+          avatar_url: avatar_url,
         },
         { transaction: t }
       );

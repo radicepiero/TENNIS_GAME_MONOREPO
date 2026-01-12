@@ -1,0 +1,87 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: tennis-postgres
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - tennis_net
+
+  api:
+    build:
+      context: ./services/api
+    container_name: tennis-api
+    env_file:
+      - ./.env.prod
+    environment:
+      - PORT=9000
+      - DB_CONNESSIONE=postgres
+    depends_on:
+      postgres:
+        condition: service_healthy
+    expose:
+      - "9000"
+    networks:
+      - tennis_net
+
+  ui:
+    build:
+      context: ./services/ui
+    container_name: tennis-ui
+    env_file:
+      - ./.env.prod
+    environment:
+      - PORT=3000
+      - API=http://api:9000/api
+    depends_on:
+      - api
+    volumes:
+      - ui_uploads:/app/public/uploads
+    expose:
+      - "3000"
+    networks:
+      - tennis_net
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: tennis-proxy
+    depends_on:
+      - ui
+      - api
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.prod.conf:/etc/nginx/nginx.conf:ro
+      - letsencrypt:/etc/letsencrypt
+      - certbot_www:/var/www/certbot
+    networks:
+      - tennis_net
+
+  certbot:
+    image: certbot/certbot:latest
+    container_name: tennis-certbot
+    volumes:
+      - letsencrypt:/etc/letsencrypt
+      - certbot_www:/var/www/certbot
+    entrypoint: ["sh", "-c", "sleep infinity"]
+    networks:
+      - tennis_net
+
+networks:
+  tennis_net:
+
+volumes:
+  postgres_data:
+  ui_uploads:
+  letsencrypt:
+  certbot_www:

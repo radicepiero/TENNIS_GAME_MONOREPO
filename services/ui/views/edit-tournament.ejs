@@ -43,6 +43,41 @@
     .tournament-nav-arrow--next {
       right: 10px;
     }
+
+    #scripts-fieldset {
+      margin: 8px 0;
+      padding: 10px;
+    }
+
+    #scripts-fieldset legend {
+      font-size: 0.95em;
+    }
+
+    #scripts-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 6px 14px;
+    }
+
+    #scripts-list > label {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      justify-content: flex-start;
+      padding: 4px 6px;
+      border-radius: 10px;
+      margin: 0;
+      font-size: 0.9em;
+      line-height: 1.2;
+      min-width: 0;
+    }
+
+    #scripts-list > label > span {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      min-width: 0;
+    }
   </style>
   <h1 style="text-align: center;">Modifica Torneo <%= tournament.name %></h1>
   <% const roundLabels = ["128-esimi","64-esimi","32-esimi","16-esimi","Ottavi","Quarti","Semifinali","Finali"]; %>
@@ -60,6 +95,11 @@
     <label>
       Nome:
       <input type="text" name="name" value="<%= tournament.name %>" required/>
+    </label>
+
+    <label>
+      Nickname:
+      <input type="text" name="nickname" value="<%= tournament.nickname || '' %>" />
     </label>
 
     <label>
@@ -167,12 +207,22 @@
     </label>
     <label>
       Data Ranking:
-      <input type="date" name="ranking_date" value="<%= tournament.ranking_date || '' %>">
+      <select id="ranking-date" name="ranking_date">
+        <option value="" <%= !tournament.ranking_date ? "selected" : "" %>>(vuoto)</option>
+        <% if (tournament.ranking_date) { %>
+          <option value="<%= String(tournament.ranking_date).slice(0,10) %>" selected><%= String(tournament.ranking_date).slice(0,10) %></option>
+        <% } %>
+      </select>
     </label>
 
     <label>
       Data Open:
       <input type="date" name="dataopen" value="<%= tournament.dataopen || '' %>">
+    </label>
+
+    <label>
+      Chiusura Pronostici:
+      <input type="datetime-local" name="chiusuraPronostici" value="<%= tournament.chiusuraPronostici || '' %>">
     </label>
 
     <label>
@@ -207,12 +257,12 @@
 
         <fieldset id="scripts-fieldset" style="margin: 16px 0; padding: 12px; border: 1px solid #ddd; border-radius: 10px; grid-column: 1 / -1;">
           <legend>Scripts</legend>
-          <div id="scripts-list" style="display: grid; grid-template-columns: 1fr; gap: 8px;"></div>
+          <div id="scripts-list"></div>
         </fieldset>
 
         <div style="display:flex; justify-content:flex-end; gap: 10px; margin-top: 12px; grid-column: 1 / -1;">
-          <button id="cancel-edit" type="reset" style="padding: 8px 14px; border-radius: 999px;">Annulla</button>
-          <button type="submit" style="padding: 8px 14px; border-radius: 999px;">Salva</button>
+          <button id="cancel-edit" type="reset" style="padding: 6px 10px; border-radius: 999px; font-size: 0.9em;">Annulla</button>
+          <button type="submit" style="padding: 6px 10px; border-radius: 999px; font-size: 0.9em;">Salva</button>
         </div>
     </form>
   </div>
@@ -329,6 +379,13 @@
       if (data.ranking_date === "") delete data.ranking_date;
       if (data.dataopen === "") delete data.dataopen;
 
+      if (data.chiusuraPronostici === "") {
+        delete data.chiusuraPronostici;
+      } else if (typeof data.chiusuraPronostici === "string") {
+        const d = new Date(data.chiusuraPronostici);
+        if (!Number.isNaN(d.getTime())) data.chiusuraPronostici = d.toISOString();
+      }
+
       if (typeof data.rounds !== "undefined") data.rounds = Number(data.rounds);
       if (typeof data.roundopen !== "undefined") data.roundopen = Number(data.roundopen);
 
@@ -406,6 +463,33 @@
         ).sort((a, b) => a.localeCompare(b));
 
         dl.innerHTML = countries.map((c) => `<option value="${c}"></option>`).join("");
+      } catch (e) {}
+    })();
+
+    (async () => {
+      const sel = document.getElementById("ranking-date");
+      if (!sel) return;
+
+      const current = sel.value || "";
+      try {
+        const res = await fetch(`<%- apiUrl%>/rankings/dates`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+        if (!res.ok) return;
+        const json = await res.json();
+        const dates = (json && json.data) ? json.data : [];
+        const normalized = (dates || [])
+          .map((d) => (d ? String(d).slice(0, 10) : ""))
+          .filter(Boolean);
+
+        sel.innerHTML = [
+          `<option value="">(vuoto)</option>`,
+          ...normalized.map((d) => `<option value="${d}">${d}</option>`),
+        ].join("");
+        sel.value = current;
       } catch (e) {}
     })();
 

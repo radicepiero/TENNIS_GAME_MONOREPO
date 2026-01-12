@@ -1,5 +1,12 @@
 const db = require("../models");
 
+const getSuperuserId = async () => {
+  let superuserId = process.env.SUPERUSER;
+  if (superuserId) return superuserId;
+  const superUser = await db.User.findOne({ where: { level: "super" } });
+  return superUser ? superUser.uuid : null;
+};
+
 function toTime(v) {
   if (!v) return null;
   const t = new Date(v).getTime();
@@ -51,7 +58,9 @@ async function getFriendDashboard(userUuid) {
     )
   );
 
-  const [trees, predictions] = await Promise.all([
+  const superuserId = await getSuperuserId();
+
+  const [trees, predictions, superTrees] = await Promise.all([
     db.Tree.findAll({
       where: {
         ownerId: userUuid,
@@ -64,6 +73,21 @@ async function getFriendDashboard(userUuid) {
         ...(tournamentIds.length ? { tournament_id: tournamentIds } : {}),
       },
     }),
+    superuserId
+      ? db.Tree.findAll({
+          where: {
+            ownerId: String(superuserId),
+            ...(tournamentIds.length
+              ? {
+                  [db.Sequelize.Op.or]: [
+                    { tournament_id: tournamentIds },
+                    { tournament: tournamentIds.map(String) },
+                  ],
+                }
+              : {}),
+          },
+        })
+      : [],
   ]);
 
   const hasTreeByTournament = new Map();
@@ -76,6 +100,12 @@ async function getFriendDashboard(userUuid) {
   for (const pr of predictions || []) {
     const tid = pr && pr.tournament_id ? String(pr.tournament_id) : null;
     if (tid) hasPredictionByTournament.set(tid, true);
+  }
+
+  const hasSuperTreeByTournament = new Map();
+  for (const tr of superTrees || []) {
+    const tid = tr && (tr.tournament_id || tr.tournament) ? String(tr.tournament_id || tr.tournament) : null;
+    if (tid) hasSuperTreeByTournament.set(tid, true);
   }
 
   const buildTournamentPreview = (t) => {
@@ -91,6 +121,7 @@ async function getFriendDashboard(userUuid) {
       roundopen: t.roundopen,
       hasTree: Boolean(hasTreeByTournament.get(tid)),
       hasPrediction: Boolean(hasPredictionByTournament.get(tid)),
+      hasSuperTree: Boolean(hasSuperTreeByTournament.get(tid)),
     };
   };
 

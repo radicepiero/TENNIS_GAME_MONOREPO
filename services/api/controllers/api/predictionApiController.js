@@ -100,6 +100,37 @@ const getPredictionsByTournamentId = async (req, res) => {
       return res.status(400).json({ success: false, message: "ID mancante" });
     }
 
+    const user = res.locals.user;
+    const level = user && user.level ? String(user.level) : null;
+    if (!user || !level) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+
+    if (level === "friend") {
+      const tournament = await tournamentService.getTournament(id);
+      if (!tournament) {
+        return res.status(404).json({ success: false, message: "Torneo non trovato" });
+      }
+
+      const st = tournament.status ? String(tournament.status).toLowerCase() : "";
+      // In sviluppo i pronostici devono essere visibili almeno quando il torneo è in corso o completato
+      if (st === "in-progress" || st === "completed") {
+        // bypass cutoff
+      } else if (st === "excluded") {
+        return res.status(403).json({ success: false, message: "Torneo escluso dal gioco" });
+      } else {
+      const closeAt = tournament.chiusuraPronostici ? new Date(tournament.chiusuraPronostici) : null;
+      const now = new Date();
+      if (!closeAt || Number.isNaN(closeAt.getTime()) || now < closeAt) {
+        return res.status(403).json({
+          success: false,
+          message: "Pronostici altri utenti non ancora visibili",
+          chiusuraPronostici: tournament.chiusuraPronostici || null,
+        });
+      }
+      }
+    }
+
     const prediction = await predictionService.readPredictionsTournament(id);
     //console.log("DCcC", prediction);
     if (!prediction || prediction.length === 0) {

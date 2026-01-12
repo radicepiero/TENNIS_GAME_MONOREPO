@@ -21,6 +21,49 @@ async function loadTournaments({ apiUrl }) {
       return s.length >= 10 ? s.slice(0, 10) : s;
     };
 
+    const formatDmyShort = (v) => {
+      const ymd = normalizeYmd(v);
+      if (!ymd || ymd.length < 10) return ymd;
+      const [yyyy, mm, dd] = ymd.split("-");
+      if (!yyyy || !mm || !dd) return ymd;
+      return `${dd}-${mm}-${String(yyyy).slice(-2)}`;
+    };
+
+    const countryToFlag = (countryRaw) => {
+      const c = String(countryRaw || "").trim().toLowerCase();
+      const map = {
+        italia: "IT",
+        australia: "AU",
+        spagna: "ES",
+        francia: "FR",
+        germania: "DE",
+        olanda: "NL",
+        monaco: "MC",
+        qatar: "QA",
+        "stati uniti": "US",
+        argentina: "AR",
+        brasile: "BR",
+        canada: "CA",
+        cina: "CN",
+        giappone: "JP",
+        regno: "GB",
+        "regno unito": "GB",
+        svezia: "SE",
+        svizzera: "CH",
+        emirati: "AE",
+        "emirati arabi": "AE",
+        "emirati arabi uniti": "AE",
+      };
+      const code = map[c];
+      if (!code || code.length !== 2) return "🏳️";
+      const A = 0x1f1e6;
+      const pts = code
+        .toUpperCase()
+        .split("")
+        .map((ch) => A + ch.charCodeAt(0) - 65);
+      return String.fromCodePoint(...pts);
+    };
+
     const tournamentYear = (t) => {
       const df = t && t.datafine ? new Date(t.datafine) : null;
       if (!df || Number.isNaN(df.getTime())) return null;
@@ -72,6 +115,49 @@ async function loadTournaments({ apiUrl }) {
 
     const getTournamentStatus = (t) => (t && t.status ? String(t.status).toLowerCase() : "");
 
+    const statusLabel = (statusRaw) => {
+      const st = String(statusRaw || "").toLowerCase();
+      if (st === "excluded") return "torneo escluso dal gioco";
+      if (st === "open") return "Fai il tuo pronostico";
+      if (st === "in-progress") return "Segui i risultati dei pronostici";
+      if (st === "completed") return "Verifica il punteggio";
+      return st;
+    };
+
+    const statusHref = (t) => {
+      const st = getTournamentStatus(t);
+      if (st === "open") return `/tornei/${t.id}/pronostico`;
+      if (st === "in-progress" || st === "completed") return `/tornei/${t.id}/sviluppo`;
+      return "";
+    };
+
+    const superuserTreeExistsCache = new Map();
+    const checkSuperuserTreeExists = async (tournamentId) => {
+      const key = String(tournamentId);
+      if (superuserTreeExistsCache.has(key)) {
+        const v = superuserTreeExistsCache.get(key);
+        return typeof v === "boolean" ? v : await v;
+      }
+      const p = (async () => {
+        try {
+          const res = await fetch(
+            `${apiUrl}/trees/superuser/${encodeURIComponent(tournamentId)}`,
+            {
+              method: "GET",
+              headers: { "Content-Type": "application/json" },
+            }
+          );
+          return res.ok;
+        } catch (e) {
+          return false;
+        }
+      })();
+      superuserTreeExistsCache.set(key, p);
+      const ok = await p;
+      superuserTreeExistsCache.set(key, ok);
+      return ok;
+    };
+
     const isActionAllowed = {
       pronostico: (t) => {
         const st = getTournamentStatus(t);
@@ -105,10 +191,10 @@ async function loadTournaments({ apiUrl }) {
       const currentYear = new Date().getFullYear();
       const defaultYear = years.includes(currentYear) ? currentYear : years[0] || currentYear;
 
-      const allStatuses = ["upcoming", "open", "in-progress", "completed"];
+      const allStatuses = ["excluded", "upcoming", "open", "in-progress", "completed"];
 
       let selectedYear = defaultYear;
-      let selectedStatuses = new Set(allStatuses);
+      let selectedStatuses = new Set(allStatuses.filter((s) => s !== "excluded"));
 
       const setTitle = () => {
         titleEl.innerHTML = `Tornei ATP ${selectedYear} ${APP_ICONS.EDIT}`;
@@ -207,11 +293,20 @@ async function loadTournaments({ apiUrl }) {
       const filters = setupFriendsFiltersUi({ tournaments });
       if (!filters) return;
 
+      tournamentGrid.addEventListener("click", (e) => {
+        const btn = e.target && e.target.closest ? e.target.closest("[data-country-toggle]") : null;
+        if (!btn) return;
+        const wrap = btn.closest("[data-country-wrap]");
+        if (!wrap) return;
+        const name = wrap.querySelector("[data-country-name]");
+        if (!name) return;
+        name.classList.toggle("is-hidden");
+      });
+
       const paint = () => {
         tournamentGrid.innerHTML = "";
 
         (tournaments || [])
-          .filter((t) => String(t && t.status).toLowerCase() !== "excluded")
           .filter((t) => tournamentYear(t) === filters.selectedYear)
           .filter((t) => filters.selectedStatuses.has(getTournamentStatus(t)))
           .sort((a, b) => {
@@ -233,26 +328,58 @@ async function loadTournaments({ apiUrl }) {
             header.className = "tournament-card__header";
             header.style.backgroundImage = tournament.image ? `url('${tournament.image}')` : "none";
 
+            const category = document.createElement("div");
+            category.className = "tournament-card__category";
+            category.textContent = `${tournament.category || ""}`;
+
             const title = document.createElement("div");
             title.className = "tournament-card__title";
-            title.textContent = `${tournament.name || ""}`;
+            const nickname = String(tournament.nickname || "").trim();
+            title.textContent = nickname;
 
             const meta = document.createElement("div");
             meta.className = "tournament-card__meta";
+            const statusText = statusLabel(tournament.status);
+            const href = statusHref(tournament);
+            const statusEl = href
+              ? `<a class="tournament-status-link" href="${href}">${statusText}</a>`
+              : `<button type="button" class="tournament-status-link tournament-status-link--disabled" aria-disabled="true">${statusText}</button>`;
+
+            const city = tournament.location || "";
+            const country = tournament.country || "";
+            const flag = countryToFlag(country);
+            const where = city || country
+              ? `<span class="tournament-where" data-country-wrap><span class="tournament-city">${city}</span><button type="button" class="tournament-flag" data-country-toggle aria-label="Nazione">${flag}</button><span class="tournament-country is-hidden" data-country-name>${country}</span></span>`
+              : "";
+
+            const openRow = tournament.dataopen
+              ? `<div>open: ${formatDmyShort(tournament.dataopen)}</div>`
+              : "";
+
+            const st = getTournamentStatus(tournament);
+            const maybeEasyWin = st === "open"
+              ? `<a class="tournament-status-link tournament-easywin-btn is-hidden" data-easywin-btn data-tournament-id="${tournament.id}" href="/tornei/${tournament.id}/albero-pronostico">usa il tabellone per vincere facile</a>`
+              : "";
             meta.innerHTML = `
-              <div>inizio: ${normalizeYmd(tournament.datainizio)} | fine: ${normalizeYmd(tournament.datafine)}</div>
-              <div>open: ${normalizeYmd(tournament.dataopen)}</div>
+              <div>${statusEl}</div>
+              ${maybeEasyWin}
+              <div>dal ${formatDmyShort(tournament.datainizio)} al ${formatDmyShort(tournament.datafine)}</div>
+              ${openRow}
+              <div>${where}</div>
             `;
 
-            const tags = document.createElement("div");
-            tags.className = "tournament-card__tags";
-            tags.innerHTML = `
-              <span class="money-badge">${formatPrizeMoney(tournament) || ""}</span>
-            `;
+            if (st === "open") {
+              const btn = meta.querySelector("[data-easywin-btn]");
+              if (btn) {
+                checkSuperuserTreeExists(tournament.id).then((exists) => {
+                  if (exists) btn.classList.remove("is-hidden");
+                });
+              }
+            }
 
+            header.appendChild(category);
             header.appendChild(title);
             header.appendChild(meta);
-            header.appendChild(tags);
             tournamentContainer.appendChild(header);
 
             const actions = document.createElement("div");
@@ -294,20 +421,10 @@ async function loadTournaments({ apiUrl }) {
             // sviluppo
             actions.appendChild(
               createIconButton({
-                icon: "🏆",
-                title: "Sviluppo",
-                href: `/tornei/${tournament.id}/sviluppo`,
-                disabled: !isActionAllowed.sviluppo(tournament),
-              })
-            );
-
-            // albero superuser read-only
-            actions.appendChild(
-              createIconButton({
-                icon: APP_ICONS.VIEW,
-                title: "Albero superuser",
-                href: `/tornei/${tournament.id}/albero-superuser`,
-                disabled: !isActionAllowed.superuserTree(tournament),
+                icon: APP_ICONS.ATP,
+                title: "ATP",
+                href: tournament.href || "#",
+                disabled: !isActionAllowed.atp(tournament),
               })
             );
 
@@ -358,6 +475,16 @@ async function loadTournaments({ apiUrl }) {
     };
 
     if (isFriendsView) {
+      try {
+        if (window.sessionStorage) {
+          const keys = [];
+          for (let i = 0; i < window.sessionStorage.length; i++) {
+            const k = window.sessionStorage.key(i);
+            if (k && String(k).startsWith("skipAutoClone:")) keys.push(k);
+          }
+          keys.forEach((k) => window.sessionStorage.removeItem(k));
+        }
+      } catch (e) {}
       renderFriends();
     } else {
       renderDefault();

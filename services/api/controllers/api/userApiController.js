@@ -1,4 +1,6 @@
 const serviceUser = require("../../services/userService");
+const bcrypt = require("bcrypt");
+const { spedisciMailCambioPassword } = require("../../config/mailer");
 
 const getUsers = async (req, res) => {
   try {
@@ -7,6 +9,40 @@ const getUsers = async (req, res) => {
   } catch (error) {
     console.error("Errore nel recupero degli utenti:", error);
     res.status(500).json({ error: "Errore nel recupero dei dati" });
+  }
+};
+
+const changePassword = async (req, res) => {
+  try {
+    const user = res.locals.user;
+    if (!user) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+
+    const { current_password, new_password, confirm_password } = req.body || {};
+    if (!current_password || !new_password) {
+      return res.status(400).json({ success: false, message: "Dati mancanti" });
+    }
+    if (confirm_password && String(confirm_password) !== String(new_password)) {
+      return res.status(400).json({ success: false, message: "Conferma password non valida" });
+    }
+
+    const ok = await bcrypt.compare(String(current_password), String(user.password || ""));
+    if (!ok) {
+      return res.status(400).json({ success: false, message: "Password attuale errata" });
+    }
+
+    user.password = String(new_password);
+    await user.save();
+
+    try {
+      await spedisciMailCambioPassword("radice.p@gmail.com", user.email);
+    } catch (e) {}
+
+    return res.status(200).json({ success: true });
+  } catch (error) {
+    const msg = error && error.message ? String(error.message) : "Errore";
+    return res.status(400).json({ success: false, message: msg });
   }
 };
 
@@ -133,6 +169,7 @@ module.exports = {
   deleteUser,
   updateActiveUser,
   updateUserProfile,
+  changePassword,
   // patchUser,
 
   getUsersTournaments,

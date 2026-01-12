@@ -44,8 +44,19 @@ const getRanking = async (req, res) => {
   }
 };
 
+const getRankingDates = async (req, res) => {
+  try {
+    const dates = await serviceRanking.readRankingDates();
+    res.status(200).json({ success: true, data: dates });
+  } catch (error) {
+    console.error("Errore nel recupero delle date ranking:", error);
+    res.status(500).json({ error: "Errore nel recupero date ranking" });
+  }
+};
+
 module.exports = {
   getRanking,
   getFirstNPlayersOfAnyRankingDate,
   getRankingByDate,
+  getRankingDates,
 };

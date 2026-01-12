@@ -80,10 +80,13 @@
 
     // Aggiungi nuovi header
     const headerFragment = document.createDocumentFragment();
-    dates.forEach((date) => {
+    dates.forEach((date, idx) => {
       const th = document.createElement("th");
       th.className = "date-header";
-      th.textContent = date;
+      th.textContent = formatDmyShort(date);
+      // Evita che le date più recenti vengano coperte dalle precedenti (overlap per rotazione)
+      // Prima colonna data = più recente => z-index più alto
+      th.style.zIndex = String((dates.length - idx) + 2);
       headerFragment.appendChild(th);
     });
     datesHeader.appendChild(headerFragment);
@@ -211,6 +214,15 @@
       console.warn(`Invalid date: ${dateInput}`);
       return null;
     }
+  }
+
+  function formatDmyShort(ymd) {
+    if (!ymd) return "";
+    const s = String(ymd);
+    if (s.length < 10) return s;
+    const [yyyy, mm, dd] = s.split("-");
+    if (!yyyy || !mm || !dd) return s;
+    return `${dd}-${mm}-${String(yyyy).slice(-2)}`;
   }
 
   document.addEventListener("DOMContentLoaded", async () => {

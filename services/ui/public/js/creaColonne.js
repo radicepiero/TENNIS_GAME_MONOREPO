@@ -1,10 +1,19 @@
 const punteggi = [];
 
 async function fetchJson(url, options) {
-  const res = await fetch(url, options);
+  const res = await fetch(url, { credentials: "include", ...(options || {}) });
   if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(`HTTP ${res.status} ${url} ${text}`);
+    let msg = "";
+    try {
+      const json = await res.json();
+      msg = (json && (json.message || json.error)) ? (json.message || json.error) : JSON.stringify(json);
+      if (json && json.chiusuraPronostici) {
+        msg = `${msg} (visibili dopo: ${json.chiusuraPronostici})`;
+      }
+    } catch (e) {
+      msg = await res.text().catch(() => "");
+    }
+    throw new Error(`HTTP ${res.status} ${url} ${msg}`);
   }
   return await res.json();
 }
@@ -157,13 +166,23 @@ function computeDisplayStatusForPick({ pickType, playerId, selectedRound, matche
 
   const baseStatus = computePlayerStatusForRound(playerId, selectedRound, matches);
 
+  // In Finale view (round=1), a predicted winner who reached semis but is not in the final
+  // should remain visible (red) instead of being hidden.
+  if (pickType === "winner" && Number(selectedRound) === 1) {
+    const reachedSemifinal = didPlayRound(playerId, 2, matches);
+    const inFinal = didPlayRound(playerId, 1, matches);
+    if (reachedSemifinal && !inFinal) {
+      return "esce";
+    }
+  }
+
   // In Finale view (round=1), a semifinalist who reached semis but is not in the final should
   // remain visible (red) instead of being hidden.
   if (pickType === "semifinalist" && Number(selectedRound) === 1) {
     const reachedSemifinal = didPlayRound(playerId, 2, matches);
     const inFinal = didPlayRound(playerId, 1, matches);
     if (reachedSemifinal && !inFinal) {
-      return "uscito";
+      return "esce";
     }
   }
 
@@ -336,7 +355,7 @@ export async function creaColonne(tournamentID, faseMenu, apiUrl, loggedUserUuid
 
     const headerCell = document.createElement("div");
     headerCell.className = "header-cell";
-    const userImg = prediction.img || prediction.user_image_url;
+    const userImg = prediction.avatar_url || prediction.img || prediction.user_image_url;
     const userName = prediction.user_soprannome || prediction.user_email;
     headerCell.innerHTML = `
     <img src="${userImg}" alt="Immagine ${userName}" />

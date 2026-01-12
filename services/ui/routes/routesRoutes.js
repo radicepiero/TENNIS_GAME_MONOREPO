@@ -1,5 +1,9 @@
 const router = require("express").Router();
 const { requireAdmin } = require("../middleware/authMiddleware");
+const multer = require("multer");
+const path = require("path");
+const fs = require("fs");
+const avatarStore = require("../services/avatarStore");
 
 router.get("/prediction", (req, res) => {
   res.render("prediction");
@@ -66,10 +70,19 @@ router.get("/tornei/:id/edit", requireAdmin, async (req, res) => {
       const s = String(v);
       return s.length >= 10 ? s.slice(0, 10) : s;
     };
+    const toDatetimeLocal = (v) => {
+      if (!v) return "";
+      const d = new Date(v);
+      if (Number.isNaN(d.getTime())) return "";
+      const pad = (n) => String(n).padStart(2, "0");
+      // datetime-local expects local time, no timezone suffix
+      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    };
     tournament.datainizio = toYmd(tournament.datainizio);
     tournament.datafine = toYmd(tournament.datafine);
     tournament.ranking_date = toYmd(tournament.ranking_date);
     tournament.dataopen = toYmd(tournament.dataopen);
+    tournament.chiusuraPronostici = toDatetimeLocal(tournament.chiusuraPronostici);
 
     const safeJson = async (res) => {
       try {
@@ -102,25 +115,39 @@ router.get("/tornei/:id/edit", requireAdmin, async (req, res) => {
       : null;
     const playersJson = playersRes.ok ? await safeJson(playersRes) : null;
 
-    const tournamentWithScripts =
-      (tournamentScriptsJson && tournamentScriptsJson.data && tournamentScriptsJson.data[0]) ||
-      null;
-    const scripts = (tournamentWithScripts && tournamentWithScripts.Scripts) || [];
+    const getTournamentWithScriptsFromApiResponse = (json) => {
+      if (!json) return null;
+      if (json.data && Array.isArray(json.data) && json.data[0]) return json.data[0];
+      if (json.data && !Array.isArray(json.data) && typeof json.data === "object") return json.data;
+      if (Array.isArray(json) && json[0]) return json[0];
+      if (typeof json === "object") return json;
+      return null;
+    };
+
+    const tournamentWithScripts = getTournamentWithScriptsFromApiResponse(tournamentScriptsJson);
+    const scripts =
+      (tournamentWithScripts && (tournamentWithScripts.Scripts || tournamentWithScripts.scripts)) || [];
 
     const players = (playersJson && playersJson.data) || [];
 
+    // Compile scripts like creaColonne.js (iterate all scripts and extract functions)
+    let pointsWinnerFn = null;
+    let pointsSemiFn = null;
     try {
-      const sWinner = scripts.find((s) => s && s.name === "punteggioWinner");
-      const sSemi = scripts.find((s) => s && s.name === "punteggioSemifinalist");
-      if (sWinner && sWinner.script) {
-        eval(sWinner.script);
-      }
-      if (sSemi && sSemi.script) {
-        eval(sSemi.script);
+      for (const s of scripts) {
+        if (!s || !s.script) continue;
+        const compiled = new Function(
+          `${s.script}; return { w: (typeof punteggioWinner === 'function') ? punteggioWinner : null, sf: (typeof punteggioSemifinalist === 'function') ? punteggioSemifinalist : null };`
+        )();
+        if (!pointsWinnerFn && compiled && typeof compiled.w === "function") pointsWinnerFn = compiled.w;
+        if (!pointsSemiFn && compiled && typeof compiled.sf === "function") pointsSemiFn = compiled.sf;
+        if (pointsWinnerFn && pointsSemiFn) break;
       }
     } catch (e) {
-      console.error("Errore esecuzione scripts punteggio:", e);
+      console.error("Errore compile scripts punteggio:", e);
     }
+    if (!pointsWinnerFn) pointsWinnerFn = () => 0;
+    if (!pointsSemiFn) pointsSemiFn = () => 0;
 
     const parseRankingNumber = (rawRanking) => {
       let ranking = Number(rawRanking);
@@ -137,41 +164,57 @@ router.get("/tornei/:id/edit", requireAdmin, async (req, res) => {
       return s.length >= 10 ? s.slice(0, 10) : s;
     };
 
-    const getRankingForDate = (player, rankingDate) => {
+    const hasRankingForDate = (player, rankingDate) => {
       const targetDate = normalizeYmd(rankingDate);
-      if (!targetDate) return { ranking: null, rankingIssue: true };
-      if (!player || !player.Rankings || !player.Rankings.length)
-        return { ranking: null, rankingIssue: true };
-
+      if (!targetDate) return false;
+      if (!player || !player.Rankings || !player.Rankings.length) return false;
+      // If API doesn't provide ranking.date, we cannot check: assume endpoint already filtered by rankingDate.
       const anyHasDate = Boolean(player.Rankings.find((r) => r && r.date));
-      const chosen = anyHasDate
-        ? player.Rankings.find((r) => normalizeYmd(r && r.date) === targetDate) || null
-        : player.Rankings[0];
-      if (!chosen) return { ranking: null, rankingIssue: true };
+      if (!anyHasDate) return true;
+      return Boolean(player.Rankings.find((r) => normalizeYmd(r && r.date) === targetDate));
+    };
 
-      const ranking = parseRankingNumber(chosen.ranking);
-      // If dates are present and none matched, flag the issue; otherwise rely on parse.
-      const dateMismatch = anyHasDate && !player.Rankings.find((r) => normalizeYmd(r && r.date) === targetDate);
-      return { ranking, rankingIssue: dateMismatch || ranking === null };
+    const getPlayerRanking = (player, rankingDate = null) => {
+      if (!player) return null;
+      const targetDate = normalizeYmd(rankingDate);
+
+      if (player.Rankings && player.Rankings.length) {
+        let chosen = null;
+        if (targetDate) {
+          const anyHasDate = Boolean(player.Rankings.find((r) => r && r.date));
+          chosen = anyHasDate
+            ? player.Rankings.find((r) => normalizeYmd(r && r.date) === targetDate) || null
+            : player.Rankings[0];
+        }
+        if (!chosen) chosen = player.Rankings[0];
+        if (chosen && typeof chosen.ranking !== "undefined") {
+          return parseRankingNumber(chosen.ranking);
+        }
+      }
+
+      if (typeof player.ranking !== "undefined") return parseRankingNumber(player.ranking);
+      return null;
     };
 
     players.forEach((player) => {
       player.puntiSemifinalist = 0;
       player.puntiWinner = 0;
 
-      const { ranking, rankingIssue } = getRankingForDate(player, tournament.ranking_date);
-      player._rankingIssue = rankingIssue;
-      player._rankingValue = ranking;
-      if (rankingIssue) return;
+      const tournamentRankingDate = tournament && tournament.ranking_date ? normalizeYmd(tournament.ranking_date) : null;
+      const hasTournamentRanking = tournamentRankingDate ? hasRankingForDate(player, tournamentRankingDate) : false;
+      const ranking = tournamentRankingDate && hasTournamentRanking
+        ? getPlayerRanking(player, tournamentRankingDate)
+        : null;
 
-      if (typeof punteggioSemifinalist === "function") {
-        const v = punteggioSemifinalist(ranking);
-        player.puntiSemifinalist = Number.isFinite(Number(v)) ? Number(v) : 0;
-      }
-      if (typeof punteggioWinner === "function") {
-        const v = punteggioWinner(ranking);
-        player.puntiWinner = Number.isFinite(Number(v)) ? Number(v) : 0;
-      }
+      player._rankingIssue = !tournamentRankingDate || !hasTournamentRanking || ranking === null;
+      player._rankingValue = ranking;
+      if (player._rankingIssue) return;
+
+      const semiVal = pointsSemiFn(ranking);
+      player.puntiSemifinalist = Number.isFinite(Number(semiVal)) ? Number(semiVal) : 0;
+
+      const winVal = pointsWinnerFn(ranking);
+      player.puntiWinner = Number.isFinite(Number(winVal)) ? Number(winVal) : 0;
     });
 
     const playerById = new Map(players.map((p) => [String(p.id), p]));
@@ -322,11 +365,266 @@ router.get("/tornei/:id/schedule", async (req, res) => {
 });
 
 router.get("/profilo", (req, res) => {
-  res.render("profilo");
+  res.render("profilo", {
+    apiUrl: req.app.locals.apiUrl || "/api",
+    user: res.locals.user,
+  });
+});
+
+const PROFILE_UPLOAD_DIR = path.join(__dirname, "..", "public", "uploads", "profile");
+const ensureProfileUploadDir = () => {
+  try {
+    fs.mkdirSync(PROFILE_UPLOAD_DIR, { recursive: true });
+  } catch (e) {
+    console.error("[profilo/upload-image] mkdir failed:", e);
+  }
+};
+
+const profileUpload = multer({
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => {
+      ensureProfileUploadDir();
+      cb(null, PROFILE_UPLOAD_DIR);
+    },
+    filename: (req, file, cb) => {
+      const ext = path.extname(file.originalname || "").toLowerCase();
+      const safeExt = [".jpg", ".jpeg", ".png", ".webp", ".gif"].includes(ext) ? ext : ".png";
+      const ts = Date.now();
+      const rnd = Math.random().toString(16).slice(2);
+      cb(null, `profile-${ts}-${rnd}${safeExt}`);
+    },
+  }),
+  limits: { fileSize: 2 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const ok = [
+      "image/jpeg",
+      "image/png",
+      "image/webp",
+      "image/gif",
+    ].includes(String(file.mimetype || "").toLowerCase());
+    cb(ok ? null : new Error("Tipo file non supportato"), ok);
+  },
+});
+
+router.post("/profilo/upload-image", (req, res) => {
+  profileUpload.single("image")(req, res, (err) => {
+    console.log("[profilo/upload-image] cwd:", process.cwd());
+    console.log("[profilo/upload-image] __dirname:", __dirname);
+    console.log("[profilo/upload-image] PROFILE_UPLOAD_DIR:", PROFILE_UPLOAD_DIR);
+    if (err) {
+      if (err && err.code === "LIMIT_FILE_SIZE") {
+        return res.status(413).json({ error: "File troppo grande (max 2MB)" });
+      }
+      return res.status(400).json({ error: err.message || "Upload fallito" });
+    }
+    if (!req.file) {
+      return res.status(400).json({ error: "Nessun file" });
+    }
+    console.log("[profilo/upload-image] saved file:", {
+      filename: req.file.filename,
+      path: req.file.path,
+      destination: req.file.destination,
+    });
+
+    const publicPath = `/uploads/profile/${encodeURIComponent(req.file.filename)}`;
+
+    try {
+      const uuid = res.locals.user && res.locals.user.uuid ? String(res.locals.user.uuid) : "";
+      const oldUrl = uuid ? String(avatarStore.getProfileAvatar(uuid) || "") : "";
+      const newFilename = String(req.file.filename || "");
+      if (oldUrl.startsWith("/uploads/profile/") && newFilename) {
+        const oldFilename = path.basename(decodeURIComponent(oldUrl.replace("/uploads/profile/", "")));
+        if (oldFilename && oldFilename !== newFilename) {
+          const oldPath = path.join(PROFILE_UPLOAD_DIR, oldFilename);
+          fs.unlinkSync(oldPath);
+          console.log("[profilo/upload-image] deleted previous profile image:", oldPath);
+        }
+      }
+      if (uuid) {
+        avatarStore.setProfileAvatar(uuid, publicPath);
+      }
+    } catch (e) {
+      console.warn("[profilo/upload-image] could not delete/store previous profile image:", e && e.message ? e.message : e);
+    }
+
+    return res.status(200).json({ image_url: publicPath });
+  });
+});
+
+router.post("/pronostico/delete-avatar", (req, res) => {
+  try {
+    const avatarUrl = req.body && req.body.avatar_url ? String(req.body.avatar_url) : "";
+    if (!avatarUrl || !avatarUrl.startsWith("/uploads/predictions/")) {
+      return res.status(200).json({ success: true });
+    }
+
+    const filename = path.basename(
+      decodeURIComponent(avatarUrl.replace("/uploads/predictions/", ""))
+    );
+    if (!filename) {
+      return res.status(200).json({ success: true });
+    }
+
+    const filePath = path.join(PREDICTION_AVATAR_UPLOAD_DIR, filename);
+    fs.unlinkSync(filePath);
+    console.log("[pronostico/delete-avatar] deleted prediction avatar:", filePath);
+    return res.status(200).json({ success: true });
+  } catch (e) {
+    console.warn(
+      "[pronostico/delete-avatar] could not delete prediction avatar:",
+      e && e.message ? e.message : e
+    );
+    return res.status(200).json({ success: true });
+  }
+});
+
+router.post("/pronostico/delete-avatars", (req, res) => {
+  try {
+    const avatarUrls = (req.body && req.body.avatar_urls) || [];
+    const list = Array.isArray(avatarUrls) ? avatarUrls : [];
+    for (const u of list) {
+      try {
+        const avatarUrl = u ? String(u) : "";
+        if (!avatarUrl || !avatarUrl.startsWith("/uploads/predictions/")) continue;
+        const filename = path.basename(
+          decodeURIComponent(avatarUrl.replace("/uploads/predictions/", ""))
+        );
+        if (!filename) continue;
+        const filePath = path.join(PREDICTION_AVATAR_UPLOAD_DIR, filename);
+        fs.unlinkSync(filePath);
+        console.log("[pronostico/delete-avatars] deleted prediction avatar:", filePath);
+      } catch (e) {}
+    }
+    return res.status(200).json({ success: true });
+  } catch (e) {
+    return res.status(200).json({ success: true });
+  }
+});
+
+router.get("/ui/avatar/profile", (req, res) => {
+  try {
+    const uuid = res.locals.user && res.locals.user.uuid ? String(res.locals.user.uuid) : "";
+    const image_url = uuid ? avatarStore.getProfileAvatar(uuid) : "";
+    return res.status(200).json({ image_url: image_url || "" });
+  } catch (e) {
+    return res.status(200).json({ image_url: "" });
+  }
+});
+
+router.put("/ui/avatar/profile", (req, res) => {
+  try {
+    const uuid = res.locals.user && res.locals.user.uuid ? String(res.locals.user.uuid) : "";
+    const { image_url } = req.body || {};
+    const saved = uuid ? avatarStore.setProfileAvatar(uuid, image_url) : "";
+    return res.status(200).json({ image_url: saved || "" });
+  } catch (e) {
+    return res.status(400).json({ error: "Errore nel salvataggio avatar" });
+  }
+});
+
+router.get("/ui/avatar/prediction/:tournamentId", (req, res) => {
+  try {
+    const uuid = res.locals.user && res.locals.user.uuid ? String(res.locals.user.uuid) : "";
+    const tournamentId = req.params.tournamentId;
+    const image_url = uuid ? avatarStore.getPredictionAvatar(uuid, tournamentId) : "";
+    return res.status(200).json({ image_url: image_url || "" });
+  } catch (e) {
+    return res.status(200).json({ image_url: "" });
+  }
+});
+
+router.put("/ui/avatar/prediction/:tournamentId", (req, res) => {
+  try {
+    const uuid = res.locals.user && res.locals.user.uuid ? String(res.locals.user.uuid) : "";
+    const tournamentId = req.params.tournamentId;
+    const { image_url } = req.body || {};
+    const saved = uuid ? avatarStore.setPredictionAvatar(uuid, tournamentId, image_url) : "";
+    return res.status(200).json({ image_url: saved || "" });
+  } catch (e) {
+    return res.status(400).json({ error: "Errore nel salvataggio avatar" });
+  }
+});
+
+const PREDICTION_AVATAR_UPLOAD_DIR = path.join(__dirname, "..", "public", "uploads", "predictions");
+const ensurePredictionAvatarUploadDir = () => {
+  try {
+    fs.mkdirSync(PREDICTION_AVATAR_UPLOAD_DIR, { recursive: true });
+  } catch (e) {
+    console.error("[pronostico/upload-avatar] mkdir failed:", e);
+  }
+};
+
+const predictionAvatarUpload = multer({
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => {
+      ensurePredictionAvatarUploadDir();
+      cb(null, PREDICTION_AVATAR_UPLOAD_DIR);
+    },
+    filename: (req, file, cb) => {
+      const ext = path.extname(file.originalname || "").toLowerCase();
+      const safeExt = [".jpg", ".jpeg", ".png", ".webp", ".gif"].includes(ext) ? ext : ".png";
+      const ts = Date.now();
+      const rnd = Math.random().toString(16).slice(2);
+      cb(null, `prediction-avatar-${ts}-${rnd}${safeExt}`);
+    },
+  }),
+  limits: { fileSize: 2 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const ok = [
+      "image/jpeg",
+      "image/png",
+      "image/webp",
+      "image/gif",
+    ].includes(String(file.mimetype || "").toLowerCase());
+    cb(ok ? null : new Error("Tipo file non supportato"), ok);
+  },
+});
+
+router.post("/pronostico/upload-avatar", (req, res) => {
+  predictionAvatarUpload.single("image")(req, res, (err) => {
+    if (err) {
+      if (err && err.code === "LIMIT_FILE_SIZE") {
+        return res.status(413).json({ error: "File troppo grande (max 2MB)" });
+      }
+      return res.status(400).json({ error: err.message || "Upload fallito" });
+    }
+    if (!req.file) {
+      return res.status(400).json({ error: "Nessun file" });
+    }
+    const publicPath = `/uploads/predictions/${encodeURIComponent(req.file.filename)}`;
+
+    try {
+      const oldUrl = req.query && req.query.old_avatar_url ? String(req.query.old_avatar_url) : "";
+      const newFilename = String(req.file.filename || "");
+      if (oldUrl.startsWith("/uploads/predictions/") && newFilename) {
+        const oldFilename = path.basename(
+          decodeURIComponent(oldUrl.replace("/uploads/predictions/", ""))
+        );
+        if (oldFilename && oldFilename !== newFilename) {
+          const oldPath = path.join(PREDICTION_AVATAR_UPLOAD_DIR, oldFilename);
+          fs.unlinkSync(oldPath);
+          console.log("[pronostico/upload-avatar] deleted previous prediction avatar:", oldPath);
+        }
+      }
+    } catch (e) {
+      console.warn(
+        "[pronostico/upload-avatar] could not delete previous prediction avatar:",
+        e && e.message ? e.message : e
+      );
+    }
+
+    return res.status(200).json({ image_url: publicPath });
+  });
 });
 
 router.get("/admin/tornei", requireAdmin, (req, res) => {
   res.render("admin-tornei");
+});
+
+router.get("/admin/utenti", requireAdmin, (req, res) => {
+  res.render("admin-utenti", {
+    apiUrl: req.app.locals.apiUrl || "/api",
+  });
 });
 
 router.get("/tennisti", (req, res) => {

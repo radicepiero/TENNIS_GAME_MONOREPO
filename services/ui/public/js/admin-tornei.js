@@ -35,6 +35,7 @@ function rowHtml(t) {
   const tree = t && t._tree ? t._tree : null;
   const treeLabel = tree ? "Apri albero" : "Genera albero";
   const treeName = tree && tree.name ? String(tree.name) : "";
+  const nickname = t && t.nickname ? String(t.nickname) : "";
   const predCount = Number(t && t._predictionsCount);
   const predCountText = Number.isFinite(predCount) ? String(predCount) : "0";
   const actionsHtml = `
@@ -45,7 +46,10 @@ function rowHtml(t) {
   return `
     <tr data-id="${safe(t.id)}">
       <td style="border-bottom: 1px solid #eee; padding: 8px;">${safe(t.id)}</td>
-      <td style="border-bottom: 1px solid #eee; padding: 8px;">${safe(t.name)}</td>
+      <td style="border-bottom: 1px solid #eee; padding: 8px;">
+        <div>${safe(t.name)}</div>
+        ${nickname ? `<div style="font-size: 12px; opacity: 0.8; margin-top: 4px;">${safe(nickname)}</div>` : ""}
+      </td>
       <td style="border-bottom: 1px solid #eee; padding: 8px;">${safe(formatDateItUtc(t.datainizio))}</td>
       <td style="border-bottom: 1px solid #eee; padding: 8px;">${safe(formatDateItUtc(t.datafine))}</td>
       <td style="border-bottom: 1px solid #eee; padding: 8px;">${safe(t.status)}</td>
@@ -84,6 +88,27 @@ async function loadPredictionCounts(apiUrl) {
   if (!res.ok) return [];
   const json = await res.json();
   return (json && json.data) || [];
+}
+
+async function loadRankingDates(apiUrl) {
+  const res = await apiFetch(`${apiUrl}/rankings/dates`, { method: "GET" });
+  if (!res.ok) return [];
+  const json = await res.json();
+  return (json && json.data) || [];
+}
+
+function fillRankingDatesSelect(selectEl, dates) {
+  if (!selectEl) return;
+  const current = selectEl.value || "";
+  const opts = [
+    `<option value="">(vuoto)</option>`,
+    ...(dates || []).map((d) => {
+      const ymd = toYmd(d);
+      return `<option value="${ymd}">${ymd}</option>`;
+    }),
+  ];
+  selectEl.innerHTML = opts.join("");
+  selectEl.value = current;
 }
 
 function updateCountriesDatalist(tournaments) {
@@ -146,6 +171,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const form = document.getElementById("create-tournament");
   const createStatus = document.getElementById("create-status");
+  const rankingDateSelect = document.getElementById("ranking-date");
 
   const createModal = setupCreateModal();
 
@@ -157,13 +183,15 @@ document.addEventListener("DOMContentLoaded", () => {
   const tbody = document.querySelector("#tournaments-table tbody");
 
   let all = [];
+  let rankingDates = [];
 
   function applyFilters() {
     const nameQ = (filterName.value || "").toLowerCase();
     const yearQ = filterYear.value || "";
 
     const filtered = all.filter((t) => {
-      const okName = !nameQ || String(t.name || "").toLowerCase().includes(nameQ);
+      const haystack = `${String(t.name || "")} ${String(t.nickname || "")}`.toLowerCase();
+      const okName = !nameQ || haystack.includes(nameQ);
       const y = toYear(t.datafine || t.datainizio);
       const okYear = !yearQ || y === yearQ;
       return okName && okYear;
@@ -175,6 +203,14 @@ document.addEventListener("DOMContentLoaded", () => {
   async function load() {
     setText(listStatus, "Caricamento...");
     try {
+      try {
+        rankingDates = await loadRankingDates(apiUrl);
+        fillRankingDatesSelect(rankingDateSelect, rankingDates);
+      } catch (e) {
+        rankingDates = [];
+        fillRankingDatesSelect(rankingDateSelect, []);
+      }
+
       const res = await apiFetch(`${apiUrl}/tournaments`, { method: "GET" });
       if (!res.ok) {
         setText(listStatus, `Errore: ${res.status}`);
@@ -237,6 +273,26 @@ document.addEventListener("DOMContentLoaded", () => {
 
     setText(listStatus, "Eliminazione...");
     try {
+      try {
+        const prRes = await apiFetch(`${apiUrl}/predictions/tournaments/${id}`, { method: "GET" });
+        if (prRes.ok) {
+          const prJson = await prRes.json().catch(() => null);
+          const preds = (prJson && prJson.data) || [];
+          const avatarUrls = (preds || [])
+            .map((p) => (p && p.avatar_url ? String(p.avatar_url) : ""))
+            .filter((u) => u && u.startsWith("/uploads/predictions/"));
+
+          if (avatarUrls.length > 0) {
+            await fetch("/pronostico/delete-avatars", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ avatar_urls: avatarUrls }),
+              credentials: "include",
+            }).catch(() => null);
+          }
+        }
+      } catch (e3) {}
+
       const res = await apiFetch(`${apiUrl}/tournaments/${id}`, { method: "DELETE" });
       if (!res.ok) {
         setText(listStatus, `Errore delete: ${res.status}`);
@@ -262,6 +318,14 @@ document.addEventListener("DOMContentLoaded", () => {
     if (data.rounds === "") delete data.rounds;
     if (typeof data.costopartecipazione !== "undefined") data.costopartecipazione = Number(data.costopartecipazione);
     if (data.ranking_date === "") delete data.ranking_date;
+    if (typeof data.ranking_date === "string") data.ranking_date = toYmd(data.ranking_date);
+
+    if (data.chiusuraPronostici === "") {
+      delete data.chiusuraPronostici;
+    } else if (typeof data.chiusuraPronostici === "string") {
+      const d = new Date(data.chiusuraPronostici);
+      if (!Number.isNaN(d.getTime())) data.chiusuraPronostici = d.toISOString();
+    }
 
     try {
       const res = await apiFetch(`${apiUrl}/tournaments`, {

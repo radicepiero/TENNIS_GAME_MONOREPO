@@ -13,6 +13,10 @@ module.exports = function (sequelize) {
         type: DataTypes.STRING(255),
         allowNull: false,
       },
+      nickname: {
+        type: DataTypes.STRING(255),
+        allowNull: true,
+      },
       href: {
         type: DataTypes.STRING(255),
         allowNull: false,
@@ -78,6 +82,10 @@ module.exports = function (sequelize) {
       },
       admin_links: {
         type: DataTypes.JSONB,
+        allowNull: true,
+      },
+      chiusuraPronostici: {
+        type: DataTypes.DATE,
         allowNull: true,
       },
     },

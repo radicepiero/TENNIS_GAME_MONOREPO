@@ -12,12 +12,24 @@
 
   <div style="margin-top: 12px;">
     <label for="soprannome"><strong>Soprannome</strong></label>
-    <input id="soprannome" name="soprannome" type="text" value="<%= user && user.soprannome ? user.soprannome : '' %>" />
+    <input id="soprannome" name="soprannome" type="text" value="<%= user && user.soprannome ? user.soprannome : '' %>" style="text-align: center;" />
   </div>
 
-  <div style="margin-top: 12px;">
-    <label for="image_url"><strong>Immagine (URL)</strong></label>
-    <input id="image_url" name="image_url" type="text" value="<%= user && user.image_url ? user.image_url : '' %>" />
+  <input id="image_url" name="image_url" type="hidden" value="<%= user && user.ui_avatar_url ? user.ui_avatar_url : '' %>" />
+
+  <div
+    id="profile-avatar-uploader"
+    data-upload-url="/profilo/upload-image"
+    data-preview-id="profile-preview"
+    data-image-url-input-id="image_url"
+    data-status-id="upload-status"
+    style="margin-top: 12px; text-align: center;"
+  >
+    <label for="profile_image"><strong>Carica immagine</strong></label>
+    <input id="profile_image" name="profile_image" type="file" accept="image/*" style="display: block; margin: 8px auto 0;" />
+    <div>
+      <span id="upload-status" style="display: inline-block; margin-top: 8px;"></span>
+    </div>
   </div>
 
   <div style="margin-top: 12px;">
@@ -28,10 +40,30 @@
   </div>
 
   <div style="margin-top: 16px;">
-    <button id="save-profile">Salva</button>
+    <button id="save-profile" style="display: none; margin: 0 auto;">Salva</button>
     <span id="profile-status" style="margin-left: 10px;"></span>
+  </div>
+
+  <div style="margin-top: 26px; max-width: 420px; margin-left: auto; margin-right: auto;">
+    <h3 style="margin: 0 0 10px;">Cambia password</h3>
+    <div style="display: grid; gap: 10px;">
+      <label><strong>Password attuale</strong>
+        <input id="current_password" type="password" autocomplete="current-password" style="width: 100%;" />
+      </label>
+      <label><strong>Nuova password</strong>
+        <input id="new_password" type="password" autocomplete="new-password" style="width: 100%;" />
+      </label>
+      <label><strong>Conferma nuova password</strong>
+        <input id="confirm_password" type="password" autocomplete="new-password" style="width: 100%;" />
+      </label>
+      <div>
+        <button id="change-password" type="button">Cambia password</button>
+        <span id="password-status" style="margin-left: 10px;"></span>
+      </div>
+    </div>
   </div>
 </div>
 
+<script src="/js/avatarUploader.js"></script>
 <script src="/js/profilo.js"></script>
 <%- include('partials/footer'); -%>

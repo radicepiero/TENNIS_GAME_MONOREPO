@@ -36,11 +36,26 @@ const readUsers = async () => {
   }
 };
 
-const postUser = async (email, password, soprannome) => {
+const postUser = async (emailOrPayload, password, soprannome) => {
   try {
-    return User.create({ email, password, soprannome });
+    const payload =
+      emailOrPayload && typeof emailOrPayload === "object"
+        ? emailOrPayload
+        : { email: emailOrPayload, password, soprannome };
+
+    const createPayload = {
+      email: payload.email,
+      password: payload.password,
+      soprannome: payload.soprannome,
+    };
+    if (typeof payload.level !== "undefined") createPayload.level = payload.level;
+    if (typeof payload.active !== "undefined") createPayload.active = payload.active;
+    if (typeof payload.image_url !== "undefined") createPayload.image_url = payload.image_url;
+
+    return User.create(createPayload);
   } catch (error) {
     console.error("errore durante la creazione dello User");
+    throw error;
   }
 };
 

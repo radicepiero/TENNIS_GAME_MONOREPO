@@ -44,6 +44,9 @@ const getTournamentsScripts = async (tournamentId, scriptName) => {
 
 const postTournament = async (tournament) => {
   try {
+    if (tournament && tournament.name && (!tournament.nickname || !String(tournament.nickname).trim())) {
+      tournament.nickname = tournament.name;
+    }
     return await Tournament.create(tournament);
   } catch (error) {
     console.error("Errore nel creare il torneo:", error);
@@ -148,6 +151,9 @@ const deleteTournament = async (id) => {
 
 const putTournament = async (id, tournament) => {
   try {
+    if (tournament && tournament.name && (!tournament.nickname || !String(tournament.nickname).trim())) {
+      tournament.nickname = tournament.name;
+    }
     await Tournament.update(tournament, {
       where: { id },
     });

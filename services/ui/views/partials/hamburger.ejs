@@ -19,9 +19,11 @@
         <% if (user && (user.level === "admin" || user.level === "super")) { %>
           <li><a href="/admin/tornei">Admin Tornei</a></li>
         <% } %>
+        <% if (user && (user.level === "admin" || user.level === "super")) { %>
+          <li><a href="/admin/utenti">Admin Utenti</a></li>
+        <% } %>
         <% if (!user) { %>
           <li><a href="/login">Log in</a></li>
-          <li><a href="/signup">Sign up</a></li>
         <% } %>
       </ul>
     </nav>

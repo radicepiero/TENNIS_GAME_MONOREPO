@@ -3,6 +3,7 @@
 //se il cookie esiste ma è scaduto reindirizza alla home
 //se il cookie esiste valido allora restituisce quello che è stato richiesto
 const jwt = require("jsonwebtoken");
+const avatarStore = require("../services/avatarStore");
 
 const JWT_SECRET = process.env.JWT_SECRET || "un segreto generato a caso";
 
@@ -46,13 +47,23 @@ const checkUser = async (req, res, next) => {
 
     // Recupera dati utente dall'API
     const url = `${process.env.API}/users/${decodedToken.uuid}`;
-    const response = await fetch(url);
+    const response = await fetch(url, {
+      headers: {
+        cookie: req.headers.cookie || "",
+      },
+    });
     if (!response.ok) {
       res.locals.user = null;
       return next();
     }
     const user = await response.json();
     //console.log("Dati utente recuperati:", user);
+    try {
+      const avatarUrl = avatarStore.getProfileAvatar(user && user.uuid);
+      user.ui_avatar_url = avatarUrl || user.image_url || "";
+    } catch (e) {
+      user.ui_avatar_url = user.image_url || "";
+    }
     res.locals.user = user;
   } catch (error) {
     res.locals.user = null;

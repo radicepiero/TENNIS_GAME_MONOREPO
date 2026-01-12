@@ -96,7 +96,25 @@ const readRankingByDate = async (date) => {
   }
 };
 
+const readRankingDates = async () => {
+  try {
+    const rows = await Ranking.findAll({
+      attributes: [[db.Sequelize.fn("DISTINCT", db.Sequelize.col("date")), "date"]],
+      order: [["date", "DESC"]],
+      raw: true,
+    });
+
+    return (rows || [])
+      .map((r) => (r && r.date ? String(r.date).slice(0, 10) : ""))
+      .filter(Boolean);
+  } catch (error) {
+    console.error("Errore durante il recupero delle date ranking:", error);
+    throw error;
+  }
+};
+
 module.exports = {
   readRanking,
   readRankingByDate,
+  readRankingDates,
 };

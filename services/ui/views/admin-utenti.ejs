@@ -1,0 +1,55 @@
+<%- include('partials/head'); -%>
+<link rel="stylesheet" href="/css/hamburger.css" />
+<%- include('partials/header'); -%> <%- include('partials/hamburger'); -%>
+
+<h1>Admin Utenti</h1>
+
+<div id="admin-users" data-api-url="<%= apiUrl %>" style="max-width: 900px; margin: 0 auto; padding: 0 12px;">
+  <h2>Crea utente friend</h2>
+
+  <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; max-width: 700px;">
+    <label>Email
+      <input id="new-email" type="email" placeholder="email" />
+    </label>
+    <label>Soprannome
+      <input id="new-soprannome" type="text" placeholder="soprannome" />
+    </label>
+    <label>Password
+      <input id="new-password" type="password" placeholder="password" autocomplete="new-password" />
+    </label>
+    <label>Conferma password
+      <input id="new-password-confirm" type="password" placeholder="conferma" autocomplete="new-password" />
+    </label>
+  </div>
+
+  <div style="margin-top: 12px; display:flex; gap: 10px; align-items:center;">
+    <button id="create-friend" type="button">Crea friend</button>
+    <span id="create-status"></span>
+  </div>
+
+  <hr style="margin: 22px 0;" />
+
+  <h2>Utenti</h2>
+  <div style="margin: 10px 0; display:flex; gap: 10px; align-items:center;">
+    <button id="reload" type="button">Ricarica</button>
+    <span id="list-status"></span>
+  </div>
+
+  <div style="overflow-x:auto;">
+    <table id="users-table" style="width:100%; border-collapse: collapse;">
+      <thead>
+        <tr>
+          <th style="text-align:left; border-bottom: 1px solid #ddd; padding: 8px;">UUID</th>
+          <th style="text-align:left; border-bottom: 1px solid #ddd; padding: 8px;">Email</th>
+          <th style="text-align:left; border-bottom: 1px solid #ddd; padding: 8px;">Soprannome</th>
+          <th style="text-align:left; border-bottom: 1px solid #ddd; padding: 8px;">Level</th>
+          <th style="text-align:left; border-bottom: 1px solid #ddd; padding: 8px;">Azioni</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</div>
+
+<script src="/js/admin-utenti.js"></script>
+<%- include('partials/footer'); -%>

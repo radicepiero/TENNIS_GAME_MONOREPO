@@ -54,7 +54,14 @@
               <option value="completed">Completato</option>
             </select>
           </label>
-          <label>Ranking date<input name="ranking_date" type="date" /></label>
+          <label>Chiusura Pronostici
+            <input name="chiusuraPronostici" type="datetime-local" />
+          </label>
+          <label>Ranking date
+            <select name="ranking_date" id="ranking-date" style="width: 100%;">
+              <option value="">(vuoto)</option>
+            </select>
+          </label>
           <label>Rounds
             <select name="rounds" id="rounds">
               <option value="">(vuoto)</option>

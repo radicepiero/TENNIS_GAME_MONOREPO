@@ -43,6 +43,8 @@ services:
       - API=http://api:9000/api
     depends_on:
       - api
+    volumes:
+      - ./services/ui/public/uploads:/app/public/uploads
     expose:
       - "3000"
 

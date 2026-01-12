@@ -1,12 +1,15 @@
 const { Router } = require("express");
 const router = Router();
 const controller = require("../../controllers/api/userApiController");
-router.get("/", controller.getUsers);
+const { requireAdmin } = require("../../middleware/authMiddleware");
+
+router.get("/", requireAdmin, controller.getUsers);
 router.get("/mail/:mail", controller.getUserByMail);
+router.post("/me/change-password", controller.changePassword);
 router.put("/:uuid/profile", controller.updateUserProfile);
 router.get("/:uuid", controller.getUser);
-router.post("/", controller.postUser);
-router.delete("/:uuid", controller.deleteUser);
+router.post("/", requireAdmin, controller.postUser);
+router.delete("/:uuid", requireAdmin, controller.deleteUser);
 router.put("/:uuid", controller.updateActiveUser);
 router.get("/tournaments/", controller.getUsersTournaments);
 router.get("/tournaments/:uuid", controller.getUserTournaments);
