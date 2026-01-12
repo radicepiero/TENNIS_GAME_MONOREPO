@@ -169,6 +169,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const apiUrl = root.dataset.apiUrl || "/api";
 
+  const rankingImportDate = document.getElementById("ranking-import-date");
+  const rankingImportFile = document.getElementById("ranking-import-file");
+  const rankingImportRun = document.getElementById("ranking-import-run");
+  const rankingImportStatus = document.getElementById("ranking-import-status");
+
   const form = document.getElementById("create-tournament");
   const createStatus = document.getElementById("create-status");
   const rankingDateSelect = document.getElementById("ranking-date");
@@ -184,6 +189,58 @@ document.addEventListener("DOMContentLoaded", () => {
 
   let all = [];
   let rankingDates = [];
+
+  async function runRankingImport() {
+    if (!rankingImportRun || !rankingImportFile || !rankingImportDate) return;
+    const file = rankingImportFile.files && rankingImportFile.files[0];
+    const date = rankingImportDate.value;
+    if (!file) {
+      setText(rankingImportStatus, "Seleziona un file CSV");
+      return;
+    }
+    if (!date) {
+      setText(rankingImportStatus, "Seleziona la ranking date");
+      return;
+    }
+
+    setText(rankingImportStatus, "Upload... ");
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("ranking_date", date);
+
+      const res = await fetch(`${apiUrl}/rankings/import-csv`, {
+        method: "POST",
+        body: fd,
+        credentials: "include",
+      });
+
+      const json = await res.json().catch(() => null);
+      if (!res.ok) {
+        const msg = (json && (json.message || json.error)) || `Errore: ${res.status}`;
+        setText(rankingImportStatus, msg);
+        return;
+      }
+
+      const data = json && json.data ? json.data : null;
+      if (data) {
+        setText(
+          rankingImportStatus,
+          `OK (righe: ${data.rows}, players nuovi: ${data.createdPlayers}, rankings: ${data.createdRankings})`
+        );
+      } else {
+        setText(rankingImportStatus, "OK");
+      }
+
+      rankingImportFile.value = "";
+      try {
+        rankingDates = await loadRankingDates(apiUrl);
+        fillRankingDatesSelect(rankingDateSelect, rankingDates);
+      } catch (e) {}
+    } catch (e) {
+      setText(rankingImportStatus, "Errore import");
+    }
+  }
 
   function applyFilters() {
     const nameQ = (filterName.value || "").toLowerCase();
@@ -260,6 +317,7 @@ document.addEventListener("DOMContentLoaded", () => {
   filterName.addEventListener("input", applyFilters);
   filterYear.addEventListener("change", applyFilters);
   reloadBtn.addEventListener("click", load);
+  if (rankingImportRun) rankingImportRun.addEventListener("click", runRankingImport);
 
   tbody.addEventListener("click", async (e) => {
     const btn = e.target.closest("button[data-action='delete']");

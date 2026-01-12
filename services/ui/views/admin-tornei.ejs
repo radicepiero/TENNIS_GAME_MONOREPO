@@ -6,6 +6,18 @@
 
 <div id="admin-tournaments" data-api-url="<%= apiUrl %>">
   <div style="max-width: 1100px; margin: 0 auto; text-align: left; padding: 0 12px;">
+    <div style="margin-top: 14px; padding: 12px; border: 1px solid #ddd; border-radius: 8px;">
+      <h2 style="margin: 0 0 10px 0;">Aggiorna ranking tennisti</h2>
+      <div style="display:flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+        <label style="margin: 0;">Ranking date
+          <input id="ranking-import-date" type="date" />
+        </label>
+        <input id="ranking-import-file" type="file" accept=".csv,text/csv" />
+        <button id="ranking-import-run" type="button">Carica CSV e aggiorna</button>
+        <span id="ranking-import-status"></span>
+      </div>
+    </div>
+
     <div style="margin-top: 20px; display: flex; align-items: center; justify-content: space-between; gap: 12px;">
       <h2 style="margin: 0;">Tornei</h2>
       <button id="open-create" type="button" aria-label="Aggiungi torneo" title="Aggiungi torneo" style="width: 36px; height: 36px; font-size: 22px; line-height: 1;">+</button>

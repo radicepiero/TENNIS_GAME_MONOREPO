@@ -1,5 +1,7 @@
 const serviceRanking = require("../../services/rankingService");
 const utils = require("../../services/utilsService");
+const fs = require("fs");
+const { importRankingFromCsv } = require("../../scripts/rankingImport");
 
 const getRankingByDate = async (req, res) => {
   try {
@@ -54,9 +56,39 @@ const getRankingDates = async (req, res) => {
   }
 };
 
+const importRankingCsv = async (req, res) => {
+  const uploaded = req.file;
+  const rankingDate = (req.body && req.body.ranking_date) || (req.query && req.query.ranking_date);
+
+  if (!uploaded || !uploaded.path) {
+    return res.status(400).json({ success: false, message: "File mancante" });
+  }
+  if (!rankingDate) {
+    try {
+      fs.unlinkSync(uploaded.path);
+    } catch (e) {}
+    return res.status(400).json({ success: false, message: "ranking_date mancante" });
+  }
+
+  try {
+    const result = await importRankingFromCsv(uploaded.path, String(rankingDate));
+    try {
+      fs.unlinkSync(uploaded.path);
+    } catch (e) {}
+    return res.status(200).json({ success: true, data: result });
+  } catch (error) {
+    try {
+      fs.unlinkSync(uploaded.path);
+    } catch (e) {}
+    const msg = error && error.message ? String(error.message) : "Errore import ranking";
+    return res.status(500).json({ success: false, message: msg });
+  }
+};
+
 module.exports = {
   getRanking,
   getFirstNPlayersOfAnyRankingDate,
   getRankingByDate,
   getRankingDates,
+  importRankingCsv,
 };

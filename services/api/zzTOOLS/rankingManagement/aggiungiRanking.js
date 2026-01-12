@@ -40,39 +40,65 @@ async function connectDB() {
 }
 
 // Funzione per elaborare il file CSV
-async function processCSV(filePath, rankingDate) {
+async function processCSV(filePath, rankingDate, { closeConnection = true } = {}) {
   await connectDB();
   const results = [];
   const resolvedCsv = path.isAbsolute(filePath)
     ? filePath
     : path.resolve(process.cwd(), filePath);
 
-  fs.createReadStream(resolvedCsv)
-    .pipe(csv({ headers: true, skipLines: 1, trim: true }))
-    .on("data", (data) => {
-      const name = data[Object.keys(data)[0]];
-      const value = parseInt(data[Object.keys(data)[1]], 10);
-      results.push({ name, value });
-    })
-    .on("end", async () => {
-      for (const row of results) {
-        console.log("Elaborazione riga:", row);
-        const { name, value } = row;
-
-        let player = await Player.findOne({ where: { name } });
-        if (!player) {
-          player = await Player.create({ name });
+  return await new Promise((resolve, reject) => {
+    const stream = fs
+      .createReadStream(resolvedCsv)
+      .pipe(csv({ headers: true, skipLines: 1, trim: true }))
+      .on("data", (data) => {
+        try {
+          const name = data[Object.keys(data)[0]];
+          const value = parseInt(data[Object.keys(data)[1]], 10);
+          results.push({ name, value });
+        } catch (e) {
+          reject(e);
         }
+      })
+      .on("error", (err) => {
+        reject(err);
+      })
+      .on("end", async () => {
+        try {
+          let createdPlayers = 0;
+          let createdRankings = 0;
 
-        await Ranking.create({
-          player_name: name,
-          date: new Date(rankingDate),
-          ranking: value,
-        });
-      }
-      console.log("Elaborazione completata");
-      await db.sequelize.close();
-    });
+          for (const row of results) {
+            console.log("Elaborazione riga:", row);
+            const { name, value } = row;
+
+            let player = await Player.findOne({ where: { name } });
+            if (!player) {
+              player = await Player.create({ name });
+              createdPlayers += 1;
+            }
+
+            await Ranking.create({
+              player_name: name,
+              date: new Date(rankingDate),
+              ranking: value,
+            });
+            createdRankings += 1;
+          }
+
+          console.log("Elaborazione completata");
+          if (closeConnection) await db.sequelize.close();
+          resolve({ rows: results.length, createdPlayers, createdRankings });
+        } catch (e) {
+          try {
+            if (closeConnection) await db.sequelize.close();
+          } catch (e2) {}
+          reject(e);
+        }
+      });
+
+    return stream;
+  });
 }
 
 // Esegui la funzione con il percorso del file CSV

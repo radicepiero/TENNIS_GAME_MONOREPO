@@ -41,7 +41,7 @@ services:
       - ./.env.prod
     environment:
       - PORT=3000
-      - API=http://api:9000/api
+      - API=http://tennis-api:9000/api
     depends_on:
       - api
     volumes:
