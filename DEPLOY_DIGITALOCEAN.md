@@ -80,6 +80,7 @@ MAILER_PSSW=APP_PASSWORD_GMAIL
 Note:
 - `POSTGRES_PASSWORD` / `DB_PSSW` devono combaciare.
 - `CORS_ORIGIN` include entrambi i domini, anche se il canonico è `www`.
+- Le variabili Mailer sono opzionali se non usi flussi email (es. autoregistrazione). Login e creazione utenti da admin funzionano anche senza SMTP.
 
 ## 6) Avvio stack in produzione
 
@@ -132,7 +133,57 @@ La configurazione `docker-compose.prod.yml` usa volumi docker:
 
 Quindi dati e uploads non si perdono con rebuild.
 
-## 10) Backup
+## 10) Migrazione dati (locale -> droplet)
+
+Questa sezione serve a portare i dati presenti in locale (DB + uploads) sul droplet.
+
+In locale:
+- Postgres è in un volume docker (`postgres_data`).
+- Gli uploads della UI sono una bind-mount su filesystem: `./services/ui/public/uploads`.
+
+In produzione (`docker-compose.prod.yml`):
+- Postgres usa il volume `postgres_data`.
+- Gli uploads UI usano il volume `ui_uploads`.
+
+### 10.1) Migrazione DB (Postgres)
+
+Sul PC locale (da root repo):
+
+```bash
+docker exec -t tennis-postgres pg_dump -U postgres -d utenticoi_1 > dump.sql
+```
+
+Copia `dump.sql` sul droplet (es. con `scp`).
+
+Sul droplet (dentro la cartella del repo):
+
+```bash
+cat dump.sql | docker exec -i tennis-postgres psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"
+```
+
+Nota: se sul droplet il DB non è vuoto, valuta di ripartire da database pulito prima del restore.
+
+### 10.2) Migrazione uploads UI
+
+In locale, gli uploads sono una cartella sul filesystem:
+
+```bash
+tar -czf uploads.tgz -C services/ui/public/uploads .
+```
+
+Copia `uploads.tgz` sul droplet.
+
+Sul droplet, importa nel volume `ui_uploads`. Il nome reale del volume può variare in base al project name di Docker Compose: controlla con `docker volume ls`.
+
+Esempio:
+
+```bash
+docker run --rm -v tennis_game_monorepo_ui_uploads:/data -v $(pwd):/backup alpine tar -xzf /backup/uploads.tgz -C /data .
+```
+
+Se il volume non si chiama `tennis_game_monorepo_ui_uploads`, sostituisci con quello corretto.
+
+## 11) Backup
 
 ### Backup Postgres (dump)
 
@@ -150,14 +201,16 @@ Se vuoi esportare sul filesystem del droplet:
 docker run --rm -v tennis_game_monorepo_ui_uploads:/data -v $(pwd):/backup alpine tar -czf /backup/uploads.tgz -C /data .
 ```
 
-## 11) Update (deploy nuova versione)
+Nota: verifica il nome del volume con `docker volume ls`.
+
+## 12) Update (deploy nuova versione)
 
 Workflow tipico:
 
 - `git pull`
 - `docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build`
 
-## 12) Rinnovo certificati
+## 13) Rinnovo certificati
 
 Let’s Encrypt dura 90 giorni.
 
