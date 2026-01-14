@@ -50,7 +50,31 @@ Esempio:
 - `git clone <REPO_URL>`
 - `cd TENNIS_GAME_MONOREPO`
 
-## 5) Creazione file `.env.prod`
+## 5) Preparazione `.env.prod` (sul droplet)
+
+Il file `.env.prod` contiene le variabili d'ambiente per Postgres/API/UI e non va committato.
+
+Nel repo esiste un template `.env.example` (committabile). Sul droplet:
+
+```bash
+cp .env.example .env.prod
+nano .env.prod
+```
+
+Imposta almeno:
+
+- `POSTGRES_USER`
+- `POSTGRES_PASSWORD` (password forte)
+- `POSTGRES_DB`
+- `DB_USER` (uguale a `POSTGRES_USER`)
+- `DB_PSSW` (uguale a `POSTGRES_PASSWORD`)
+- `DATABASE` (uguale a `POSTGRES_DB`)
+- `JWT_SECRET` (stringa lunga random)
+
+Nota:
+- Le variabili Mailer sono opzionali se non usi flussi email (es. autoregistrazione).
+
+## 6) Creazione file `.env.prod` (esempio)
 
 Crea un file `.env.prod` nella root del repo (stessa cartella di `docker-compose.prod.yml`).
 
@@ -82,7 +106,7 @@ Note:
 - `CORS_ORIGIN` include entrambi i domini, anche se il canonico è `www`.
 - Le variabili Mailer sono opzionali se non usi flussi email (es. autoregistrazione). Login e creazione utenti da admin funzionano anche senza SMTP.
 
-## 6) Avvio stack in produzione
+## 7) Avvio stack in produzione
 
 Da root repo sul droplet:
 
@@ -96,7 +120,7 @@ Controlla che i container siano up:
 docker ps
 ```
 
-## 7) Certificato HTTPS Let’s Encrypt
+## 8) Certificato HTTPS Let’s Encrypt
 
 La config Nginx prod serve la challenge in:
 - `/.well-known/acme-challenge/`
@@ -117,13 +141,13 @@ Poi riavvia Nginx:
 docker compose -f docker-compose.prod.yml restart nginx
 ```
 
-## 8) Verifica
+## 9) Verifica
 
 - Apri `https://www.popostapo.com`
 - Verifica che `http://popostapo.com` e `https://popostapo.com` redirigano a `https://www.popostapo.com`
 - Verifica che `/api/...` funzioni dietro Nginx.
 
-## 9) Persistenza dati
+## 10) Persistenza dati
 
 La configurazione `docker-compose.prod.yml` usa volumi docker:
 
@@ -133,7 +157,7 @@ La configurazione `docker-compose.prod.yml` usa volumi docker:
 
 Quindi dati e uploads non si perdono con rebuild.
 
-## 10) Migrazione dati (locale -> droplet)
+## 11) Migrazione dati (locale -> droplet)
 
 Questa sezione serve a portare i dati presenti in locale (DB + uploads) sul droplet.
 
@@ -145,7 +169,7 @@ In produzione (`docker-compose.prod.yml`):
 - Postgres usa il volume `postgres_data`.
 - Gli uploads UI usano il volume `ui_uploads`.
 
-### 10.1) Migrazione DB (Postgres)
+### 11.1) Migrazione DB (Postgres)
 
 Sul PC locale (da root repo):
 
@@ -163,7 +187,7 @@ cat dump.sql | docker exec -i tennis-postgres psql -U "$POSTGRES_USER" -d "$POST
 
 Nota: se sul droplet il DB non è vuoto, valuta di ripartire da database pulito prima del restore.
 
-### 10.2) Migrazione uploads UI
+### 11.2) Migrazione uploads UI
 
 In locale, gli uploads sono una cartella sul filesystem:
 
@@ -183,7 +207,7 @@ docker run --rm -v tennis_game_monorepo_ui_uploads:/data -v $(pwd):/backup alpin
 
 Se il volume non si chiama `tennis_game_monorepo_ui_uploads`, sostituisci con quello corretto.
 
-## 11) Backup
+## 12) Backup
 
 ### Backup Postgres (dump)
 
@@ -203,14 +227,30 @@ docker run --rm -v tennis_game_monorepo_ui_uploads:/data -v $(pwd):/backup alpin
 
 Nota: verifica il nome del volume con `docker volume ls`.
 
-## 12) Update (deploy nuova versione)
+## 13) Update (deploy nuova versione)
 
 Workflow tipico:
 
 - `git pull`
 - `docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build`
 
-## 13) Rinnovo certificati
+## 14) Rinnovo certificati
+
+## Appendice: smoke test Postgres/API (prima del deploy completo)
+
+Se vuoi verificare subito credenziali e connessione DB prima del `--build` completo:
+
+```bash
+docker compose -f docker-compose.prod.yml --env-file .env.prod up -d postgres
+docker exec -it tennis-postgres psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"
+```
+
+Poi avvia API e controlla i log:
+
+```bash
+docker compose -f docker-compose.prod.yml --env-file .env.prod up -d api
+docker logs --tail 100 tennis-api
+```
 
 Let’s Encrypt dura 90 giorni.
 

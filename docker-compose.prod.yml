@@ -14,7 +14,10 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
-      - tennis_net
+      tennis_net:
+        aliases:
+          - postgres
+          - tennis-postgres
 
   api:
     build:
@@ -24,7 +27,7 @@ services:
       - ./.env.prod
     environment:
       - PORT=9000
-      - DB_CONNESSIONE=postgres
+      - DB_CONNESSIONE=tennis-postgres
     depends_on:
       postgres:
         condition: service_healthy
