@@ -23,6 +23,8 @@ Imposta questi record:
 
 Attendi la propagazione.
 
+Nota: se gestisci il DNS su Namecheap, i record sono in `Domain List -> Manage -> Advanced DNS`.
+
 ## 2) Firewall (DigitalOcean)
 
 Apri porte:
@@ -49,6 +51,29 @@ Esempio:
 
 - `git clone <REPO_URL>`
 - `cd TENNIS_GAME_MONOREPO`
+
+Repo privato (Deploy Key consigliata):
+
+Sul droplet:
+
+```bash
+ssh-keygen -t ed25519 -C "do-droplet-tennis" -f ~/.ssh/id_ed25519 -N ""
+cat ~/.ssh/id_ed25519.pub
+```
+
+Su GitHub:
+
+- Repo -> `Settings` -> `Deploy keys` -> `Add deploy key`
+- Incolla la chiave pubblica
+- Non abilitare write access
+
+Poi sul droplet:
+
+```bash
+ssh -o StrictHostKeyChecking=accept-new -T git@github.com
+git clone git@github.com:PieroRadice/TENNIS_GAME_MONOREPO.git
+cd TENNIS_GAME_MONOREPO
+```
 
 ## 5) Preparazione `.env.prod` (sul droplet)
 
@@ -125,20 +150,38 @@ docker ps
 La config Nginx prod serve la challenge in:
 - `/.well-known/acme-challenge/`
 
+Bootstrap consigliato:
+
+- Avvia Nginx in HTTP (senza certificati) per servire la challenge
+- Esegui Certbot
+- Avvia Nginx in HTTPS (config prod)
+
+Avvio Nginx in HTTP (bootstrap):
+
+```bash
+docker compose -f docker-compose.prod.yml -f docker-compose.prod.local.yml --env-file .env.prod up -d --force-recreate nginx
+```
+
 Esegui Certbot (webroot) dal droplet:
 
 ```bash
-docker compose -f docker-compose.prod.yml run --rm certbot certonly \
+docker compose -f docker-compose.prod.yml --env-file .env.prod run --rm -T \
+  --entrypoint certbot certbot \
+  certonly \
   --webroot -w /var/www/certbot \
   -d popostapo.com -d www.popostapo.com \
   --email radice.p@gmail.com \
-  --agree-tos --no-eff-email
+  --agree-tos --no-eff-email \
+  -n
 ```
+
+Nota: Certbot può salvare i certificati in `live/popostapo.com`.
 
 Poi riavvia Nginx:
 
 ```bash
-docker compose -f docker-compose.prod.yml restart nginx
+docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --force-recreate nginx
+docker compose -f docker-compose.prod.yml --env-file .env.prod restart nginx
 ```
 
 ## 9) Verifica
@@ -179,10 +222,40 @@ docker exec -t tennis-postgres pg_dump -U postgres -d utenticoi_1 > dump.sql
 
 Copia `dump.sql` sul droplet (es. con `scp`).
 
-Sul droplet (dentro la cartella del repo):
+Esempio da PC (PowerShell):
 
 ```bash
-cat dump.sql | docker exec -i tennis-postgres psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"
+scp dump.sql root@<IP_DROPLET>:/root/
+```
+
+Sul droplet (dentro la cartella del repo):
+
+Consigliato: ferma temporaneamente l'API durante il restore:
+
+```bash
+docker compose -f docker-compose.prod.yml --env-file .env.prod stop api
+```
+
+Se vuoi sovrascrivere completamente i dati, riparti da schema pulito:
+
+```bash
+docker exec -i tennis-postgres psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" <<'SQL'
+DROP SCHEMA public CASCADE;
+CREATE SCHEMA public;
+GRANT ALL ON SCHEMA public TO postgres;
+GRANT ALL ON SCHEMA public TO public;
+SQL
+```
+
+```bash
+cat /root/dump.sql | docker exec -i tennis-postgres psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"
+```
+
+Poi riavvia l'API e controlla i log:
+
+```bash
+docker compose -f docker-compose.prod.yml --env-file .env.prod up -d api
+docker logs --tail 120 tennis-api
 ```
 
 Nota: se sul droplet il DB non è vuoto, valuta di ripartire da database pulito prima del restore.
@@ -235,6 +308,36 @@ Workflow tipico:
 - `docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build`
 
 ## 14) Rinnovo certificati
+
+Esempio di automazione con cron (sul droplet):
+
+Script:
+
+```bash
+cat > /usr/local/bin/renew-letsencrypt.sh <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+
+cd /root/TENNIS_GAME_MONOREPO
+
+docker compose -f docker-compose.prod.yml --env-file .env.prod run --rm -T --entrypoint certbot certbot renew -n
+docker compose -f docker-compose.prod.yml --env-file .env.prod restart nginx
+EOF
+
+chmod +x /usr/local/bin/renew-letsencrypt.sh
+```
+
+Cron (2 volte al giorno):
+
+```bash
+crontab -e
+```
+
+Riga:
+
+```bash
+0 3,15 * * * /usr/local/bin/renew-letsencrypt.sh >> /var/log/renew-letsencrypt.log 2>&1
+```
 
 ## Appendice: smoke test Postgres/API (prima del deploy completo)
 
