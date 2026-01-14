@@ -145,6 +145,47 @@ Controlla che i container siano up:
 docker ps
 ```
 
+## 7-bis) Workflow locale (consigliato) e anti-mixing Compose
+
+In locale puoi lavorare in 2 modalità:
+
+- Modalità *prod-like* (consigliata): reverse proxy su `http://localhost/`.
+- Modalità *direct*: UI su `http://localhost:3000` e API su `http://localhost:9000` (senza Nginx).
+
+Per evitare problemi come `502 Bad Gateway`, è importante NON avviare servizi con compose diversi nello stesso momento.
+Esempio tipico di problema: `nginx` avviato con `docker-compose.prod.yml` e `ui/api` avviati con `docker-compose.yml`.
+In quel caso i container finiscono su network diverse e Nginx non riesce a risolvere gli upstream.
+
+### Locale: reverse proxy su `http://localhost/` (prod-like)
+
+Da root repo:
+
+```bash
+docker compose -f docker-compose.prod.yml -f docker-compose.prod.local.yml --env-file .env.prod up -d --build
+```
+
+Se vuoi rebuildare solo alcuni servizi (es. `api` e `ui`), usa SEMPRE gli stessi file `-f`:
+
+```bash
+docker compose -f docker-compose.prod.yml -f docker-compose.prod.local.yml --env-file .env.prod up -d --build api ui
+```
+
+Per spegnere tutto (senza cancellare i volumi):
+
+```bash
+docker compose -f docker-compose.prod.yml -f docker-compose.prod.local.yml --env-file .env.prod down
+```
+
+### Locale: direct (senza Nginx)
+
+Se usi `docker-compose.yml` (sviluppo), resta coerente e non avviare anche lo stack prod nello stesso momento:
+
+```bash
+docker compose up -d --build
+```
+
+Nota: questa modalità espone le porte dei servizi direttamente e non usa il path `/api` dietro proxy.
+
 ## 8) Certificato HTTPS Let’s Encrypt
 
 La config Nginx prod serve la challenge in:

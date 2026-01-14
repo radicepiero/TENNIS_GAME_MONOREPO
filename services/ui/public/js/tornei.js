@@ -147,7 +147,9 @@ async function loadTournaments({ apiUrl }) {
               headers: { "Content-Type": "application/json" },
             }
           );
-          return res.ok;
+          if (!res.ok) return false;
+          const json = await res.json().catch(() => null);
+          return Boolean(json && (json.id || json.uuid));
         } catch (e) {
           return false;
         }
@@ -360,75 +362,37 @@ async function loadTournaments({ apiUrl }) {
             const maybeEasyWin = st === "open"
               ? `<a class="tournament-status-link tournament-easywin-btn is-hidden" data-easywin-btn data-tournament-id="${tournament.id}" href="/tornei/${tournament.id}/albero-pronostico">usa il tabellone per vincere facile</a>`
               : "";
+
+            const superLabel = st === "open" ? "tabellone" : "guarda i risultati";
+            const superBtn = `<a class="tournament-status-link tournament-superuser-tree-btn is-hidden" data-superuser-tree-btn data-tournament-id="${tournament.id}" href="/tornei/${tournament.id}/albero-superuser">${superLabel}</a>`;
             meta.innerHTML = `
               <div>${statusEl}</div>
               ${maybeEasyWin}
+              ${superBtn}
               <div>dal ${formatDmyShort(tournament.datainizio)} al ${formatDmyShort(tournament.datafine)}</div>
               ${openRow}
               <div>${where}</div>
             `;
-
-            if (st === "open") {
-              const btn = meta.querySelector("[data-easywin-btn]");
-              if (btn) {
-                checkSuperuserTreeExists(tournament.id).then((exists) => {
-                  if (exists) btn.classList.remove("is-hidden");
-                });
-              }
-            }
 
             header.appendChild(category);
             header.appendChild(title);
             header.appendChild(meta);
             tournamentContainer.appendChild(header);
 
-            const actions = document.createElement("div");
-            actions.className = "tournament-card__actions";
+            // superuser tree dependent actions
+            {
+              const easywinBtn = meta.querySelector("[data-easywin-btn]");
+              const superTreeBtn = meta.querySelector("[data-superuser-tree-btn]");
+              const applyExists = (exists) => {
+                if (!exists) return;
+                if (superTreeBtn) superTreeBtn.classList.remove("is-hidden");
+                if (st === "open") {
+                  if (easywinBtn) easywinBtn.classList.remove("is-hidden");
+                }
+              };
 
-            // link ATP (da tenere)
-            actions.appendChild(
-              createIconButton({
-                icon: "🔗",
-                title: "ATP",
-                href: tournament.href,
-                className: "icon-btn--link",
-                disabled: !isActionAllowed.atp(tournament),
-              })
-            );
-
-            // pronostico (vedi/modifica)
-            actions.appendChild(
-              createIconButton({
-                icon: APP_ICONS.EDIT,
-                title: "Pronostico",
-                href: `/tornei/${tournament.id}/pronostico`,
-                className: "icon-btn--primary",
-                disabled: !isActionAllowed.pronostico(tournament),
-              })
-            );
-
-            // compila albero friend
-            actions.appendChild(
-              createIconButton({
-                icon: "🌳",
-                title: "Compila albero",
-                href: `/tornei/${tournament.id}/albero-pronostico`,
-                className: "icon-btn--primary",
-                disabled: !isActionAllowed.compilaAlbero(tournament),
-              })
-            );
-
-            // sviluppo
-            actions.appendChild(
-              createIconButton({
-                icon: APP_ICONS.ATP,
-                title: "ATP",
-                href: tournament.href || "#",
-                disabled: !isActionAllowed.atp(tournament),
-              })
-            );
-
-            tournamentContainer.appendChild(actions);
+              checkSuperuserTreeExists(tournament.id).then((exists) => applyExists(exists));
+            }
             tournamentGrid.appendChild(tournamentContainer);
           });
       };

@@ -153,7 +153,9 @@
             `${apiUrl}/trees/superuser/${encodeURIComponent(tournamentId)}`,
             { method: "GET", credentials: "include" }
           );
-          return res.ok;
+          if (!res.ok) return false;
+          const json = await res.json().catch(() => null);
+          return Boolean(json && (json.id || json.uuid));
         } catch (e) {
           return false;
         }
@@ -162,21 +164,6 @@
       const ok = await p;
       superuserTreeExistsCache.set(key, ok);
       return ok;
-    }
-
-    function createIconButton({ icon, title, href, disabled }) {
-      const a = document.createElement("a");
-      a.href = href;
-      a.className = `icon-btn ${disabled ? "icon-btn--disabled" : ""}`.trim();
-      a.title = title;
-      a.setAttribute("aria-label", title);
-      a.textContent = icon;
-      if (disabled) {
-        a.setAttribute("aria-disabled", "true");
-        a.tabIndex = -1;
-        a.addEventListener("click", (e) => e.preventDefault());
-      }
-      return a;
     }
 
     function buildTournamentCard(tournament) {
@@ -224,9 +211,13 @@
         ? `<a class="tournament-status-link tournament-easywin-btn is-hidden" data-easywin-btn data-tournament-id="${tournament.id}" href="/tornei/${tournament.id}/albero-pronostico">usa il tabellone per vincere facile</a>`
         : "";
 
+      const superLabel = st === "open" ? "tabellone" : "guarda i risultati";
+      const superBtn = `<a class="tournament-status-link tournament-superuser-tree-btn is-hidden" data-superuser-tree-btn data-tournament-id="${tournament.id}" href="/tornei/${tournament.id}/albero-superuser">${superLabel}</a>`;
+
       meta.innerHTML = `
         <div>${statusEl}</div>
         ${maybeEasyWin}
+        ${superBtn}
         <div>dal ${formatDmyShort(tournament.datainizio)} al ${formatDmyShort(tournament.datafine)}</div>
         ${openRow}
         <div>${where}</div>
@@ -236,38 +227,6 @@
       header.appendChild(title);
       header.appendChild(meta);
       container.appendChild(header);
-
-      const actions = document.createElement("div");
-      actions.className = "tournament-card__actions";
-
-      actions.appendChild(
-        createIconButton({
-          icon: "🔗",
-          title: "ATP",
-          href: tournament.href || "#",
-          disabled: !tournament.href,
-        })
-      );
-
-      actions.appendChild(
-        createIconButton({
-          icon: "✏️",
-          title: "Pronostico",
-          href: `/tornei/${tournament.id}/pronostico`,
-          disabled: st === "excluded",
-        })
-      );
-
-      actions.appendChild(
-        createIconButton({
-          icon: "🌳",
-          title: "Compila albero",
-          href: `/tornei/${tournament.id}/albero-pronostico`,
-          disabled: st !== "open",
-        })
-      );
-
-      container.appendChild(actions);
 
       // country toggle
       container.addEventListener("click", (e) => {
@@ -280,20 +239,26 @@
         name.classList.toggle("is-hidden");
       });
 
-      // easywin reveal
-      if (st === "open") {
-        const btn = meta.querySelector("[data-easywin-btn]");
-        if (btn) {
-          const maybeHasSuperTree = typeof tournament.hasSuperTree === "boolean" ? tournament.hasSuperTree : null;
-          if (maybeHasSuperTree === true) {
-            btn.classList.remove("is-hidden");
-          } else if (maybeHasSuperTree === false) {
-            // keep hidden
-          } else {
-            checkSuperuserTreeExists(tournament.id).then((exists) => {
-              if (exists) btn.classList.remove("is-hidden");
-            });
+      // superuser tree dependent actions
+      {
+        const easywinBtn = meta.querySelector("[data-easywin-btn]");
+        const superTreeBtn = meta.querySelector("[data-superuser-tree-btn]");
+        const maybeHasSuperTree = typeof tournament.hasSuperTree === "boolean" ? tournament.hasSuperTree : null;
+
+        const applyExists = (exists) => {
+          if (!exists) return;
+          if (superTreeBtn) superTreeBtn.classList.remove("is-hidden");
+          if (st === "open") {
+            if (easywinBtn) easywinBtn.classList.remove("is-hidden");
           }
+        };
+
+        if (maybeHasSuperTree === true) {
+          applyExists(true);
+        } else if (maybeHasSuperTree === false) {
+          // keep hidden
+        } else {
+          checkSuperuserTreeExists(tournament.id).then((exists) => applyExists(exists));
         }
       }
 

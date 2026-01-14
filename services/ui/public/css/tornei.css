@@ -159,6 +159,15 @@
   filter: brightness(0.98);
 }
 
+.tournament-superuser-tree-btn {
+  margin-top: 6px;
+  width: fit-content;
+}
+
+.tournament-superuser-tree-btn:hover {
+  filter: brightness(0.98);
+}
+
 .friends-filter-modal {
   position: fixed;
   inset: 0;
