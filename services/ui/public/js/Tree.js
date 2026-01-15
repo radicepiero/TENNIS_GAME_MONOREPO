@@ -12,10 +12,14 @@ export class Tree {
   }
 
   toJSON() {
+    const tournamentId =
+      this.tournament && typeof this.tournament === "object"
+        ? this.tournament.id
+        : this.tournament;
     return {
       uuid: this.uuid,
       name: this.name,
-      tournamentId: this.tournament.id,
+      tournamentId,
       ownerId: this.ownerId,
       roundMax: this.roundMax,
       matches: this.matches.map((m) => m.toJSON()),
