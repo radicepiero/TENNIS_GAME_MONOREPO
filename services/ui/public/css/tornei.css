@@ -99,7 +99,7 @@
 
 .tournament-where {
   display: inline-flex;
-  align-items: center;
+  align-items: baseline;
   gap: 8px;
 }
 
@@ -110,6 +110,8 @@
   cursor: pointer;
   font-size: 18px;
   line-height: 1;
+  font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", system-ui, -apple-system, "Segoe UI", sans-serif;
+  white-space: nowrap;
 }
 
 .tournament-city {

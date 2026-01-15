@@ -34,6 +34,26 @@ git commit -m "UI: tournament cards + docs + gitignore"
 git push origin master
 ```
 
+## 1-bis) Locale: test e rebuild (modalità senza porta / prod-like)
+
+Se fino ad ora stai usando `http://localhost/` (senza porta), significa che stai lavorando con Nginx davanti (stack *prod-like*).
+In questo caso, per evitare mismatch di network/upstream, usa SEMPRE gli stessi file `-f`.
+
+Rebuild solo `api` e `ui`:
+
+```powershell
+docker compose -f docker-compose.prod.yml -f docker-compose.prod.local.yml --env-file .env.prod up -d --build api ui
+```
+
+Se vuoi essere più “pulito” (ferma tutto e poi rebuild, senza cancellare volumi):
+
+```powershell
+docker compose -f docker-compose.prod.yml -f docker-compose.prod.local.yml --env-file .env.prod down
+docker compose -f docker-compose.prod.yml -f docker-compose.prod.local.yml --env-file .env.prod up -d --build nginx api ui
+```
+
+Nota: evita `docker compose up -d --build api ui` senza `-f ...` perché useresti un compose diverso e rischi problemi tipo `502`.
+
 ## 2) Droplet: accesso SSH
 
 Da locale:

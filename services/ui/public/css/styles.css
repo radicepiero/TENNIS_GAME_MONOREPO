@@ -21,6 +21,13 @@ body {
   text-align: center;
 }
 
+@media (max-width: 520px) {
+  body {
+    margin: 12px 12px;
+    font-size: 1.05rem;
+  }
+}
+
 h1,
 h2,
 h3,
@@ -37,28 +44,34 @@ select,
 footer {
   margin: 0;
   padding: 0;
-  font-family: "Quicksand", sans-serif;
+  font-family: "Quicksand", system-ui, -apple-system, "Segoe UI", "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
   color: #444;
 }
+
 ul {
   list-style-type: none;
 }
+
 a {
   text-decoration: none;
 }
+
 nav {
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
   /*margin-bottom: 120px;*/
 }
+
 nav ul {
   display: flex;
   align-items: center;
 }
+
 nav li {
   margin-left: 20px;
 }
+
 nav li a {
   text-transform: uppercase;
   font-weight: 700;
@@ -67,10 +80,53 @@ nav li a {
   padding: 10px 16px;
   letter-spacing: 2px;
 }
+
+nav h1 {
+  margin: 0;
+}
+
+nav h1 a {
+  display: inline-block;
+  font-size: 1em;
+  letter-spacing: 1px;
+}
+
+@media (max-width: 520px) {
+  nav {
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  nav h1 a {
+    font-size: 0.72em;
+    font-weight: 800;
+    letter-spacing: 0.2px;
+    line-height: 1.05;
+  }
+
+  nav ul {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 6px;
+  }
+
+  nav li {
+    margin-left: 0;
+  }
+
+  nav li a {
+    font-size: 0.72em;
+    padding: 6px 8px;
+    letter-spacing: 1px;
+  }
+}
+
 .btn {
   border-radius: 36px;
   background: #fee996;
 }
+
 form h2 {
   font-size: 2.4em;
   font-weight: 900;
@@ -211,4 +267,8 @@ footer {
 }
 .visible {
   display: inline-block !important;
+}
+
+.is-hidden {
+  display: none !important;
 }

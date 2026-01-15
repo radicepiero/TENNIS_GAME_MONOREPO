@@ -68,6 +68,37 @@
       return `${dd}-${mm}-${String(yyyy).slice(-2)}`;
     }
 
+    let supportsFlagEmojiCache = null;
+    function supportsFlagEmoji() {
+      if (supportsFlagEmojiCache !== null) return supportsFlagEmojiCache;
+      try {
+        const canvas = document.createElement("canvas");
+        canvas.width = 32;
+        canvas.height = 32;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return (supportsFlagEmojiCache = false);
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.font = "28px sans-serif";
+        ctx.textBaseline = "top";
+        ctx.fillText("🇮🇹", 0, 0);
+        const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+
+        let nonZero = 0;
+        for (let i = 3; i < data.length; i += 4) {
+          if (data[i] !== 0) {
+            nonZero++;
+            if (nonZero > 10) break;
+          }
+        }
+        supportsFlagEmojiCache = nonZero > 10;
+        return supportsFlagEmojiCache;
+      } catch (e) {
+        supportsFlagEmojiCache = false;
+        return false;
+      }
+    }
+
     function countryToFlag(countryRaw) {
       const c = String(countryRaw || "").trim().toLowerCase();
       const map = {
@@ -93,8 +124,10 @@
         "emirati arabi": "AE",
         "emirati arabi uniti": "AE",
       };
-      const code = map[c];
-      if (!code || code.length !== 2) return "🏳️";
+      const direct = c.length === 2 ? c.toUpperCase() : "";
+      const code = direct || map[c] || "";
+      if (!code || code.length !== 2) return "";
+      if (!supportsFlagEmoji()) return code;
       const A = 0x1f1e6;
       const pts = code
         .toUpperCase()
