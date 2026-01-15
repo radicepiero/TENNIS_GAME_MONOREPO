@@ -1,11 +1,12 @@
 utenticoi_1.dump
 cookies.txt
 services/api/zzTOOLS/password.txt
-
+services/ui/public/uploads/
+services/ui/public/immagini/
+services/api/public/immagini/
 
 # Dependency directories
 node_modules/
-
 
 # Optional npm cache directory
 .npm
