@@ -24,12 +24,14 @@ document.addEventListener("DOMContentLoaded", () => {
   const changePasswordBtn = document.getElementById("change-password");
   const passwordStatus = document.getElementById("password-status");
 
-  const initialSoprannome = soprannomeInput ? soprannomeInput.value : "";
+  let initialSoprannome = soprannomeInput ? soprannomeInput.value : "";
+  let initialImageUrl = imageUrlInput ? imageUrlInput.value : "";
 
   const updateSaveVisibility = () => {
     if (!saveBtn) return;
     const sopChanged = soprannomeInput ? soprannomeInput.value !== initialSoprannome : false;
-    const shouldShow = sopChanged;
+    const imgChanged = imageUrlInput ? imageUrlInput.value !== initialImageUrl : false;
+    const shouldShow = sopChanged || imgChanged;
     saveBtn.style.display = shouldShow ? "block" : "none";
   };
 
@@ -58,8 +60,10 @@ document.addEventListener("DOMContentLoaded", () => {
       const res = await fetch(`${apiUrl}/users/${userUuid}/profile`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({
           soprannome: soprannomeInput.value,
+          image_url: imageUrlInput ? imageUrlInput.value : "",
         }),
       });
 
@@ -71,6 +75,10 @@ document.addEventListener("DOMContentLoaded", () => {
       const updated = await res.json();
       if (updated && preview && imageUrlInput && imageUrlInput.value) preview.src = imageUrlInput.value;
       setStatus(statusEl, "Salvato");
+
+      if (soprannomeInput) initialSoprannome = soprannomeInput.value;
+      if (imageUrlInput) initialImageUrl = imageUrlInput.value;
+
       if (updated && soprannomeInput && typeof updated.soprannome !== "undefined") {
         // keep the UI coherent after save
         // (initial values are captured on load; we simply hide the button again)
