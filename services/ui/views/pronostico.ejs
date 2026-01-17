@@ -17,6 +17,7 @@
         style="display:inline-block;"
       >
         <button id="choose-prediction-avatar" type="button">scegli il tuo avatar per questo pronostico</button>
+        <button id="save-prediction-avatar" type="button" style="display:none; margin-left: 10px;">Salva avatar</button>
         <input id="prediction_avatar_file" type="file" accept="image/*" style="display:none;" />
       </div>
       <div style="margin-top: 10px;">
@@ -39,12 +40,30 @@
     document.addEventListener("DOMContentLoaded", async () => {
       const avatarRoot = document.getElementById("prediction-avatar-uploader");
       const chooseBtn = document.getElementById("choose-prediction-avatar");
+      const saveAvatarBtn = document.getElementById("save-prediction-avatar");
       const fileInput = document.getElementById("prediction_avatar_file");
       const preview = document.getElementById("prediction-avatar-preview");
       const hiddenUrl = document.getElementById("prediction_avatar_url");
       const tournamentIdForAvatar = window.location.pathname.split("/")[2];
 
       const submitBtn = document.getElementById("submit-button");
+
+      async function loadSavedAvatarForTournament() {
+        try {
+          const res = await fetch(`/ui/avatar/prediction/${encodeURIComponent(String(tournamentIdForAvatar || ""))}`, {
+            method: "GET",
+            credentials: "include",
+          });
+          if (!res.ok) return;
+          const json = await res.json().catch(() => null);
+          const u = json && json.image_url ? String(json.image_url) : "";
+          if (u && hiddenUrl) hiddenUrl.value = u;
+          if (u && preview) {
+            preview.src = u;
+            preview.style.display = "inline-block";
+          }
+        } catch (e) {}
+      }
 
       try {
         const defaultUrl = hiddenUrl && hiddenUrl.value ? String(hiddenUrl.value) : "";
@@ -53,6 +72,8 @@
           preview.style.display = "inline-block";
         }
       } catch (e) {}
+
+      await loadSavedAvatarForTournament();
 
       if (chooseBtn && fileInput) {
         chooseBtn.addEventListener("click", () => {
@@ -77,12 +98,46 @@
               if (preview) preview.src = json.image_url;
             }
 
+            if (saveAvatarBtn) saveAvatarBtn.style.display = "inline-block";
+
             if (predictionEsiste && submitBtn) {
               submitBtn.textContent = "Salva Pronostico";
               submitBtn.classList.remove("hidden");
             }
           },
           onError: () => {},
+        });
+      }
+
+      if (saveAvatarBtn) {
+        saveAvatarBtn.addEventListener("click", async () => {
+          try {
+            const image_url = hiddenUrl && hiddenUrl.value ? String(hiddenUrl.value) : "";
+            const res = await fetch(`/ui/avatar/prediction/${encodeURIComponent(String(tournamentIdForAvatar || ""))}`, {
+              method: "PUT",
+              credentials: "include",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ image_url }),
+            });
+            const json = await res.json().catch(() => null);
+            if (!res.ok) {
+              const msg = (json && (json.error || json.message)) || "Errore nel salvataggio";
+              const statusEl = document.getElementById("prediction-avatar-status");
+              if (statusEl) statusEl.textContent = msg;
+              return;
+            }
+            if (json && json.image_url && hiddenUrl) hiddenUrl.value = String(json.image_url);
+            if (json && json.image_url && preview) {
+              preview.src = String(json.image_url);
+              preview.style.display = "inline-block";
+            }
+            const statusEl = document.getElementById("prediction-avatar-status");
+            if (statusEl) statusEl.textContent = "Salvato";
+            saveAvatarBtn.style.display = "none";
+          } catch (e) {
+            const statusEl = document.getElementById("prediction-avatar-status");
+            if (statusEl) statusEl.textContent = "Errore nel salvataggio";
+          }
         });
       }
 
