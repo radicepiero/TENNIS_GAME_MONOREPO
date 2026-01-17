@@ -21,7 +21,7 @@
 <script type="module">
   import { Tournament } from "/js/Tournament.js";
   import { treeApiClient } from "/js/TreeApiClient.js";
-  import { setup, renderTree, roundLabels, populateRoundSelects, getAlberoMatches, setEditable } from "/js/alberoTorneo.js?v=<%= Date.now() %>";
+  import { setup, renderTree, roundLabels, populateRoundSelects, getAlberoMatches, setEditable, setWinnersEditable } from "/js/alberoTorneo.js?v=<%= Date.now() %>";
 
   const apiUrl = "<%= apiUrl %>";
   const tournamentId = "<%= tournamentId %>";
@@ -37,6 +37,7 @@
 
   // read-only
   setEditable(false);
+  setWinnersEditable(false);
 
   // setup needs a user, but for read-only we can pass a stub
   await setup(tournament, { uuid: "superuser" }, apiUrl);

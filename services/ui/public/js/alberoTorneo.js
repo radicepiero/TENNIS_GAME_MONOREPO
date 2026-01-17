@@ -13,6 +13,7 @@ let tournament = {};
 let user = {};
 let apiUrl = "";
 let editable = true;
+let winnersEditable = true;
 
 const treeChangeListeners = [];
 
@@ -111,6 +112,10 @@ export async function setup(torneo, utente, _apiUrl) {
 
 export function setEditable(isEditable) {
   editable = Boolean(isEditable);
+}
+
+export function setWinnersEditable(isEditable) {
+  winnersEditable = Boolean(isEditable);
 }
 
 export function genera() {
@@ -257,7 +262,11 @@ export function creaComodino(onClick = () => {}) {
   const comodino = document.createElement("span");
   comodino.className = "toggle-winner";
   comodino.textContent = emojiLooser;
-  comodino.addEventListener("click", onClick);
+  if (!winnersEditable) {
+    comodino.style.display = "none";
+  } else {
+    comodino.addEventListener("click", onClick);
+  }
   return comodino;
 }
 
@@ -329,6 +338,7 @@ function cancellaPerdenteDaiTurniSuccessivi(looser, treantNodeId) {
 
 function aggiornaVincitore(comodino1, comodino2) {
   return (e) => {
+    if (!winnersEditable) return;
     if (e && typeof e.preventDefault === "function") e.preventDefault();
     if (e && typeof e.stopPropagation === "function") e.stopPropagation();
     captureScrollSnapshot(e.target);

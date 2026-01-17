@@ -65,6 +65,7 @@
     getAlberoMatches,
     getAlberi,
     setEditable,
+    setWinnersEditable,
   } from "/js/alberoTorneo.js?v=<%= Date.now() %>";
 
   document.title = `programma ${tournament.name}`;
@@ -96,6 +97,7 @@
     const selected = await getAlberoMatches(treeId);
     const editable = Boolean(isAdmin || user.uuid === selected.ownerId);
     setEditable(editable);
+    setWinnersEditable(editable);
     setUiState({ visible: true, _mode: "existing", _canEdit: editable });
     renderTree(effectiveRounds, 1);
   }
@@ -195,6 +197,7 @@
     if (isExcludedTournament) return;
     genera();
     setEditable(true);
+    setWinnersEditable(true);
     setUiState({ visible: true, _mode: "new", _canEdit: true });
   });
 
@@ -206,6 +209,7 @@
 
   // stato iniziale
   setEditable(false);
+  setWinnersEditable(false);
   setUiState({ visible: false, _mode: "none", _canEdit: false });
 </script>
 

@@ -55,6 +55,7 @@
     roundLabels,
     populateRoundSelects,
     setEditable,
+    setWinnersEditable,
     onTreeChanged,
   } from "/js/alberoTorneo.js?v=<%= Date.now() %>";
 
@@ -169,6 +170,7 @@
     if (mine) {
       // friend può solo selezionare vincenti: disabilito modale giocatori
       setEditable(false);
+      setWinnersEditable(true);
       await getAlberoMatches(mine.id);
       renderTree(Number(fromRoundSelect && fromRoundSelect.value ? fromRoundSelect.value : effectiveRounds), Number(toRoundSelect && toRoundSelect.value ? toRoundSelect.value : 1));
       setDirty(false);
