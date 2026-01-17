@@ -8,9 +8,6 @@
           <li><a href="/friend/home">gioca</a></li>
         <% } %>
         <li><a href="/tornei/friends">Tornei</a></li>
-        <% if (user && (user.level === "super"||user.level === "admin")) { %>
-          <li><a href="/tornei">Tornei Admin</a></li>
-        <% } %>
         <% if (user) { %>
           <li><a href="/pronostici/colonna">Pronostici</a></li>
         <% } %>

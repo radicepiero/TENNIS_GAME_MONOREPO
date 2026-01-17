@@ -9,12 +9,6 @@ router.get("/prediction", (req, res) => {
   res.render("prediction");
 });
 
-router.get("/tornei", (req, res) => {
-  res.render("tornei", {
-    apiUrl: req.app.locals.apiUrl || "/api",
-  });
-});
-
 router.get("/tornei/friends", (req, res) => {
   res.render("tornei", {
     viewMode: "friends",

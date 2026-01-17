@@ -434,58 +434,18 @@ async function loadTournaments({ apiUrl }) {
       paint();
     };
 
-    const renderDefault = () => {
-      tournaments.forEach((tournament) => {
-        const tournamentContainer = document.createElement("div");
-        tournamentContainer.className = "tournament-container";
-
-        const button = document.createElement("a");
-        button.href = tournament.href;
-        button.className = `tournament-button ${tournament.status}`;
-        button.style.backgroundImage = `url('${tournament.image}')`;
-        button.textContent = tournament.name;
-        tournamentContainer.appendChild(button);
-
-        const canShowPronostico = tournament.status === "open";
-        if (canShowPronostico) {
-          const pronosticoButton = document.createElement("button");
-          pronosticoButton.className = "pronostico-button";
-          pronosticoButton.textContent = "Pronostico";
-          pronosticoButton.addEventListener("click", () => {
-            window.location.href = `/tornei/${tournament.id}/pronostico`;
-          });
-          tournamentContainer.appendChild(pronosticoButton);
+    if (!isFriendsView) return;
+    try {
+      if (window.sessionStorage) {
+        const keys = [];
+        for (let i = 0; i < window.sessionStorage.length; i++) {
+          const k = window.sessionStorage.key(i);
+          if (k && String(k).startsWith("skipAutoClone:")) keys.push(k);
         }
-
-        if (tournament.status === "open") {
-          const alberoButton = document.createElement("button");
-          alberoButton.className = "pronostico-button";
-          alberoButton.textContent = "Crea l'albero del torneo";
-          alberoButton.addEventListener("click", () => {
-            window.location.href = `/tornei/${tournament.id}/genera-albero`;
-          });
-          tournamentContainer.appendChild(alberoButton);
-        }
-
-        tournamentGrid.appendChild(tournamentContainer);
-      });
-    };
-
-    if (isFriendsView) {
-      try {
-        if (window.sessionStorage) {
-          const keys = [];
-          for (let i = 0; i < window.sessionStorage.length; i++) {
-            const k = window.sessionStorage.key(i);
-            if (k && String(k).startsWith("skipAutoClone:")) keys.push(k);
-          }
-          keys.forEach((k) => window.sessionStorage.removeItem(k));
-        }
-      } catch (e) {}
-      renderFriends();
-    } else {
-      renderDefault();
-    }
+        keys.forEach((k) => window.sessionStorage.removeItem(k));
+      }
+    } catch (e) {}
+    renderFriends();
   } catch (error) {
     console.error("Si è verificato un errore:", error);
   }
