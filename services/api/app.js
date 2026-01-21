@@ -53,7 +53,7 @@ app.post("/api/auth/login", async (req, res) => {
 app.use("/api", requireAuth, apiRouter);
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
+//parte per aggiungere colonne al db se non esistono
 const ensureTournamentExtras = async () => {
   try {
     await db.sequelize.query(
