@@ -144,7 +144,27 @@
   if (toRoundSelect) toRoundSelect.value = "1";
 
   const filterBar = document.getElementById("filter-bar");
-  if (filterBar) filterBar.classList.remove("hidden");
+  if (filterBar) {
+    filterBar.classList.remove("hidden");
+    filterBar.classList.add("visible");
+  }
+
+  function renderFromDropdowns() {
+    const fromRound = Number(fromRoundSelect && fromRoundSelect.value);
+    const toRound = Number(toRoundSelect && toRoundSelect.value);
+    if (!Number.isFinite(fromRound) || !Number.isFinite(toRound)) return;
+
+    // Garantiamo un range valido: from >= to
+    if (toRound > fromRound && toRoundSelect) {
+      toRoundSelect.value = String(fromRound);
+      renderTree(fromRound, fromRound);
+      return;
+    }
+    renderTree(fromRound, toRound);
+  }
+
+  if (fromRoundSelect) fromRoundSelect.addEventListener("change", renderFromDropdowns);
+  if (toRoundSelect) toRoundSelect.addEventListener("change", renderFromDropdowns);
 
   // carica players + punteggi (winner/semifinalist) e prepara rendering
   await setup(tournament, user, apiUrl);
