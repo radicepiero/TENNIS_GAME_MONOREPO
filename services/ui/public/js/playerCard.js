@@ -11,6 +11,10 @@ class PlayerCard {
     div.id = `player-${this.player.name}`;
     div.classList.add("player");
 
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.style.display = "none";
+
     const img = document.createElement("img");
     img.src = this.player.image_src || "default.jpg";
     img.alt = this.player.image_alt || this.player.name;
@@ -27,8 +31,9 @@ class PlayerCard {
 
     const punteggio = document.createElement("div");
 
-    punteggio.textContent = this.player.Rankings.length
-      ? `${this.player.Rankings[0].ranking} : ${this.player.puntiSemifinalist} / ${this.player.puntiWinner}`
+    const rankings = this.player && Array.isArray(this.player.Rankings) ? this.player.Rankings : [];
+    punteggio.textContent = rankings.length
+      ? `${rankings[0].ranking} : ${this.player.puntiSemifinalist} / ${this.player.puntiWinner}`
       : "N/D";
 
     const label = document.createElement("label");
@@ -151,7 +156,6 @@ async function fetchTournamentUsers(tournamentId, apiUrl) {
 
 export {
   PlayerCard,
-  fetchPlayers,
   fetchTournament,
   fetchTournamentUserPredictions,
   fetchTournamentPredictions,

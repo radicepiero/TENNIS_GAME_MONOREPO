@@ -21,12 +21,15 @@
 
   <section class="card" id="recentTournaments"></section>
 
+  <section class="card" id="myPlayers"></section>
+
   <section class="card" id="usefulLinks"></section>
 </div>
 
 <script type="module">
   import { buildTournamentCard } from "/js/tournamentCard.js";
   import { formatDmyShort } from "/js/utils.js";
+  import { PlayerCard } from "/js/playerCard.js";
 
   (function () {
     const apiUrl = "<%= apiUrl %>";
@@ -35,6 +38,7 @@
     const currentEl = document.getElementById("currentTournament");
     const nextEl = document.getElementById("nextTournaments");
     const recentEl = document.getElementById("recentTournaments");
+    const myPlayersEl = document.getElementById("myPlayers");
     const linksEl = document.getElementById("usefulLinks");
 
     function showWarning(msg) {
@@ -87,40 +91,169 @@
     }
 
     function renderRecent(list) {
-      const rows = (list || []).map((t) => {
-        const id = encodeURIComponent(t.id);
-        return `
-          <tr>
-            <td class="td-name">${t.name || ""}</td>
-            <td>${formatDmyShort(t.datafine)}</td>
-            <td>${statusBadge(t.status)}</td>
-            <td class="td-actions">
-              <a class="btn btn--small" href="/tornei/${id}/pronostico">Pronostico</a>
-              <a class="btn btn--small" href="/tornei/${id}/sviluppo">Risultati del pronostico</a>
-              <a class="btn btn--small" href="/tornei/${id}/albero-superuser">tabellone dei risultati</a>
-            </td>
-          </tr>
-        `;
+      recentEl.innerHTML = `<div class="card__title">Tornei precedenti</div>`;
+
+      const sorted = (list || [])
+        .slice()
+        .sort((a, b) => {
+          const da = a && a.datafine ? new Date(a.datafine).getTime() : 0;
+          const db = b && b.datafine ? new Date(b.datafine).getTime() : 0;
+          return db - da;
+        });
+
+      const topTwo = sorted.slice(0, 2);
+      if (topTwo.length === 0) {
+        const empty = document.createElement("div");
+        empty.className = "card__empty";
+        empty.textContent = "Nessun torneo";
+        recentEl.appendChild(empty);
+        return;
+      }
+
+      const grid = document.createElement("div");
+      grid.className = "tournament-grid";
+      topTwo.forEach((t) => grid.appendChild(buildTournamentCard(t, { apiUrl })));
+      recentEl.appendChild(grid);
+    }
+
+    function formatRole(r) {
+      const v = String(r || "").toLowerCase();
+      if (v === "winner") return "Vincitore";
+      if (v === "semifinalist") return "Semifinalista";
+      return v;
+    }
+
+    function fmtPoints(v) {
+      if (v === null || typeof v === "undefined") return "N/D";
+      const n = Number(v);
+      return Number.isFinite(n) ? String(n) : "N/D";
+    }
+
+    function renderMyPlayers(list) {
+      if (!myPlayersEl) return;
+      const rows = Array.isArray(list) ? list : [];
+      myPlayersEl.innerHTML = `<div class="card__title">I miei tennisti</div>`;
+
+      if (!rows.length) {
+        const empty = document.createElement("div");
+        empty.className = "card__empty";
+        empty.textContent = "Nessun tennista trovato";
+        myPlayersEl.appendChild(empty);
+        return;
+      }
+
+      const sortedRows = rows
+        .slice()
+        .sort((a, b) => {
+          const ta = a && Array.isArray(a.tournaments) ? a.tournaments : [];
+          const tb = b && Array.isArray(b.tournaments) ? b.tournaments : [];
+
+          const predA = ta.reduce((acc, t) => acc + (Number(t && t.predictedPoints) || 0), 0);
+          const predB = tb.reduce((acc, t) => acc + (Number(t && t.predictedPoints) || 0), 0);
+
+          const realA = ta
+            .map((t) => (t && t.realizedPoints !== null && typeof t.realizedPoints !== "undefined" ? Number(t.realizedPoints) : NaN))
+            .filter((n) => Number.isFinite(n))
+            .reduce((acc, n) => acc + n, 0);
+          const realB = tb
+            .map((t) => (t && t.realizedPoints !== null && typeof t.realizedPoints !== "undefined" ? Number(t.realizedPoints) : NaN))
+            .filter((n) => Number.isFinite(n))
+            .reduce((acc, n) => acc + n, 0);
+
+          if (realB !== realA) return realB - realA;
+          if (predB !== predA) return predB - predA;
+          const na = a && a.player && a.player.name ? String(a.player.name) : "";
+          const nb = b && b.player && b.player.name ? String(b.player.name) : "";
+          return na.localeCompare(nb, "it");
+        });
+
+      const wrap = document.createElement("div");
+      wrap.style.display = "grid";
+      wrap.style.gridTemplateColumns = "1fr";
+      wrap.style.gap = "14px";
+
+      sortedRows.forEach((row) => {
+        const player = row && row.player ? row.player : null;
+        const tournaments = row && Array.isArray(row.tournaments) ? row.tournaments : [];
+        if (!player) return;
+
+        const block = document.createElement("div");
+        block.style.border = "1px solid rgba(0,0,0,0.12)";
+        block.style.borderRadius = "12px";
+        block.style.padding = "10px 12px";
+        block.style.background = "rgba(250,250,250,0.9)";
+
+        const header = document.createElement("div");
+        header.style.display = "flex";
+        header.style.justifyContent = "center";
+        header.style.alignItems = "flex-start";
+        header.style.flexWrap = "wrap";
+        header.style.gap = "12px";
+        header.appendChild(new PlayerCard(player).getElement());
+
+        block.appendChild(header);
+
+        if (!tournaments.length) {
+          const empty = document.createElement("div");
+          empty.className = "card__empty";
+          empty.style.marginTop = "8px";
+          empty.textContent = "Nessun torneo";
+          block.appendChild(empty);
+        } else {
+          const totalsWrap = document.createElement("div");
+          totalsWrap.style.marginTop = "10px";
+          totalsWrap.style.fontWeight = "800";
+
+          const totalPred = tournaments.reduce((acc, t) => acc + (Number(t && t.predictedPoints) || 0), 0);
+          const realizedNums = tournaments
+            .map((t) => (t && t.realizedPoints !== null && typeof t.realizedPoints !== "undefined" ? Number(t.realizedPoints) : NaN))
+            .filter((n) => Number.isFinite(n));
+          const totalRealized = realizedNums.reduce((acc, n) => acc + n, 0);
+          const realizedLabel = realizedNums.length ? String(totalRealized) : "N/D";
+
+          totalsWrap.textContent = `Totale punti pronostico: ${fmtPoints(totalPred)} | Totale punti realizzati: ${realizedLabel}`;
+          block.appendChild(totalsWrap);
+
+          const tWrap = document.createElement("div");
+          tWrap.style.display = "grid";
+          tWrap.style.gridTemplateColumns = "repeat(auto-fit, minmax(260px, 1fr))";
+          tWrap.style.gap = "10px";
+          tWrap.style.marginTop = "10px";
+
+          tournaments.forEach((t) => {
+            const card = document.createElement("div");
+            card.style.border = "1px solid rgba(0,0,0,0.10)";
+            card.style.borderRadius = "12px";
+            card.style.padding = "10px 12px";
+            card.style.background = "rgba(255,255,255,0.95)";
+            card.style.textAlign = "left";
+            card.style.display = "grid";
+            card.style.gap = "6px";
+
+            const title = document.createElement("div");
+            title.style.fontWeight = "800";
+            title.textContent = `${t.tournament_nickname || ""} ${t.tournament_datafine ? `(${formatDmyShort(t.tournament_datafine)})` : ""}`;
+
+            const role = document.createElement("div");
+            role.textContent = `Ruolo: ${formatRole(t.role)}`;
+
+            const pred = document.createElement("div");
+            pred.textContent = `Punti pronostico: ${fmtPoints(t.predictedPoints)}`;
+
+            const real = document.createElement("div");
+            real.textContent = `Punti realizzati: ${fmtPoints(t.realizedPoints)}`;
+
+            card.append(title, role, pred, real);
+            tWrap.appendChild(card);
+          });
+
+          block.appendChild(tWrap);
+        }
+
+        wrap.appendChild(block);
       });
 
-      recentEl.innerHTML = `
-        <div class="card__title">Tornei precedenti</div>
-        <div class="table-wrap">
-          <table class="table">
-            <thead>
-              <tr>
-                <th>Torneo</th>
-                <th>Fine</th>
-                <th>Status</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              ${rows.join("") || `<tr><td colspan="4" class="td-empty">Nessun torneo</td></tr>`}
-            </tbody>
-          </table>
-        </div>
-      `;
+      myPlayersEl.appendChild(wrap);
     }
 
     async function load() {
@@ -137,11 +270,13 @@
         renderCurrent(data.currentTournament);
         renderNext(data.nextTournaments, data.currentYear);
         renderRecent(data.recentTournaments);
+        renderMyPlayers(data.myPlayers);
       } catch (e) {
         showWarning(e.message || "Errore caricamento dashboard");
         renderCurrent(null);
         renderNext([], new Date().getFullYear());
         renderRecent([]);
+        renderMyPlayers([]);
       }
     }
 

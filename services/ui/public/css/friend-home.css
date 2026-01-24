@@ -215,3 +215,8 @@
 .td-name {
   font-weight: 700;
 }
+
+#myPlayers .player img {
+  width: 75px;
+  height: 75px;
+}
