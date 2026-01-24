@@ -1,0 +1,288 @@
+<%- include('partials/head'); -%>
+<link rel="stylesheet" href="/css/hamburger.css" />
+<link rel="stylesheet" href="/css/pronostico.css" />
+<title>Admin Player</title>
+<%- include('partials/header'); -%>
+<%- include('partials/hamburger'); -%>
+
+<div style="max-width: 920px; margin: 0 auto; padding: 12px 16px;">
+  <div style="max-width: 600px; margin: 8px auto 14px; position: relative;">
+    <input
+      id="playerSearch"
+      type="text"
+      placeholder="Cerca giocatore per nome o paese..."
+      style="width: 100%; padding: 10px; font-size: 16px; border: 1px solid #ccc; border-radius: 10px;"
+    />
+    <div
+      id="searchResults"
+      style="position: absolute; width: 100%; background: white; border: 1px solid #ccc; border-radius: 10px; max-height: 240px; overflow-y: auto; display: none; z-index: 1000;"
+    ></div>
+  </div>
+
+  <h1 id="player-title" style="text-align:center;"></h1>
+
+  <div style="display:flex; gap: 18px; flex-wrap: wrap; justify-content:center; align-items:flex-start;">
+    <div id="player-card-wrap"></div>
+
+    <div style="min-width: 320px; flex: 1; text-align:left; border: 1px solid rgba(0,0,0,0.12); border-radius: 12px; padding: 12px 14px; background: rgba(255,255,255,0.9);">
+      <div style="font-weight: 800; margin-bottom: 10px;">Modifica dati</div>
+      <form id="player-form">
+        <input type="hidden" id="player-id" name="id" />
+
+        <div style="display:grid; grid-template-columns: 140px 1fr; gap: 10px; padding: 6px 0; border-bottom: 1px solid rgba(0,0,0,0.08);">
+          <div style="font-weight:700; opacity:0.8;">name</div>
+          <input id="f-name" name="name" type="text" required />
+        </div>
+
+        <div style="display:grid; grid-template-columns: 140px 1fr; gap: 10px; padding: 6px 0; border-bottom: 1px solid rgba(0,0,0,0.08);">
+          <div style="font-weight:700; opacity:0.8;">first_name</div>
+          <input id="f-first_name" name="first_name" type="text" />
+        </div>
+
+        <div style="display:grid; grid-template-columns: 140px 1fr; gap: 10px; padding: 6px 0; border-bottom: 1px solid rgba(0,0,0,0.08);">
+          <div style="font-weight:700; opacity:0.8;">second_name</div>
+          <input id="f-second_name" name="second_name" type="text" />
+        </div>
+
+        <div style="display:grid; grid-template-columns: 140px 1fr; gap: 10px; padding: 6px 0; border-bottom: 1px solid rgba(0,0,0,0.08);">
+          <div style="font-weight:700; opacity:0.8;">country</div>
+          <input id="f-country" name="country" type="text" />
+        </div>
+
+        <div style="display:grid; grid-template-columns: 140px 1fr; gap: 10px; padding: 6px 0; border-bottom: 1px solid rgba(0,0,0,0.08);">
+          <div style="font-weight:700; opacity:0.8;">profile_url</div>
+          <input id="f-profile_url" name="profile_url" type="url" />
+        </div>
+
+        <div style="display:grid; grid-template-columns: 140px 1fr; gap: 10px; padding: 6px 0; border-bottom: 1px solid rgba(0,0,0,0.08);">
+          <div style="font-weight:700; opacity:0.8;">image_src</div>
+          <input id="f-image_src" name="image_src" type="text" />
+        </div>
+
+        <div style="display:grid; grid-template-columns: 140px 1fr; gap: 10px; padding: 6px 0;">
+          <div style="font-weight:700; opacity:0.8;">image_alt</div>
+          <input id="f-image_alt" name="image_alt" type="text" />
+        </div>
+
+        <div style="display:flex; gap: 10px; justify-content:flex-end; margin-top: 12px;">
+          <a id="open-public" href="#" style="text-decoration:none; align-self:center;">apri pagina friend</a>
+          <button id="save-btn" type="submit">Salva</button>
+        </div>
+      </form>
+      <div id="save-status" style="margin-top: 10px; font-weight: 700;"></div>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+  import { countryToFlag } from "/js/icons.js";
+
+  const apiUrl = "<%= apiUrl %>";
+  const playerId = "<%= playerId %>";
+
+  function el(tag, attrs = {}, ...children) {
+    const n = document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs || {})) {
+      if (k === "className") n.className = v;
+      else if (k === "text") n.textContent = v;
+      else if (k.startsWith("on") && typeof v === "function") n.addEventListener(k.slice(2), v);
+      else if (v !== undefined && v !== null) n.setAttribute(k, String(v));
+    }
+    for (const c of children) {
+      if (c === null || c === undefined) continue;
+      if (typeof c === "string") n.appendChild(document.createTextNode(c));
+      else n.appendChild(c);
+    }
+    return n;
+  }
+
+  function renderPronosticoStyleCard(player) {
+    const wrap = document.getElementById("player-card-wrap");
+    if (!wrap) return;
+
+    wrap.innerHTML = "";
+
+    const div = el("div", { className: "player", id: `player-${player.name || player.id || ""}` });
+
+    const img = el("img", {
+      src: player.image_src || "default.jpg",
+      alt: player.image_alt || player.name || "player",
+    });
+
+    const punteggio = el("div", { text: "" });
+
+    const label = el("label", { text: player.name || "" });
+
+    const c = player && player.country ? String(player.country) : "";
+    const flag = c ? countryToFlag(c) : "";
+    const country = el("div", { text: c ? `${flag ? `${flag} ` : ""}${c}` : "" });
+
+    div.append(punteggio, img, label, country);
+    wrap.appendChild(div);
+  }
+
+  function setStatus(text, ok) {
+    const s = document.getElementById("save-status");
+    if (!s) return;
+    s.textContent = text || "";
+    s.style.color = ok ? "#0a7a2a" : "#b00020";
+  }
+
+  function fillForm(player) {
+    document.getElementById("player-title").textContent = player && player.name ? player.name : "Player";
+
+    const pid = String(player && player.id ? player.id : playerId);
+    const openPublic = document.getElementById("open-public");
+    if (openPublic) openPublic.href = `/friend/player/${encodeURIComponent(pid)}`;
+
+    const set = (id, v) => {
+      const n = document.getElementById(id);
+      if (!n) return;
+      n.value = v === null || v === undefined ? "" : String(v);
+    };
+
+    set("player-id", player && player.id);
+    set("f-name", player && player.name);
+    set("f-first_name", player && player.first_name);
+    set("f-second_name", player && player.second_name);
+    set("f-country", player && player.country);
+    set("f-profile_url", player && player.profile_url);
+    set("f-image_src", player && player.image_src);
+    set("f-image_alt", player && player.image_alt);
+  }
+
+  async function fetchPlayer(id) {
+    const res = await fetch(`${apiUrl}/players/${encodeURIComponent(id)}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const json = await res.json();
+    if (json && Array.isArray(json.data) && json.data[0]) return json.data[0];
+    if (json && json.data) return json.data;
+    return json;
+  }
+
+  async function init() {
+    setStatus("", true);
+    try {
+      if (!playerId) {
+        const title = document.getElementById("player-title");
+        if (title) title.textContent = "Cerca un giocatore";
+        return;
+      }
+      const player = await fetchPlayer(playerId);
+      renderPronosticoStyleCard(player);
+      fillForm(player);
+    } catch (e) {
+      setStatus("Errore nel caricamento del player", false);
+      console.error(e);
+    }
+  }
+
+  function debounce(fn, ms) {
+    let t;
+    return (...args) => {
+      clearTimeout(t);
+      t = setTimeout(() => fn(...args), ms);
+    };
+  }
+
+  async function searchPlayers(q) {
+    const res = await fetch(`${apiUrl}/players/search?q=${encodeURIComponent(q)}`);
+    if (!res.ok) return [];
+    const json = await res.json();
+    return Array.isArray(json) ? json : (json && json.data ? json.data : []);
+  }
+
+  function renderSearchResults(players) {
+    const root = document.getElementById("searchResults");
+    if (!root) return;
+    root.innerHTML = "";
+
+    if (!players || !players.length) {
+      root.style.display = "none";
+      return;
+    }
+
+    players.forEach((p) => {
+      const label = `${p.name || ""}${p.country ? ` (${p.country})` : ""}`;
+      const row = el(
+        "div",
+        {
+          style:
+            "padding: 10px 12px; cursor: pointer; border-bottom: 1px solid rgba(0,0,0,0.06);",
+          onclick: () => {
+            root.style.display = "none";
+            if (p && p.id) window.location.href = `/admin/player/${encodeURIComponent(p.id)}`;
+          },
+        },
+        label
+      );
+      root.appendChild(row);
+    });
+
+    root.style.display = "block";
+  }
+
+  document.getElementById("playerSearch").addEventListener(
+    "input",
+    debounce(async (e) => {
+      const q = (e && e.target && e.target.value ? e.target.value : "").trim();
+      if (q.length < 2) {
+        const root = document.getElementById("searchResults");
+        if (root) root.style.display = "none";
+        return;
+      }
+      const players = await searchPlayers(q);
+      renderSearchResults(players);
+    }, 250)
+  );
+
+  document.getElementById("player-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    setStatus("Salvataggio...", true);
+
+    const form = e.target;
+    const data = Object.fromEntries(new FormData(form));
+    const id = data && data.id ? data.id : playerId;
+
+    try {
+      const response = await fetch(`${apiUrl}/players/${encodeURIComponent(id)}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: data.name,
+          first_name: data.first_name || null,
+          second_name: data.second_name || null,
+          country: data.country || null,
+          profile_url: data.profile_url || null,
+          image_src: data.image_src || null,
+          image_alt: data.image_alt || null,
+        }),
+      });
+
+      if (!response.ok) {
+        let msg = `HTTP ${response.status}`;
+        try {
+          const err = await response.json();
+          msg = err && (err.message || err.error) ? (err.message || err.error) : msg;
+        } catch (_) {}
+        setStatus(`Errore: ${msg}`, false);
+        return;
+      }
+
+      setStatus("Salvato!", true);
+
+      try {
+        const player = await fetchPlayer(id);
+        renderPronosticoStyleCard(player);
+        fillForm(player);
+      } catch (_) {}
+    } catch (error) {
+      console.error(error);
+      setStatus("Errore durante l'invio della richiesta", false);
+    }
+  });
+
+  init();
+</script>

@@ -13,6 +13,7 @@ router.get(
   },
   controller.getPlayersWithRankingDate
 );
+router.get("/search", controller.searchPlayers);
 router.get("/:id", controller.getPlayer); //get player by ID
 router.post("/", controller.postPlayer); //create new player
 router.delete("/:id", controller.deletePlayer); //delete player by ID

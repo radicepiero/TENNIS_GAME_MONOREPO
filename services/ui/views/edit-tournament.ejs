@@ -78,6 +78,44 @@
       white-space: nowrap;
       min-width: 0;
     }
+
+    .predictions-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 12px;
+      align-items: stretch;
+    }
+
+    .prediction-card {
+      border: 1px solid rgba(0, 0, 0, 0.12);
+      border-radius: 12px;
+      padding: 10px 12px;
+      background: rgba(255, 255, 255, 0.92);
+      text-align: left;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      min-width: 0;
+    }
+
+    .prediction-card__row {
+      display: grid;
+      grid-template-columns: 110px 1fr;
+      gap: 10px;
+      align-items: baseline;
+    }
+
+    .prediction-card__label {
+      font-weight: 800;
+      opacity: 0.75;
+      white-space: nowrap;
+    }
+
+    .prediction-card__value {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
   </style>
   <h1 style="text-align: center;">Modifica Torneo <%= tournament.name %></h1>
   <% const roundLabels = ["128-esimi","64-esimi","32-esimi","16-esimi","Ottavi","Quarti","Semifinali","Finali"]; %>
@@ -282,44 +320,47 @@
       <% if (!pt.length) { %>
         <div>Nessun pronostico presente per questo torneo.</div>
       <% } else { %>
-        <div style="overflow:auto; max-width: 100%;">
-          <table style="width:100%; border-collapse: collapse;">
-            <thead>
-              <tr>
-                <th style="text-align:left; border-bottom: 1px solid #ddd; padding: 8px;">Informazioni cronologiche</th>
-                <th style="text-align:left; border-bottom: 1px solid #ddd; padding: 8px;">Indirizzo email</th>
-                <th style="text-align:left; border-bottom: 1px solid #ddd; padding: 8px;">VINCITORE</th>
-                <th style="text-align:left; border-bottom: 1px solid #ddd; padding: 8px;">ALTRO SEMIFINALISTA 1</th>
-                <th style="text-align:left; border-bottom: 1px solid #ddd; padding: 8px;">ALTRO SEMIFINALISTA 2</th>
-                <th style="text-align:left; border-bottom: 1px solid #ddd; padding: 8px;">ALTRO SEMIFINALISTA 3</th>
-                <th style="text-align:left; border-bottom: 1px solid #ddd; padding: 8px;">TOTALE</th>
-              </tr>
-            </thead>
-            <tbody>
-              <% pt.forEach((row) => { %>
-                <% const s = (row && row.semifinalists) ? row.semifinalists : []; %>
-                <% const semiCell = (idx) => {
-                  const sp = s[idx];
-                  if (!sp) return '';
-                  const pts = (typeof sp.puntiSemifinalist !== 'undefined') ? ` (${sp.puntiSemifinalist})` : '';
-                  return `${sp.name}${pts}`;
-                }; %>
-                <tr>
-                  <td style="border-bottom: 1px solid #eee; padding: 8px; white-space: nowrap;"><%= fmtTs(row.created_at) %></td>
-                  <td style="border-bottom: 1px solid #eee; padding: 8px;"><%= row.user_email || '' %></td>
-                  <td style="border-bottom: 1px solid #eee; padding: 8px; white-space: nowrap;">
-                    <% if (row.winner) { %>
-                      <%= row.winner.name %> (<%= row.winner.puntiWinner %>)
-                    <% } %>
-                  </td>
-                  <td style="border-bottom: 1px solid #eee; padding: 8px; white-space: nowrap;"><%= semiCell(0) %></td>
-                  <td style="border-bottom: 1px solid #eee; padding: 8px; white-space: nowrap;"><%= semiCell(1) %></td>
-                  <td style="border-bottom: 1px solid #eee; padding: 8px; white-space: nowrap;"><%= semiCell(2) %></td>
-                  <td style="border-bottom: 1px solid #eee; padding: 8px; white-space: nowrap;"><%= (typeof row.totalPoints !== 'undefined') ? row.totalPoints : '' %></td>
-                </tr>
-              <% }); %>
-            </tbody>
-          </table>
+        <div class="predictions-grid">
+          <% pt.forEach((row) => { %>
+            <% const s = (row && row.semifinalists) ? row.semifinalists : []; %>
+            <% const semiCell = (idx) => {
+              const sp = s[idx];
+              if (!sp) return '';
+              const pts = (typeof sp.puntiSemifinalist !== 'undefined') ? ` (${sp.puntiSemifinalist})` : '';
+              return `${sp.name}${pts}`;
+            }; %>
+            <% const winnerCell = row && row.winner ? `${row.winner.name} (${row.winner.puntiWinner})` : ''; %>
+            <div class="prediction-card">
+              <div class="prediction-card__row">
+                <div class="prediction-card__label">Creato</div>
+                <div class="prediction-card__value"><%= fmtTs(row.created_at) %></div>
+              </div>
+              <div class="prediction-card__row">
+                <div class="prediction-card__label">Email</div>
+                <div class="prediction-card__value"><%= row.user_email || '' %></div>
+              </div>
+              <div class="prediction-card__row">
+                <div class="prediction-card__label">Vincitore</div>
+                <div class="prediction-card__value"><%= winnerCell %></div>
+              </div>
+              <div class="prediction-card__row">
+                <div class="prediction-card__label">Semi 1</div>
+                <div class="prediction-card__value"><%= semiCell(0) %></div>
+              </div>
+              <div class="prediction-card__row">
+                <div class="prediction-card__label">Semi 2</div>
+                <div class="prediction-card__value"><%= semiCell(1) %></div>
+              </div>
+              <div class="prediction-card__row">
+                <div class="prediction-card__label">Semi 3</div>
+                <div class="prediction-card__value"><%= semiCell(2) %></div>
+              </div>
+              <div class="prediction-card__row">
+                <div class="prediction-card__label">Totale</div>
+                <div class="prediction-card__value"><%= (typeof row.totalPoints !== 'undefined') ? row.totalPoints : '' %></div>
+              </div>
+            </div>
+          <% }); %>
         </div>
       <% } %>
     </fieldset>

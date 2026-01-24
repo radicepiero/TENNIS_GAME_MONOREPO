@@ -92,6 +92,27 @@ const getPredictionsByUser = async (req, res) => {
   }
 };
 
+const getPredictionsByUserForPlayer = async (req, res) => {
+  try {
+    const user = res.locals.user;
+    const user_uuid = user && user.dataValues ? user.dataValues.uuid : null;
+    if (!user_uuid) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+
+    const playerId = req.params && req.params.playerId ? String(req.params.playerId) : "";
+    if (!playerId) {
+      return res.status(400).json({ success: false, message: "playerId mancante" });
+    }
+
+    const rows = await predictionService.readPredictionsUserForPlayer(user_uuid, playerId);
+    res.status(200).json({ success: true, data: rows });
+  } catch (error) {
+    console.error("Errore nel recupero delle predictions user per player:", error);
+    res.status(500).json({ success: false, message: "Errore interno del server" });
+  }
+};
+
 const getPredictionsByTournamentId = async (req, res) => {
   try {
     const { id } = req.params; // Estrai il parametro "id" dalla URL
@@ -234,6 +255,7 @@ module.exports = {
   getPredictionsByTournamentId,
   getPredictionByUserIdTournamentId,
   getPredictionsByUser,
+  getPredictionsByUserForPlayer,
   postPrediction,
   deletePredictionById,
 };

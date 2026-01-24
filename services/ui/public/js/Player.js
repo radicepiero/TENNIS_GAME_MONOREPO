@@ -1,3 +1,5 @@
+import { countryToFlag } from "./icons.js";
+
 export default class Player {
   constructor({
     id = null,
@@ -62,7 +64,10 @@ export default class Player {
 
   // Metodo di utilità per visualizzazione (esempio)
   getDisplayName() {
-    return `${this.name}${this.country ? " (" + this.country + ")" : ""}`;
+    const c = this.country ? String(this.country) : "";
+    const flag = c ? countryToFlag(c) : "";
+    const suffix = c ? ` (${flag ? `${flag} ` : ""}${c})` : "";
+    return `${this.name}${suffix}`;
   }
 
   // Altri metodi di utilità (es. per validazione)
@@ -92,7 +97,9 @@ export default class Player {
     label.textContent = this.name;
 
     const country = document.createElement("div");
-    country.textContent = this.country;
+    const c = this.country ? String(this.country) : "";
+    const flag = c ? countryToFlag(c) : "";
+    country.textContent = c ? `${flag ? `${flag} ` : ""}${c}` : "";
 
     const checkbox = document.createElement("input");
     checkbox.type = "checkbox";
@@ -110,19 +117,27 @@ export default class Player {
     playerDiv.dataset.playerid = this.id;
     const img = document.createElement("img");
     img.className = "player-avatar";
-    img.src = this.image_src;
-    img.alt = `${this.image_alt}`;
+    img.src = this.image_src || "default.jpg";
+    img.alt = this.image_alt || this.name;
 
     const nameDiv = document.createElement("span");
     nameDiv.textContent = this.name;
 
     const ratingDiv = document.createElement("span");
-    ratingDiv.textContent = `[${this.Rankings[0].ranking}] `;
+    const ranking = this.Rankings && this.Rankings.length ? this.Rankings[0].ranking : "N/D";
+    ratingDiv.textContent = `[${ranking}] `;
 
     const prizeDiv = document.createElement("span");
-    prizeDiv.textContent = ` {${this.puntiWinner}/${this.puntiSemifinalist}}`;
+    const pw = typeof this.puntiWinner === "number" ? this.puntiWinner : 0;
+    const ps = typeof this.puntiSemifinalist === "number" ? this.puntiSemifinalist : 0;
+    prizeDiv.textContent = ` {${pw}/${ps}}`;
 
-    playerDiv.append(ratingDiv, img, nameDiv, prizeDiv);
+    const c = this.country ? String(this.country) : "";
+    const flag = c ? countryToFlag(c) : "";
+    const countryDiv = document.createElement("span");
+    countryDiv.textContent = c ? ` ${flag ? `${flag} ` : ""}${c}` : "";
+
+    playerDiv.append(ratingDiv, img, nameDiv, countryDiv, prizeDiv);
     return playerDiv;
   }
 

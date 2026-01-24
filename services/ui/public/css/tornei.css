@@ -31,12 +31,29 @@
 .tournament-flag {
   border: 0;
   background: transparent;
+  margin: 0;
+  margin-top: 0;
   padding: 0;
   cursor: pointer;
   font-size: 18px;
   line-height: 1;
   font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", system-ui, -apple-system, "Segoe UI", sans-serif;
   white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tournament-flag__img {
+  height: 26px;
+  width: auto;
+  display: block;
+}
+
+.tournament-card__title [data-country-wrap] {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
 }
 
 .tournament-city {
@@ -261,6 +278,9 @@
 .tournament-card__title {
   font-weight: 800;
   text-shadow: 0 1px 0 rgba(255, 255, 255, 0.75);
+  display: block;
+  text-align: center;
+  line-height: 1.15;
 }
 
 .tournament-card__meta {

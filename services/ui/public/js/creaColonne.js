@@ -1,3 +1,5 @@
+import { normalizeYmd } from "./utils.js";
+
 const punteggi = [];
 
 async function fetchJson(url, options) {
@@ -45,13 +47,7 @@ async function fetchTournamentPredictions(tournamentId, apiUrl) {
 }
 
 async function fetchPlayersByRankingDate(rankingDate, apiUrl) {
-  const normalizeRankingDate = (v) => {
-    if (!v) return null;
-    const s = String(v);
-    return s.length >= 10 ? s.slice(0, 10) : s;
-  };
-
-  const normalizedDate = normalizeRankingDate(rankingDate);
+  const normalizedDate = normalizeYmd(rankingDate);
   const url = normalizedDate
     ? `${apiUrl}/players/ranking/${encodeURIComponent(normalizedDate)}`
     : `${apiUrl}/players/ranking`;
@@ -104,12 +100,6 @@ function parseRankingNumber(rawRanking) {
     ranking = m ? Number(m[0]) : NaN;
   }
   return Number.isFinite(ranking) ? ranking : null;
-}
-
-function normalizeYmd(v) {
-  if (!v) return null;
-  const s = String(v);
-  return s.length >= 10 ? s.slice(0, 10) : s;
 }
 
 function hasRankingForDate(player, rankingDate) {
@@ -252,12 +242,20 @@ function createCell({ title, player, status, isWinner = false }) {
   cell.className = isWinner ? "winner" : "cell";
 
   aggiornaStileGiocatore(cell, status);
+
+  const playerId = player && player.id !== undefined && player.id !== null ? String(player.id) : "";
+  const friendHref = playerId ? `/friend/player/${encodeURIComponent(playerId)}` : "";
+  const imgHtml = `<img src="${getPlayerImageSrc(player)}" alt="${player.name}" />`;
+  const nameHtml = `${player && player.name ? String(player.name) : ""}`;
+  const playerInnerHtml = friendHref
+    ? `<a href="${friendHref}" style="text-decoration:none; color: inherit; display: inline-flex; align-items: center; gap: 8px;">${imgHtml}<span>${nameHtml}</span></a>`
+    : `${imgHtml}${nameHtml}`;
+
   cell.innerHTML = `
   <div class="title">${""}</div>
   <div class="title">punti: ${typeof player._points === "number" ? player._points : 0}</div>
   <div class="player">
-    <img src="${getPlayerImageSrc(player)}" alt="${player.name}" />
-    ${player.name}
+    ${playerInnerHtml}
   </div>
   <div class="title">classifica: ${player && player._rankingIssue ? "N/D" : (player && typeof player._ranking === "number" ? player._ranking : "")}</div>
 `;

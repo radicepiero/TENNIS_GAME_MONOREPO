@@ -7,6 +7,17 @@
 
 <h1 id="nome-torneo"><%= tournamentId %></h1>
 
+<div id="filter-bar" style="display:flex; gap: 12px; justify-content:center; align-items:center; flex-wrap: wrap; margin: 10px 0 12px;">
+  <label class="filter-label">
+    <span class="label-text">Da:</span>
+    <select id="fromRound"></select>
+  </label>
+  <label class="filter-label">
+    <span class="label-text">A:</span>
+    <select id="toRound"></select>
+  </label>
+</div>
+
 <div id="scroll-container">
   <div id="chart-container">
     <div id="tree-simple" class="Treant"></div>
@@ -28,12 +39,36 @@
 
   const tournament = (await Tournament.fetchTournament(tournamentId, apiUrl)).data[0];
   document.title = `albero superuser ${tournament.name}`;
-  document.getElementById("nome-torneo").textContent = `${tournament.name} (superuser)`;
+  document.getElementById("nome-torneo").textContent = `${tournament.name} (risultati ufficiali)`;
 
   const effectiveRounds = (() => {
     const n = Number(tournament && tournament.roundopen);
     return Number.isFinite(n) && n > 0 ? n : 6;
   })();
+
+  populateRoundSelects(tournament, roundLabels);
+
+  const fromRoundSelect = document.getElementById("fromRound");
+  const toRoundSelect = document.getElementById("toRound");
+  if (fromRoundSelect) fromRoundSelect.value = String(effectiveRounds);
+  if (toRoundSelect) toRoundSelect.value = "1";
+
+  function renderFromDropdowns() {
+    const fromRound = Number(fromRoundSelect && fromRoundSelect.value);
+    const toRound = Number(toRoundSelect && toRoundSelect.value);
+    if (!Number.isFinite(fromRound) || !Number.isFinite(toRound)) return;
+
+    // Garantiamo un range valido: from >= to
+    if (toRound > fromRound && toRoundSelect) {
+      toRoundSelect.value = String(fromRound);
+      renderTree(fromRound, fromRound);
+      return;
+    }
+    renderTree(fromRound, toRound);
+  }
+
+  if (fromRoundSelect) fromRoundSelect.addEventListener("change", renderFromDropdowns);
+  if (toRoundSelect) toRoundSelect.addEventListener("change", renderFromDropdowns);
 
   // read-only
   setEditable(false);
@@ -56,7 +91,10 @@
 
     // import in Tree instance and render
     await getAlberoMatches(treeId);
-    renderTree(effectiveRounds, 1);
+    renderTree(
+      Number(fromRoundSelect && fromRoundSelect.value ? fromRoundSelect.value : effectiveRounds),
+      Number(toRoundSelect && toRoundSelect.value ? toRoundSelect.value : 1)
+    );
   } catch (e) {
     const container = document.getElementById("tree-simple");
     if (container) {

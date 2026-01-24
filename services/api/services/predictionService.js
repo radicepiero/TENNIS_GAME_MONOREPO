@@ -71,7 +71,7 @@ const readPredictions = async (user_uuid, tournament_id, prediction_id) => {
         {
           model: Tournament,
           required: false, // true se vuoi solo quelli con User associato
-          attributes: ["name", "datafine", "ranking_date"], // seleziona i campi che ti servono
+          attributes: ["name","nickname", "datafine", "ranking_date"], // seleziona i campi che ti servono
         },
       ],
     });
@@ -85,13 +85,14 @@ const readPredictions = async (user_uuid, tournament_id, prediction_id) => {
         created_at: prediction.createdAt,
         updated_at: prediction.updatedAt,
         user_uuid: prediction.user_uuid,
-        user_email: User.email,
-        user_soprannome: User.soprannome,
-        user_image_url: User.image_url,
+        user_email: User ? User.email : "",
+        user_soprannome: User ? User.soprannome : "",
+        user_image_url: User ? User.image_url : "",
         tournament_id: prediction.tournament_id,
-        tournament_name: Tournament.name,
-        tournament_datafine: Tournament.datafine,
-        tournament_ranking_date: Tournament.ranking_date,
+        tournament_name: Tournament ? Tournament.name : "",
+        tournament_nickname: Tournament ? Tournament.nickname : "",
+        tournament_datafine: Tournament ? Tournament.datafine : null,
+        tournament_ranking_date: Tournament ? Tournament.ranking_date : null,
         rows: [],
       };
 
@@ -144,6 +145,28 @@ const readPredictionsBK = async (user_uuid, tournament_id, prediction_id) => {
 
 const readPredictionsUser = async (user_uuid) => {
   return await readPredictions(user_uuid, false, false);
+};
+
+const readPredictionsUserForPlayer = async (user_uuid, player_id) => {
+  const pid = player_id ? String(player_id) : "";
+  if (!pid) return [];
+  const all = await readPredictions(user_uuid, false, false);
+  return (all || [])
+    .map((p) => {
+      const rows = (p && p.rows) || [];
+      const row = rows.find((r) => r && String(r.player_id) === pid);
+      if (!row) return null;
+      return {
+        tournament_id: p.tournament_id,
+        tournament_name: p.tournament_name,
+        tournament_nickname: p.tournament_nickname,
+        tournament_datafine: p.tournament_datafine,
+        tournament_ranking_date: p.tournament_ranking_date,
+        prediction: row.prediction,
+        created_at: p.created_at || null,
+      };
+    })
+    .filter(Boolean);
 };
 const readPredictionsTournament = async (tournament_id) => {
   return await readPredictions(false, tournament_id, false);
@@ -332,6 +355,7 @@ const deletePrediction = async (predictionId) => {
 module.exports = {
   readPredictions,
   readPredictionsUser,
+  readPredictionsUserForPlayer,
   readPredictionsTournament,
   readPrediction,
   readPredictionByUserIdTournamentId,

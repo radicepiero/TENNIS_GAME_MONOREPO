@@ -22,6 +22,34 @@ router.get("/friend/home", (req, res) => {
   });
 });
 
+router.get("/friend/player", (req, res) => {
+  res.render("friend-player", {
+    apiUrl: req.app.locals.apiUrl || "/api",
+    playerId: "",
+  });
+});
+
+router.get("/friend/player/:id", (req, res) => {
+  res.render("friend-player", {
+    apiUrl: req.app.locals.apiUrl || "/api",
+    playerId: req.params.id,
+  });
+});
+
+router.get("/admin/player", requireAdmin, (req, res) => {
+  res.render("admin-player", {
+    apiUrl: req.app.locals.apiUrl || "/api",
+    playerId: "",
+  });
+});
+
+router.get("/admin/player/:id", requireAdmin, (req, res) => {
+  res.render("admin-player", {
+    apiUrl: req.app.locals.apiUrl || "/api",
+    playerId: req.params.id,
+  });
+});
+
 router.get("/pronostici/colonna", (req, res) => {
   res.render("pronostici-colonna", {
     apiUrl: req.app.locals.apiUrl || "/api",

@@ -9,6 +9,7 @@ const { requireAuth } = require("../../middleware/authMiddleware");
 router.get("/counts/tournaments", controller.getPredictionCountsByTournament);
 router.get("/", controller.getPredictions); //get predictions
 router.get("/user", requireAuth, controller.getPredictionsByUser);
+router.get("/user/player/:playerId", requireAuth, controller.getPredictionsByUserForPlayer);
 router.get("/tournaments/:id", requireAuth, controller.getPredictionsByTournamentId);
 router.get(
   "/tournaments/:id/user",

@@ -3,7 +3,6 @@
     <button class="menu-toggle" aria-label="Toggle menu">☰</button>
     <nav class="menu">
       <ul>
-        <li><a href="/">Home</a></li>
         <% if (user && (user.level === "friend" || user.level === "admin" || user.level === "super")) { %>
           <li><a href="/friend/home">gioca</a></li>
         <% } %>
@@ -13,11 +12,18 @@
         <% } %>
         <li><a href="/classifica-annuale">Classifica</a></li>
         <li><a href="/tennisti">Classifica ATP</a></li>
-        <% if (user && (user.level === "admin" || user.level === "super")) { %>
-          <li><a href="/admin/tornei">Admin Tornei</a></li>
+        <% if (user && (user.level === "friend" || user.level === "admin" || user.level === "super")) { %>
+          <li><a href="/friend/player">Tennisti</a></li>
         <% } %>
         <% if (user && (user.level === "admin" || user.level === "super")) { %>
-          <li><a href="/admin/utenti">Admin Utenti</a></li>
+          <li class="admin-submenu">
+            <button type="button" class="admin-submenu__toggle" aria-expanded="false">Admin</button>
+            <ul class="admin-submenu__list" style="display:none;">
+              <li><a href="/admin/tornei">Admin Tornei</a></li>
+              <li><a href="/admin/utenti">Admin Utenti</a></li>
+              <li><a href="/admin/player">Admin Player</a></li>
+            </ul>
+          </li>
         <% } %>
         <% if (!user) { %>
           <li><a href="/login">Log in</a></li>
@@ -26,6 +32,62 @@
     </nav>
   </div>
 </header>
+
+<style>
+  .admin-submenu__toggle {
+    width: 100%;
+    padding: 10px;
+    margin: 0;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    text-align: center;
+    font: inherit;
+    line-height: 1.2;
+  }
+  .admin-submenu__toggle:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+  }
+  .admin-submenu__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  @media (min-width: 768px) {
+    .admin-submenu {
+      position: relative;
+    }
+    .admin-submenu__toggle {
+      width: auto;
+      padding: 10px 15px;
+      line-height: normal;
+    }
+
+    .admin-submenu__list {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      z-index: 999;
+      background: #fff;
+      border: 1px solid rgba(0, 0, 0, 0.12);
+      border-radius: 12px;
+      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.18);
+      overflow: hidden;
+      width: max-content;
+      min-width: 160px;
+    }
+
+    .admin-submenu__list li {
+      width: 100%;
+      border-bottom: 1px solid #ddd;
+    }
+
+    .admin-submenu__list li:last-child {
+      border-bottom: none;
+    }
+  }
+</style>
 
 <script>
   (function () {
@@ -36,9 +98,20 @@
     const menu = root.querySelector(".menu");
     if (!menuToggle || !menu) return;
 
+    const adminToggle = root.querySelector(".admin-submenu__toggle");
+    const adminList = root.querySelector(".admin-submenu__list");
+
     menuToggle.addEventListener("click", () => {
       menu.classList.toggle("open");
     });
+
+    if (adminToggle && adminList) {
+      adminToggle.addEventListener("click", () => {
+        const open = adminList.style.display !== "none";
+        adminList.style.display = open ? "none" : "block";
+        adminToggle.setAttribute("aria-expanded", open ? "false" : "true");
+      });
+    }
 
     menu.addEventListener("click", (e) => {
       const a = e.target && e.target.closest ? e.target.closest("a") : null;

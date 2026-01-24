@@ -28,7 +28,7 @@
       </div>
     </div>
 
-    <h2>Seleziona il vincitore</h2>
+    <h2 id="winner-title" style="display:none;">Seleziona il vincitore</h2>
     <div id="semifinalists-list" class="semifinalists-container"></div>
     <h2>Totale punteggio: <span id="total-points">0</span></h2>
     <button id="submit-button" class="">Invia Pronostico</button>
@@ -167,6 +167,19 @@
           img.src = this.player.image_src || "default.jpg";
           img.alt = this.player.image_alt || this.player.name;
 
+          const playerId =
+            this.player && this.player.id !== undefined && this.player.id !== null
+              ? String(this.player.id)
+              : "";
+          const friendHref = playerId ? `/friend/player/${encodeURIComponent(playerId)}` : "";
+
+          const imgWrap = document.createElement(friendHref ? "a" : "div");
+          if (friendHref) {
+            imgWrap.href = friendHref;
+            imgWrap.style.textDecoration = "none";
+          }
+          imgWrap.appendChild(img);
+
           const punteggio = document.createElement("div");
           punteggio.textContent = this.player.Rankings.length
             ? `${this.player.Rankings[0].ranking} : ${this.player.puntiSemifinalist} / ${this.player.puntiWinner}`
@@ -175,10 +188,18 @@
           const label = document.createElement("label");
           label.textContent = this.player.name;
 
+          const labelWrap = document.createElement(friendHref ? "a" : "div");
+          if (friendHref) {
+            labelWrap.href = friendHref;
+            labelWrap.style.textDecoration = "none";
+            labelWrap.style.color = "inherit";
+          }
+          labelWrap.appendChild(label);
+
           const country = document.createElement("div");
           country.textContent = this.player.country;
 
-          div.append(punteggio, img, checkbox, label, country);
+          div.append(punteggio, imgWrap, checkbox, labelWrap, country);
           return div;
         }
 
@@ -348,6 +369,29 @@
           }
         }
 
+        const refreshPredictionUi = () => {
+          const totalEl = document.getElementById("total-points");
+          if (totalEl) {
+            const total = (semifinalists || []).reduce((acc, p) => {
+              if (!p) return acc;
+              if (p.prediction === "winner") return acc + (Number(p.puntiWinner) || 0);
+              return acc + (Number(p.puntiSemifinalist) || 0);
+            }, 0);
+            totalEl.textContent = String(total);
+          }
+
+          const winnerTitle = document.getElementById("winner-title");
+          const canPickWinner = (semifinalists || []).length === 4;
+          if (winnerTitle) winnerTitle.style.display = canPickWinner ? "block" : "none";
+
+          if (!isLockedTournament && submitButton) {
+            submitButton.className =
+              canPickWinner && !(semifinalists || []).every((p) => p.prediction !== "winner")
+                ? "visible"
+                : "hidden";
+          }
+        };
+
         semifinalists.forEach((player) => {
           //inizializzo tutti a "semifinalist"
           if (!prediction) {
@@ -383,11 +427,11 @@
           //aggiungo il radio button per indicare il finalista
           const radio = document.createElement("input");
           radio.type = "radio";
-          radio.id = "rd";
+          radio.id = `rd-${player.id}`;
           radio.name = "winner";
           radio.value = player.name;
           const label = document.createElement("label");
-          label.for = radio.id;
+          label.htmlFor = radio.id;
           label.innerHTML = "Vincitore";
           const d = document.createElement("div");
           player.prediction === "winner"
@@ -408,11 +452,7 @@
               document
                 .getElementById(`player-${player.name}`)
                 .classList.add("winner");
-              if (semifinalists.length === 4) {
-                submitButton.className = "visible";
-              } else {
-                submitButton.className = "hidden";
-              }
+              refreshPredictionUi();
             }
           };
           const sem = playerCard.getElement();
@@ -425,15 +465,7 @@
           //predictionEsiste? deleteButton.
         });
 
-        const totalEl = document.getElementById("total-points");
-        if (totalEl) {
-          const total = (semifinalists || []).reduce((acc, p) => {
-            if (!p) return acc;
-            if (p.prediction === "winner") return acc + (Number(p.puntiWinner) || 0);
-            return acc + (Number(p.puntiSemifinalist) || 0);
-          }, 0);
-          totalEl.textContent = String(total);
-        }
+        refreshPredictionUi();
       }
       //-----------fine updateSemifinalsits
       //---------------------------------------------------------------

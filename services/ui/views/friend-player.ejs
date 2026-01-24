@@ -1,0 +1,391 @@
+<%- include('partials/head'); -%>
+<link rel="stylesheet" href="/css/hamburger.css" />
+<link rel="stylesheet" href="/css/pronostico.css" />
+<title>Player</title>
+<%- include('partials/header'); -%>
+<%- include('partials/hamburger'); -%>
+
+<div style="max-width: 920px; margin: 0 auto; padding: 12px 16px;">
+  <div style="max-width: 600px; margin: 8px auto 14px; position: relative;">
+    <input
+      id="playerSearch"
+      type="text"
+      placeholder="Cerca giocatore per nome o paese..."
+      style="width: 100%; padding: 10px; font-size: 16px; border: 1px solid #ccc; border-radius: 10px;"
+    />
+    <div
+      id="searchResults"
+      style="position: absolute; width: 100%; background: white; border: 1px solid #ccc; border-radius: 10px; max-height: 240px; overflow-y: auto; display: none; z-index: 1000;"
+    ></div>
+  </div>
+
+  <h1 id="player-title" style="text-align:center;"></h1>
+
+  <div style="display:flex; gap: 18px; flex-wrap: wrap; justify-content:center; align-items:flex-start;">
+    <div id="player-card-wrap"></div>
+
+    <div style="min-width: 280px; flex: 1; text-align:left; border: 1px solid rgba(0,0,0,0.12); border-radius: 12px; padding: 12px 14px; background: rgba(255,255,255,0.9);">
+      <div style="font-weight: 800; margin-bottom: 10px;">Dettagli</div>
+      <div id="player-details"></div>
+    </div>
+  </div>
+
+  <div style="margin-top: 18px; text-align:left; border: 1px solid rgba(0,0,0,0.12); border-radius: 12px; padding: 12px 14px; background: rgba(255,255,255,0.9);">
+    <div style="display:flex; align-items:center; justify-content:space-between; gap: 12px; margin-bottom: 10px;">
+      <div style="font-weight: 800;">Storico ranking</div>
+      <button id="toggle-ranking" type="button">Mostra ranking</button>
+    </div>
+    <div id="player-rankings" style="display:none;"></div>
+  </div>
+
+  <div style="margin-top: 18px; text-align:left; border: 1px solid rgba(0,0,0,0.12); border-radius: 12px; padding: 12px 14px; background: rgba(255,255,255,0.9);">
+    <div style="font-weight: 800; margin-bottom: 10px;">Tornei dove lo hai scelto</div>
+    <div id="player-picked-tournaments"></div>
+  </div>
+</div>
+
+<script type="module">
+  import { countryToFlag } from "/js/icons.js";
+
+  const apiUrl = "<%= apiUrl %>";
+  const playerId = "<%= playerId %>";
+
+  function el(tag, attrs = {}, ...children) {
+    const n = document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs || {})) {
+      if (k === "className") n.className = v;
+      else if (k === "text") n.textContent = v;
+      else if (k.startsWith("on") && typeof v === "function") n.addEventListener(k.slice(2), v);
+      else if (v !== undefined && v !== null) n.setAttribute(k, String(v));
+    }
+    for (const c of children) {
+      if (c === null || c === undefined) continue;
+      if (typeof c === "string") n.appendChild(document.createTextNode(c));
+      else n.appendChild(c);
+    }
+    return n;
+  }
+
+  function formatValue(v) {
+    if (v === null || v === undefined) return "";
+    if (typeof v === "string") return v;
+    if (typeof v === "number" || typeof v === "boolean") return String(v);
+    try {
+      return JSON.stringify(v);
+    } catch (e) {
+      return String(v);
+    }
+  }
+
+  function normalizeRankings(r) {
+    if (!Array.isArray(r)) return [];
+    return r
+      .filter(Boolean)
+      .map((x) => ({
+        date: x.date ? String(x.date).slice(0, 10) : "",
+        ranking: x.ranking,
+      }))
+      .filter((x) => x.date || x.ranking !== undefined)
+      .sort((a, b) => {
+        const da = a.date ? new Date(a.date).getTime() : 0;
+        const db = b.date ? new Date(b.date).getTime() : 0;
+        return db - da;
+      });
+  }
+
+  function renderPronosticoStyleCard(player) {
+    const wrap = document.getElementById("player-card-wrap");
+    if (!wrap) return;
+
+    wrap.innerHTML = "";
+
+    const div = el("div", { className: "player", id: `player-${player.name || player.id || ""}` });
+
+    const img = el("img", {
+      src: player.image_src || "default.jpg",
+      alt: player.image_alt || player.name || "player",
+    });
+
+    const punteggio = el("div", { text: "" });
+
+    const label = el("label", { text: player.name || "" });
+
+    const c = player && player.country ? String(player.country) : "";
+    const flag = c ? countryToFlag(c) : "";
+    const country = el("div", { text: c ? `${flag ? `${flag} ` : ""}${c}` : "" });
+
+    div.append(punteggio, img, label, country);
+    wrap.appendChild(div);
+  }
+
+  function formatRole(r) {
+    const v = String(r || "").toLowerCase();
+    if (v === "winner") return "Vincitore";
+    if (v === "semifinalist") return "Semifinalista";
+    return v;
+  }
+
+  function renderPickedTournaments(rows) {
+    const root = document.getElementById("player-picked-tournaments");
+    if (!root) return;
+    root.innerHTML = "";
+
+    const list = Array.isArray(rows) ? rows : [];
+    if (!list.length) {
+      root.appendChild(el("div", { text: "Nessun torneo trovato" }));
+      return;
+    }
+
+    const grid = el("div", {
+      style:
+        "display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; align-items: stretch;",
+    });
+
+    list
+      .slice()
+      .sort((a, b) => {
+        const da = a && a.tournament_datafine ? new Date(a.tournament_datafine).getTime() : 0;
+        const db = b && b.tournament_datafine ? new Date(b.tournament_datafine).getTime() : 0;
+        return db - da;
+      })
+      .forEach((r) => {
+        const tid = r && r.tournament_id ? String(r.tournament_id) : "";
+
+        const title = (r && r.tournament_nickname) || tid;
+        const ruolo = formatRole(r && r.prediction);
+        const fine = r && r.tournament_datafine ? String(r.tournament_datafine).slice(0, 10) : "";
+        const href = tid ? `/tornei/${encodeURIComponent(tid)}/pronostico` : "";
+
+        const card = el(
+          "div",
+          {
+            style:
+              "border: 1px solid rgba(0,0,0,0.12); border-radius: 12px; padding: 10px 12px; background: rgba(255,255,255,0.85); display:flex; flex-direction: column; gap: 8px; min-width: 0;",
+          },
+          el("div", { style: "font-weight: 800; overflow:hidden; text-overflow: ellipsis; white-space: nowrap;", text: title }),
+          el(
+            "div",
+            { style: "display:grid; grid-template-columns: 70px 1fr; gap: 10px; align-items: baseline;" },
+            el("div", { style: "font-weight:700; opacity:0.75;", text: "Ruolo" }),
+            el("div", { style: "min-width:0;", text: ruolo })
+          ),
+          el(
+            "div",
+            { style: "display:grid; grid-template-columns: 70px 1fr; gap: 10px; align-items: baseline;" },
+            el("div", { style: "font-weight:700; opacity:0.75;", text: "Fine" }),
+            el("div", { style: "min-width:0;", text: fine })
+          ),
+          el(
+            "div",
+            { style: "display:flex; justify-content:flex-end;" },
+            href
+              ? el("a", { href, style: "text-decoration:none; font-weight:700;" , text: "apri" })
+              : el("span", { text: "" })
+          )
+        );
+
+        grid.appendChild(card);
+      });
+
+    root.appendChild(grid);
+  }
+
+  function renderDetails(player) {
+    const root = document.getElementById("player-details");
+    if (!root) return;
+    root.innerHTML = "";
+
+    const ignored = new Set(["Rankings"]);
+
+    const rows = Object.entries(player || {})
+      .filter(([k, v]) => !ignored.has(k) && v !== null && v !== undefined && String(v) !== "")
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([k, v]) => {
+        const label = el("div", { text: k, style: "font-weight:700; opacity:0.8;" });
+        const value = el("div", { text: formatValue(v) });
+        return el("div", { style: "display:grid; grid-template-columns: 140px 1fr; gap: 10px; padding: 6px 0; border-bottom: 1px solid rgba(0,0,0,0.08);" }, label, value);
+      });
+
+    if (!rows.length) {
+      root.appendChild(el("div", { text: "Nessun dettaglio disponibile" }));
+      return;
+    }
+
+    rows.forEach((r) => root.appendChild(r));
+  }
+
+  function renderRankings(player) {
+    const root = document.getElementById("player-rankings");
+    if (!root) return;
+    root.innerHTML = "";
+
+    const rankings = normalizeRankings(player && player.Rankings);
+    if (!rankings.length) {
+      root.appendChild(el("div", { text: "Nessun ranking disponibile" }));
+      return;
+    }
+
+    const table = el("table", { style: "width:100%; border-collapse: collapse;" });
+    const thead = el("thead");
+    thead.appendChild(
+      el("tr", {},
+        el("th", { style: "text-align:left; padding: 6px 8px; border-bottom: 1px solid rgba(0,0,0,0.18);" , text: "Data" }),
+        el("th", { style: "text-align:left; padding: 6px 8px; border-bottom: 1px solid rgba(0,0,0,0.18);" , text: "Ranking" })
+      )
+    );
+
+    const tbody = el("tbody");
+    rankings.forEach((r) => {
+      tbody.appendChild(
+        el("tr", {},
+          el("td", { style: "padding: 6px 8px; border-bottom: 1px solid rgba(0,0,0,0.08);", text: r.date || "" }),
+          el("td", { style: "padding: 6px 8px; border-bottom: 1px solid rgba(0,0,0,0.08);", text: r.ranking === undefined ? "" : String(r.ranking) })
+        )
+      );
+    });
+
+    table.append(thead, tbody);
+    root.appendChild(table);
+  }
+
+  async function load() {
+    const title = document.getElementById("player-title");
+    try {
+      const res = await fetch(`${apiUrl}/players/${encodeURIComponent(playerId)}`, {
+        method: "GET",
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const json = await res.json().catch(() => null);
+      const player = json && json.data && Array.isArray(json.data) ? json.data[0] : null;
+      if (!player) throw new Error("Player non trovato");
+
+      if (title) title.textContent = player.name || "Player";
+
+      renderPronosticoStyleCard(player);
+      renderDetails(player);
+
+      const rankingBtn = document.getElementById("toggle-ranking");
+      const rankingRoot = document.getElementById("player-rankings");
+      let rankingRendered = false;
+      if (rankingBtn && rankingRoot) {
+        rankingBtn.addEventListener("click", () => {
+          const isHidden = rankingRoot.style.display === "none";
+          rankingRoot.style.display = isHidden ? "block" : "none";
+          rankingBtn.textContent = isHidden ? "Nascondi ranking" : "Mostra ranking";
+          if (isHidden && !rankingRendered) {
+            renderRankings(player);
+            rankingRendered = true;
+          }
+        });
+      }
+
+      const pickedRes = await fetch(
+        `${apiUrl}/predictions/user/player/${encodeURIComponent(playerId)}`,
+        { method: "GET", credentials: "include" }
+      );
+      if (pickedRes.ok) {
+        const pickedJson = await pickedRes.json().catch(() => null);
+        renderPickedTournaments((pickedJson && pickedJson.data) || []);
+      } else {
+        renderPickedTournaments([]);
+      }
+    } catch (e) {
+      if (title) title.textContent = "Player";
+      const details = document.getElementById("player-details");
+      if (details) details.textContent = e && e.message ? e.message : "Errore caricamento";
+    }
+  }
+
+  if (!playerId) {
+    const title = document.getElementById("player-title");
+    if (title) title.textContent = "Cerca un giocatore";
+  } else {
+    load();
+  }
+
+  const searchInput = document.getElementById("playerSearch");
+  const searchResults = document.getElementById("searchResults");
+
+  function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+      const later = () => {
+        clearTimeout(timeout);
+        func(...args);
+      };
+      clearTimeout(timeout);
+      timeout = setTimeout(later, wait);
+    };
+  }
+
+  function showResults(list) {
+    if (!searchResults) return;
+    const items = Array.isArray(list) ? list : [];
+    if (!items.length) {
+      searchResults.innerHTML = `<div style="padding: 10px;">Nessun giocatore trovato</div>`;
+      searchResults.style.display = "block";
+      return;
+    }
+    searchResults.innerHTML = "";
+    items.forEach((p) => {
+      const id = p && p.id !== undefined ? String(p.id) : "";
+      const name = p && p.name ? String(p.name) : "";
+      const country = p && p.country ? String(p.country) : "";
+      const flag = country ? countryToFlag(country) : "";
+      const row = document.createElement("div");
+      row.style.padding = "10px";
+      row.style.borderBottom = "1px solid #eee";
+      row.style.cursor = "pointer";
+      row.textContent = `${name}${country ? ` (${flag ? `${flag} ` : ""}${country})` : ""}`;
+      row.addEventListener("click", () => {
+        if (!id) return;
+        window.location.href = `/friend/player/${encodeURIComponent(id)}`;
+      });
+      row.addEventListener("mouseover", () => {
+        row.style.backgroundColor = "#f0f0f0";
+      });
+      row.addEventListener("mouseout", () => {
+        row.style.backgroundColor = "white";
+      });
+      searchResults.appendChild(row);
+    });
+    searchResults.style.display = "block";
+  }
+
+  async function doSearch(q) {
+    const query = String(q || "").trim();
+    if (!searchResults) return;
+    if (query.length < 2) {
+      searchResults.style.display = "none";
+      return;
+    }
+    try {
+      const res = await fetch(`${apiUrl}/players/search?q=${encodeURIComponent(query)}`, {
+        method: "GET",
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const json = await res.json().catch(() => null);
+      showResults((json && json.data) || []);
+    } catch (e) {
+      searchResults.innerHTML = `<div style="padding: 10px;">Errore ricerca</div>`;
+      searchResults.style.display = "block";
+    }
+  }
+
+  if (searchInput) {
+    searchInput.addEventListener(
+      "input",
+      debounce((e) => doSearch(e && e.target ? e.target.value : ""), 250)
+    );
+  }
+  document.addEventListener("click", (e) => {
+    if (!searchResults || !searchInput) return;
+    if (!searchResults.contains(e.target) && e.target !== searchInput) {
+      searchResults.style.display = "none";
+    }
+  });
+</script>
+
+<%- include('partials/footer'); -%>

@@ -1,5 +1,6 @@
 const db = require("../../models");
 const playerService = require("../../services/playersService");
+const { Op, fn, col, where } = require("sequelize");
 
 const Players = db.Player;
 
@@ -33,6 +34,37 @@ const getPlayer = async (req, res) => {
   } catch (error) {
     console.error("Errore nel recupero del giocatore:", error);
     res.status(500).json({ error: "Errore nel recupero dei dati" });
+  }
+};
+
+const searchPlayers = async (req, res) => {
+  try {
+    const qRaw = req.query && req.query.q ? String(req.query.q) : "";
+    const q = qRaw.trim();
+    if (q.length < 2) {
+      return res.status(200).json({ success: true, data: [] });
+    }
+
+    const qLower = q.toLowerCase();
+    const needle = `%${qLower}%`;
+    const players = await Players.findAll({
+      where: {
+        [Op.or]: [
+          where(fn("lower", col("name")), { [Op.like]: needle }),
+          where(fn("lower", col("first_name")), { [Op.like]: needle }),
+          where(fn("lower", col("second_name")), { [Op.like]: needle }),
+          where(fn("lower", col("country")), { [Op.like]: needle }),
+        ],
+      },
+      attributes: ["id", "name", "country", "image_src", "image_alt"],
+      limit: 20,
+      order: [["name", "ASC"]],
+    });
+
+    return res.status(200).json({ success: true, data: players });
+  } catch (error) {
+    console.error("Errore nella ricerca giocatori:", error);
+    res.status(500).json({ success: false, message: "Errore nel recupero dei dati" });
   }
 };
 
@@ -173,6 +205,7 @@ module.exports = {
   getPlayers,
   getPlayersWithRankingDate,
   getPlayer,
+  searchPlayers,
   postPlayer,
   deletePlayer,
   putPlayer,

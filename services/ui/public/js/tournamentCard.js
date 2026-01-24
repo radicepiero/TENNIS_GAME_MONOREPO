@@ -1,3 +1,6 @@
+import { formatDmyShort } from "./utils.js";
+import { countryToFlag, countryToFlagIconUrl } from "./icons.js";
+
 const superuserTreeExistsCacheByApi = new Map();
 
 function getSuperuserCache(apiUrl) {
@@ -6,88 +9,6 @@ function getSuperuserCache(apiUrl) {
     superuserTreeExistsCacheByApi.set(key, new Map());
   }
   return superuserTreeExistsCacheByApi.get(key);
-}
-
-let supportsFlagEmojiCache = null;
-function supportsFlagEmoji() {
-  if (supportsFlagEmojiCache !== null) return supportsFlagEmojiCache;
-  try {
-    const canvas = document.createElement("canvas");
-    canvas.width = 32;
-    canvas.height = 32;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return (supportsFlagEmojiCache = false);
-
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.font = "28px sans-serif";
-    ctx.textBaseline = "top";
-    ctx.fillText("🇮🇹", 0, 0);
-    const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
-
-    let nonZero = 0;
-    for (let i = 3; i < data.length; i += 4) {
-      if (data[i] !== 0) {
-        nonZero++;
-        if (nonZero > 10) break;
-      }
-    }
-    supportsFlagEmojiCache = nonZero > 10;
-    return supportsFlagEmojiCache;
-  } catch (e) {
-    supportsFlagEmojiCache = false;
-    return false;
-  }
-}
-
-function countryToFlag(countryRaw) {
-  const c = String(countryRaw || "").trim().toLowerCase();
-  const map = {
-    italia: "IT",
-    australia: "AU",
-    spagna: "ES",
-    francia: "FR",
-    germania: "DE",
-    olanda: "NL",
-    monaco: "MC",
-    qatar: "QA",
-    "stati uniti": "US",
-    argentina: "AR",
-    brasile: "BR",
-    canada: "CA",
-    cina: "CN",
-    giappone: "JP",
-    regno: "GB",
-    "regno unito": "GB",
-    svezia: "SE",
-    svizzera: "CH",
-    emirati: "AE",
-    "emirati arabi": "AE",
-    "emirati arabi uniti": "AE",
-  };
-  const direct = c.length === 2 ? c.toUpperCase() : "";
-  const code = direct || map[c] || "";
-  if (!code || code.length !== 2) return "";
-  if (!supportsFlagEmoji()) return code;
-  const A = 0x1f1e6;
-  const pts = code
-    .toUpperCase()
-    .split("")
-    .map((ch) => A + ch.charCodeAt(0) - 65);
-  return String.fromCodePoint(...pts);
-}
-
-function normalizeYmd(v) {
-  if (!v) return "";
-  const s = String(v);
-  return s.length >= 10 ? s.slice(0, 10) : s;
-}
-
-function formatDmyShort(v) {
-  const ymd = normalizeYmd(v);
-  if (!ymd || ymd.length < 10) return ymd;
-  const [yyyy, mm, dd] = ymd.split("-");
-  if (!yyyy || !mm || !dd) return ymd;
-  return `${dd}-${mm}-${String(yyyy).slice(-2)}`;
 }
 
 function getTournamentStatus(t) {
@@ -170,13 +91,28 @@ export function buildTournamentCard(tournament, { apiUrl } = {}) {
   header.className = "tournament-card__header";
   header.style.backgroundImage = tournament.image ? `url('${tournament.image}')` : "none";
 
+  const city = tournament.location || "";
+  const country = tournament.country || "";
+  const flag = countryToFlag(country);
+  const flagUrl = countryToFlagIconUrl(country, { format: "svg" });
+  const flagContent = flagUrl
+    ? `<img class="tournament-flag__img" src="${flagUrl}" alt="${country}" loading="lazy" />`
+    : flag;
+
   const category = document.createElement("div");
   category.className = "tournament-card__category";
   category.textContent = `${tournament.category || ""}`;
 
   const title = document.createElement("div");
   title.className = "tournament-card__title";
-  title.textContent = String(tournament.nickname || tournament.name || "").trim();
+  const titleText = String(tournament.nickname || tournament.name || "").trim();
+  title.innerHTML = `
+    <span data-country-wrap style="display:grid; grid-template-columns: auto 1fr; align-items:center; column-gap: 8px; min-width: 0;">
+      <button type="button" class="tournament-flag" data-country-toggle aria-label="Nazione">${flagContent}</button>
+      <span style="min-width:0; overflow:hidden; text-overflow: ellipsis; text-align: center;">${titleText}</span>
+      <span class="tournament-country is-hidden" data-country-name>${country}</span>
+    </span>
+  `;
 
   const meta = document.createElement("div");
   meta.className = "tournament-card__meta";
@@ -187,11 +123,8 @@ export function buildTournamentCard(tournament, { apiUrl } = {}) {
     ? `<a class="tournament-status-link" href="${href}">${statusText}</a>`
     : `<button type="button" class="tournament-status-link tournament-status-link--disabled" aria-disabled="true">${statusText}</button>`;
 
-  const city = tournament.location || "";
-  const country = tournament.country || "";
-  const flag = countryToFlag(country);
-  const where = city || country
-    ? `<span class="tournament-where" data-country-wrap><span class="tournament-city">${city}</span><button type="button" class="tournament-flag" data-country-toggle aria-label="Nazione">${flag}</button><span class="tournament-country is-hidden" data-country-name>${country}</span></span>`
+  const where = city
+    ? `<span class="tournament-where"><span class="tournament-city">${city}</span></span>`
     : "";
 
   const openRow = tournament.dataopen ? `<div>open: ${formatDmyShort(tournament.dataopen)}</div>` : "";

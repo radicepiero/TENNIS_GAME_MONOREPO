@@ -114,6 +114,12 @@ async function getFriendDashboard(userUuid) {
     return {
       id: t.id,
       name: t.name,
+      nickname: t.nickname,
+      category: t.category,
+      image: t.image,
+      surface: t.surface,
+      location: t.location,
+      country: t.country,
       status: t.status,
       dataopen: t.dataopen,
       datainizio: t.datainizio,

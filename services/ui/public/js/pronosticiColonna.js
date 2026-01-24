@@ -1,3 +1,5 @@
+import { normalizeYmd } from "./utils.js";
+
 const apiUrl = document.documentElement.dataset.apiUrl || "/api";
 
 async function fetchJson(url, options = {}) {
@@ -7,12 +9,6 @@ async function fetchJson(url, options = {}) {
     throw new Error(`HTTP ${res.status} ${url} ${text}`);
   }
   return await res.json();
-}
-
-function normalizeYmd(v) {
-  if (!v) return null;
-  const s = String(v);
-  return s.length >= 10 ? s.slice(0, 10) : s;
 }
 
 function parseRankingNumber(rawRanking) {

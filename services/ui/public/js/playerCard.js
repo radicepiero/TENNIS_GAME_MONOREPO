@@ -1,3 +1,5 @@
+import { countryToFlag } from "./icons.js";
+
 class PlayerCard {
   constructor(player) {
     this.player = player;
@@ -13,6 +15,16 @@ class PlayerCard {
     img.src = this.player.image_src || "default.jpg";
     img.alt = this.player.image_alt || this.player.name;
 
+    const playerId = this.player && this.player.id !== undefined && this.player.id !== null ? String(this.player.id) : "";
+    const friendHref = playerId ? `/friend/player/${encodeURIComponent(playerId)}` : "";
+
+    const imgWrap = document.createElement(friendHref ? "a" : "div");
+    if (friendHref) {
+      imgWrap.href = friendHref;
+      imgWrap.style.textDecoration = "none";
+    }
+    imgWrap.appendChild(img);
+
     const punteggio = document.createElement("div");
 
     punteggio.textContent = this.player.Rankings.length
@@ -22,10 +34,20 @@ class PlayerCard {
     const label = document.createElement("label");
     label.textContent = this.player.name;
 
-    const country = document.createElement("div");
-    country.textContent = this.player.country;
+    const labelWrap = document.createElement(friendHref ? "a" : "div");
+    if (friendHref) {
+      labelWrap.href = friendHref;
+      labelWrap.style.textDecoration = "none";
+      labelWrap.style.color = "inherit";
+    }
+    labelWrap.appendChild(label);
 
-    div.append(punteggio, img, checkbox, label, country);
+    const country = document.createElement("div");
+    const c = this.player && this.player.country ? String(this.player.country) : "";
+    const flag = c ? countryToFlag(c) : "";
+    country.textContent = c ? `${flag ? `${flag} ` : ""}${c}` : "";
+
+    div.append(punteggio, imgWrap, checkbox, labelWrap, country);
     return div;
   }
 

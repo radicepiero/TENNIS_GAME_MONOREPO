@@ -24,6 +24,21 @@ export function normalizeKeys(obj, keyMap) {
   return obj;
 }
 
+export function normalizeYmd(v) {
+  if (!v) return null;
+  const s = String(v);
+  return s.length >= 10 ? s.slice(0, 10) : s;
+}
+
+export function formatDmyShort(v) {
+  const ymd = normalizeYmd(v);
+  if (!ymd) return "";
+  if (ymd.length < 10) return ymd;
+  const [yyyy, mm, dd] = ymd.split("-");
+  if (!yyyy || !mm || !dd) return ymd;
+  return `${dd}-${mm}-${String(yyyy).slice(-2)}`;
+}
+
 /**
  * Genera una query string a partire da un oggetto di parametri
  * @param {Object} params - Oggetto con i parametri
