@@ -1,74 +1,10 @@
 import { normalizeYmd } from "./utils.js";
+import { tournamentApi } from "./api/tournamentApi.js";
+import { playerApi } from "./api/playerApi.js";
+import { predictionApi } from "./api/predictionApi.js";
+import { treeApi } from "./api/treeApi.js";
 
 const punteggi = [];
-
-async function fetchJson(url, options) {
-  const res = await fetch(url, { credentials: "include", ...(options || {}) });
-  if (!res.ok) {
-    let msg = "";
-    try {
-      const json = await res.json();
-      msg = (json && (json.message || json.error)) ? (json.message || json.error) : JSON.stringify(json);
-      if (json && json.chiusuraPronostici) {
-        msg = `${msg} (visibili dopo: ${json.chiusuraPronostici})`;
-      }
-    } catch (e) {
-      msg = await res.text().catch(() => "");
-    }
-    throw new Error(`HTTP ${res.status} ${url} ${msg}`);
-  }
-  return await res.json();
-}
-
-async function fetchTournamentBasic(tournamentId, apiUrl) {
-  // NB: tournaments API may return either { success, data: [...] } or a direct object depending on endpoint.
-  const json = await fetchJson(`${apiUrl}/tournaments/${tournamentId}`, {
-    method: "GET",
-  });
-  if (json && json.data && Array.isArray(json.data) && json.data[0]) return json.data[0];
-  if (json && json.data && !Array.isArray(json.data) && typeof json.data === "object") return json.data;
-  return json;
-}
-
-async function fetchTournamentScripts(tournamentId, apiUrl) {
-  const json = await fetchJson(`${apiUrl}/tournaments/${tournamentId}/scripts`, {
-    method: "GET",
-  });
-  if (json && json.data && Array.isArray(json.data) && json.data[0]) return json.data[0];
-  if (json && json.data && !Array.isArray(json.data) && typeof json.data === "object") return json.data;
-  return json;
-}
-
-async function fetchTournamentPredictions(tournamentId, apiUrl) {
-  const json = await fetchJson(`${apiUrl}/predictions/tournaments/${tournamentId}`, {
-    method: "GET",
-  });
-  return (json && json.data) || [];
-}
-
-async function fetchPlayersByRankingDate(rankingDate, apiUrl) {
-  const normalizedDate = normalizeYmd(rankingDate);
-  const url = normalizedDate
-    ? `${apiUrl}/players/ranking/${encodeURIComponent(normalizedDate)}`
-    : `${apiUrl}/players/ranking`;
-
-  const json = await fetchJson(url, { method: "GET" });
-  return (json && json.data) || [];
-}
-
-async function fetchSuperuserTreeByTournament(tournamentId, apiUrl) {
-  // Returns a single Tree object
-  return await fetchJson(`${apiUrl}/trees/superuser/${tournamentId}`, {
-    method: "GET",
-  });
-}
-
-async function fetchMatchesByTreeId(treeId, apiUrl) {
-  const json = await fetchJson(`${apiUrl}/matches/tree/${treeId}`, {
-    method: "GET",
-  });
-  return Array.isArray(json) ? json : [];
-}
 
 function computeMatchWinnerId(match) {
   if (!match) return null;
@@ -282,14 +218,14 @@ export async function creaColonne(tournamentID, faseMenu, apiUrl, loggedUserUuid
   let matches = [];
 
   try {
-    tournament = await fetchTournamentBasic(tournamentId, apiUrl);
+    tournament = await tournamentApi.getTournamentBasic(tournamentId, apiUrl);
   } catch (e) {
     console.error("Errore fetch tournament:", e);
     tournament = null;
   }
 
   try {
-    tournamentScripts = await fetchTournamentScripts(tournamentId, apiUrl);
+    tournamentScripts = await tournamentApi.getTournamentScripts(tournamentId, apiUrl);
   } catch (e) {
     console.error("Errore fetch tournament scripts:", e);
     tournamentScripts = null;
@@ -297,14 +233,14 @@ export async function creaColonne(tournamentID, faseMenu, apiUrl, loggedUserUuid
 
   const tournamentRankingDate = tournament && tournament.ranking_date ? normalizeYmd(tournament.ranking_date) : null;
   try {
-    players = await fetchPlayersByRankingDate(tournamentRankingDate, apiUrl);
+    players = await playerApi.getPlayersByRankingDate(tournamentRankingDate, apiUrl);
   } catch (e) {
     console.error("Errore fetch players:", e);
     players = [];
   }
 
   try {
-    predictions = await fetchTournamentPredictions(tournamentId, apiUrl);
+    predictions = await predictionApi.getTournamentPredictions(tournamentId, apiUrl);
   } catch (e) {
     console.error("Errore fetch predictions:", e);
     predictions = [];
@@ -312,10 +248,10 @@ export async function creaColonne(tournamentID, faseMenu, apiUrl, loggedUserUuid
 
   if (!isPronosticiOnly) {
     try {
-      const tree = await fetchSuperuserTreeByTournament(tournamentId, apiUrl);
+      const tree = await treeApi.getSuperuserTreeByTournament(tournamentId, apiUrl);
       const treeId = tree && (tree.id || tree.uuid);
       if (treeId) {
-        matches = await fetchMatchesByTreeId(treeId, apiUrl);
+        matches = await treeApi.getMatchesByTreeId(treeId, apiUrl);
       }
     } catch (e) {
       console.error("Errore fetch tree/matches:", e);
