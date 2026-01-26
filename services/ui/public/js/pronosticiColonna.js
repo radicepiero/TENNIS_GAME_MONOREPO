@@ -1,15 +1,6 @@
-import { normalizeYmd } from "./utils.js";
+import { normalizeYmd, fetchJson } from "./utils.js";
 
 const apiUrl = document.documentElement.dataset.apiUrl || "/api";
-
-async function fetchJson(url, options = {}) {
-  const res = await fetch(url, { credentials: "include", ...options });
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(`HTTP ${res.status} ${url} ${text}`);
-  }
-  return await res.json();
-}
 
 function parseRankingNumber(rawRanking) {
   let ranking = Number(rawRanking);

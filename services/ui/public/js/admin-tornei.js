@@ -1,3 +1,5 @@
+import { fetchJson } from "./utils.js";
+
 function $(id) {
   return document.getElementById(id);
 }
@@ -66,7 +68,7 @@ function rowHtml(t) {
 }
 
 async function apiFetch(url, options = {}) {
-  const res = await fetch(url, {
+  return await fetchJson(url, {
     ...options,
     credentials: "include",
     headers: {
@@ -74,27 +76,39 @@ async function apiFetch(url, options = {}) {
       ...(options.headers || {}),
     },
   });
-  return res;
+}
+
+function parseHttpStatusFromError(err) {
+  const msg = err && err.message ? String(err.message) : "";
+  const m = msg.match(/HTTP\s+(\d+)/i);
+  return m ? Number(m[1]) : null;
 }
 
 async function loadTrees(apiUrl) {
-  const res = await apiFetch(`${apiUrl}/trees?includeMatches=false`, { method: "GET" });
-  if (!res.ok) return [];
-  return await res.json();
+  try {
+    const json = await apiFetch(`${apiUrl}/trees?includeMatches=false`, { method: "GET" });
+    return Array.isArray(json) ? json : [];
+  } catch (e) {
+    return [];
+  }
 }
 
 async function loadPredictionCounts(apiUrl) {
-  const res = await apiFetch(`${apiUrl}/predictions/counts/tournaments`, { method: "GET" });
-  if (!res.ok) return [];
-  const json = await res.json();
-  return (json && json.data) || [];
+  try {
+    const json = await apiFetch(`${apiUrl}/predictions/counts/tournaments`, { method: "GET" });
+    return (json && json.data) || [];
+  } catch (e) {
+    return [];
+  }
 }
 
 async function loadRankingDates(apiUrl) {
-  const res = await apiFetch(`${apiUrl}/rankings/dates`, { method: "GET" });
-  if (!res.ok) return [];
-  const json = await res.json();
-  return (json && json.data) || [];
+  try {
+    const json = await apiFetch(`${apiUrl}/rankings/dates`, { method: "GET" });
+    return (json && json.data) || [];
+  } catch (e) {
+    return [];
+  }
 }
 
 function fillRankingDatesSelect(selectEl, dates) {
@@ -209,18 +223,17 @@ document.addEventListener("DOMContentLoaded", () => {
       fd.append("file", file);
       fd.append("ranking_date", date);
 
-      const res = await fetch(`${apiUrl}/rankings/import-csv`, {
-        method: "POST",
-        body: fd,
-        credentials: "include",
-      });
-
-      const json = await res.json().catch(() => null);
-      if (!res.ok) {
-        const msg = (json && (json.message || json.error)) || `Errore: ${res.status}`;
-        setText(rankingImportStatus, msg);
-        return;
-      }
+      const json = await fetchJson(
+        `${apiUrl}/rankings/import-csv`,
+        {
+          method: "POST",
+          body: fd,
+          credentials: "include",
+        },
+        {
+          buildErrorMessage: ({ json }) => (json && (json.message || json.error)) || "",
+        }
+      );
 
       const data = json && json.data ? json.data : null;
       if (data) {
@@ -268,12 +281,14 @@ document.addEventListener("DOMContentLoaded", () => {
         fillRankingDatesSelect(rankingDateSelect, []);
       }
 
-      const res = await apiFetch(`${apiUrl}/tournaments`, { method: "GET" });
-      if (!res.ok) {
-        setText(listStatus, `Errore: ${res.status}`);
+      try {
+        const json = await apiFetch(`${apiUrl}/tournaments`, { method: "GET" });
+        all = Array.isArray(json) ? json : [];
+      } catch (e) {
+        const st = parseHttpStatusFromError(e);
+        setText(listStatus, `Errore: ${st || ""}`.trim());
         return;
       }
-      all = await res.json();
 
       let predCounts = [];
       try {
@@ -332,28 +347,35 @@ document.addEventListener("DOMContentLoaded", () => {
     setText(listStatus, "Eliminazione...");
     try {
       try {
-        const prRes = await apiFetch(`${apiUrl}/predictions/tournaments/${id}`, { method: "GET" });
-        if (prRes.ok) {
-          const prJson = await prRes.json().catch(() => null);
-          const preds = (prJson && prJson.data) || [];
-          const avatarUrls = (preds || [])
-            .map((p) => (p && p.avatar_url ? String(p.avatar_url) : ""))
-            .filter((u) => u && u.startsWith("/uploads/predictions/"));
+        const prJson = await fetchJson(
+          `${apiUrl}/predictions/tournaments/${id}`,
+          { method: "GET", credentials: "include" },
+          { allowStatus: [404] }
+        );
+        const preds = (prJson && prJson.data) || [];
+        const avatarUrls = (preds || [])
+          .map((p) => (p && p.avatar_url ? String(p.avatar_url) : ""))
+          .filter((u) => u && u.startsWith("/uploads/predictions/"));
 
-          if (avatarUrls.length > 0) {
-            await fetch("/pronostico/delete-avatars", {
+        if (avatarUrls.length > 0) {
+          await fetchJson(
+            "/pronostico/delete-avatars",
+            {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ avatar_urls: avatarUrls }),
               credentials: "include",
-            }).catch(() => null);
-          }
+            },
+            { allowStatus: [404] }
+          ).catch(() => null);
         }
       } catch (e3) {}
 
-      const res = await apiFetch(`${apiUrl}/tournaments/${id}`, { method: "DELETE" });
-      if (!res.ok) {
-        setText(listStatus, `Errore delete: ${res.status}`);
+      try {
+        await apiFetch(`${apiUrl}/tournaments/${id}`, { method: "DELETE" });
+      } catch (e) {
+        const st = parseHttpStatusFromError(e);
+        setText(listStatus, `Errore delete: ${st || ""}`.trim());
         return;
       }
       all = all.filter((t) => String(t.id) !== String(id));
@@ -386,17 +408,17 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     try {
-      const res = await apiFetch(`${apiUrl}/tournaments`, {
-        method: "POST",
-        body: JSON.stringify(data),
-      });
-
-      if (!res.ok) {
-        setText(createStatus, `Errore: ${res.status}`);
+      let created;
+      try {
+        created = await apiFetch(`${apiUrl}/tournaments`, {
+          method: "POST",
+          body: JSON.stringify(data),
+        });
+      } catch (e1) {
+        const st = parseHttpStatusFromError(e1);
+        setText(createStatus, `Errore: ${st || ""}`.trim());
         return;
       }
-
-      const created = await res.json();
       all = [...all, created];
       applyFilters();
       form.reset();

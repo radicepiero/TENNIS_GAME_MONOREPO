@@ -77,17 +77,10 @@ export class Tournament {
     }`;
   }
   static async fetchTournament(tournament_id, apiUrl) {
-    try {
-      let response = await fetch(
-        `${apiUrl}/tournaments/${tournament_id}/scripts`,
-        {
-          method: "GET",
-          //credentials: "include", // <<< necessario
-        }
-      );
-      return await response.json();
-    } catch (error) {
-      console.error(error);
-    }
+    const { fetchJson } = await import("./utils.js");
+    return await fetchJson(`${apiUrl}/tournaments/${tournament_id}/scripts`, {
+      method: "GET",
+      credentials: "include",
+    });
   }
 }

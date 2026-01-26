@@ -1,4 +1,4 @@
-import { generateQueryUrl } from "../js/utils.js";
+import { generateQueryUrl, fetchJson } from "../js/utils.js";
 import { Tree } from "/js/Tree.js";
 
 export const treeApiClient = {
@@ -9,17 +9,11 @@ export const treeApiClient = {
 
   async getTrees(options = {}, apiUrl) {
     const url = this.generateTreeApiUrl(options, apiUrl);
-    const response = await fetch(url, {
+    return await fetchJson(url, {
+      method: "GET",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
     });
-
-    if (!response.ok) {
-      const error = await response.text();
-      throw new Error(error || "Failed to fetch trees");
-    }
-
-    return response.json();
   },
 
   async getTree(treeId, apiUrl, includeMatches = true) {
@@ -99,19 +93,12 @@ export const treeApiClient = {
 
     const url = this.generateTreeApiUrl({ treeId }, apiUrl);
 
-    const response = await fetch(url, {
+    return await fetchJson(url, {
       method: "PUT",
       credentials: "include",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(tree),
     });
-
-    if (!response.ok) {
-      const error = await response.text();
-      throw new Error(error || "Failed to save tree");
-    }
-
-    return response.json();
   },
 
   /**
@@ -124,18 +111,11 @@ export const treeApiClient = {
     if (!treeId) throw new Error("treeId is required");
     const url = this.generateTreeApiUrl({ treeId }, apiUrl);
     console.log(url);
-    const response = await fetch(url, {
+    return await fetchJson(url, {
       method: "DELETE",
       credentials: "include",
       headers: { "Content-Type": "application/json" },
     });
-
-    if (!response.ok) {
-      const error = await response.text();
-      throw new Error(error || "Failed to delete tree");
-    }
-
-    return response.json();
   },
 
   /**
@@ -164,19 +144,11 @@ export const treeApiClient = {
 
     const url = this.generateTreeApiUrl({}, apiUrl);
     
-    const response = await fetch(url, {
+    return await fetchJson(url, {
       method: "POST",
       credentials: "include",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(tree),
     });
-
-    if (!response.ok) {
-      const error = await response.text();
-      console.log(error);
-      throw new Error(error || "Failed to create tree");
-    }
-
-    return response.json();
   },
 };

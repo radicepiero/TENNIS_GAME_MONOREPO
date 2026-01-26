@@ -7,6 +7,33 @@ export function ensureStyleLoaded(href) {
   }
 }
 
+export async function fetchJson(url, options = {}, cfg = {}) {
+  const allowStatus = cfg && Array.isArray(cfg.allowStatus) ? cfg.allowStatus : [];
+  const buildErrorMessage = cfg && typeof cfg.buildErrorMessage === "function" ? cfg.buildErrorMessage : null;
+  const res = await fetch(url, { credentials: "include", ...(options || {}) });
+  if (allowStatus.includes(res.status)) return null;
+  if (!res.ok) {
+    let json = null;
+    let text = "";
+    try {
+      json = await res.json();
+    } catch (e) {
+      text = await res.text().catch(() => "");
+    }
+
+    let msg = "";
+    if (buildErrorMessage) {
+      msg = String(buildErrorMessage({ status: res.status, url, json, text }) || "");
+    }
+    if (!msg) {
+      msg = json && (json.message || json.error) ? (json.message || json.error) : (json ? JSON.stringify(json) : text);
+    }
+
+    throw new Error(`HTTP ${res.status} ${url} ${msg}`);
+  }
+  return await res.json();
+}
+
 export function normalizeKeys(obj, keyMap) {
   if (Array.isArray(obj)) {
     return obj.map((item) => normalizeKeys(item, keyMap));
@@ -22,6 +49,16 @@ export function normalizeKeys(obj, keyMap) {
   }
 
   return obj;
+}
+
+export function unwrapData(json) {
+  return json && typeof json === "object" && "data" in json ? json.data : json;
+}
+
+export function unwrapFirst(json) {
+  const data = unwrapData(json);
+  if (Array.isArray(data)) return data[0] || null;
+  return data || null;
 }
 
 export function normalizeYmd(v) {

@@ -1,3 +1,5 @@
+import { fetchJson } from "./utils.js";
+
 export class Prediction {
   constructor({ id, user_uuid, tournament_id, img, createdAt, updatedAt }) {
     this.id = id;
@@ -24,19 +26,17 @@ export class Prediction {
   }
 
   static async fetchById(id) {
-    const res = await fetch(`/api/predictions/${id}`);
-    const data = await res.json();
+    const data = await fetchJson(`/api/predictions/${id}`, { method: "GET", credentials: "include" });
     return Prediction.fromJSON(data);
   }
 
   async save() {
-    const res = await fetch(`/api/predictions`, {
-      method: 'POST',
+    const data = await fetchJson(`/api/predictions`, {
+      method: "POST",
       credentials: "include",
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(this.toJSON())
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(this.toJSON()),
     });
-    const data = await res.json();
     Object.assign(this, Prediction.fromJSON(data));
   }
 }

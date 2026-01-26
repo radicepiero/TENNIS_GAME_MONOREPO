@@ -44,6 +44,7 @@
 <script type="module">
   const user = JSON.parse(document.getElementById("bootstrap-user").textContent || "null");
   import { Tournament } from "/js/Tournament.js";
+  import { fetchJson } from "/js/utils.js";
   import {
     setup,
     renderTree,
@@ -172,15 +173,6 @@
   function showWarning(msg) {
     warn.textContent = msg;
     warn.classList.remove("hidden");
-  }
-
-  async function fetchJson(url, options) {
-    const res = await fetch(url, options);
-    if (!res.ok) {
-      const txt = await res.text().catch(() => "");
-      throw new Error(txt || `HTTP ${res.status}`);
-    }
-    return await res.json();
   }
 
   async function ensureTreeOrOfferClone() {
