@@ -7,6 +7,13 @@
 
 <h1 id="nome-torneo"><%= tournamentId %></h1>
 
+<div id="floating-toolbar" class="floating-toolbar">
+  <div class="floating-toolbar__handle">Azioni</div>
+  <div class="floating-toolbar__content">
+    <a href="/admin/tornei">Admin tornei</a>
+  </div>
+</div>
+
 <div id="filter-bar" style="display:flex; gap: 12px; justify-content:center; align-items:center; flex-wrap: wrap; margin: 10px 0 12px;">
   <label class="filter-label">
     <span class="label-text">Da:</span>
@@ -29,78 +36,7 @@
 <script src="https://fperucic.github.io/treant-js/vendor/raphael.js"></script>
 <script src="https://fperucic.github.io/treant-js/Treant.js"></script>
 
-<script type="module">
-  import { Tournament } from "/js/Tournament.js";
-  import { treeApiClient } from "/js/TreeApiClient.js";
-  import { setup, renderTree, roundLabels, populateRoundSelects, getAlberoMatches, setEditable, setWinnersEditable } from "/js/alberoTorneo.js?v=<%= Date.now() %>";
-
-  const apiUrl = "<%= apiUrl %>";
-  const tournamentId = "<%= tournamentId %>";
-
-  const tournament = (await Tournament.fetchTournament(tournamentId, apiUrl)).data[0];
-  document.title = `albero superuser ${tournament.name}`;
-  document.getElementById("nome-torneo").textContent = `${tournament.name} (risultati ufficiali)`;
-
-  const effectiveRounds = (() => {
-    const n = Number(tournament && tournament.roundopen);
-    return Number.isFinite(n) && n > 0 ? n : 6;
-  })();
-
-  populateRoundSelects(tournament, roundLabels);
-
-  const fromRoundSelect = document.getElementById("fromRound");
-  const toRoundSelect = document.getElementById("toRound");
-  if (fromRoundSelect) fromRoundSelect.value = String(effectiveRounds);
-  if (toRoundSelect) toRoundSelect.value = "1";
-
-  function renderFromDropdowns() {
-    const fromRound = Number(fromRoundSelect && fromRoundSelect.value);
-    const toRound = Number(toRoundSelect && toRoundSelect.value);
-    if (!Number.isFinite(fromRound) || !Number.isFinite(toRound)) return;
-
-    // Garantiamo un range valido: from >= to
-    if (toRound > fromRound && toRoundSelect) {
-      toRoundSelect.value = String(fromRound);
-      renderTree(fromRound, fromRound);
-      return;
-    }
-    renderTree(fromRound, toRound);
-  }
-
-  if (fromRoundSelect) fromRoundSelect.addEventListener("change", renderFromDropdowns);
-  if (toRoundSelect) toRoundSelect.addEventListener("change", renderFromDropdowns);
-
-  // read-only
-  setEditable(false);
-  setWinnersEditable(false);
-
-  // setup needs a user, but for read-only we can pass a stub
-  await setup(tournament, { uuid: "superuser" }, apiUrl);
-
-  try {
-    const trees = await fetch(`${apiUrl}/trees/superuser/${encodeURIComponent(tournamentId)}?includeMatches=true`, {
-      credentials: "include",
-    });
-    if (!trees.ok) {
-      const txt = await trees.text().catch(() => "");
-      throw new Error(txt || `HTTP ${trees.status}`);
-    }
-    const tree = await trees.json();
-    const treeId = tree && (tree.id || tree.uuid);
-    if (!treeId) throw new Error("albero superuser non trovato");
-
-    // import in Tree instance and render
-    await getAlberoMatches(treeId);
-    renderTree(
-      Number(fromRoundSelect && fromRoundSelect.value ? fromRoundSelect.value : effectiveRounds),
-      Number(toRoundSelect && toRoundSelect.value ? toRoundSelect.value : 1)
-    );
-  } catch (e) {
-    const container = document.getElementById("tree-simple");
-    if (container) {
-      container.innerHTML = `<div style="padding:12px;border:1px solid #f99;background:#fff0f0;color:#900;max-width:720px;margin:12px auto;">${e.message || e}</div>`;
-    }
-  }
-</script>
+<div id="page-bootstrap" data-api-url="<%= apiUrl %>" data-tournament-id="<%= tournamentId %>"></div>
+<script type="module" src="/js/ui/pages/albero-superuser.js?v=<%= Date.now() %>"></script>
 
 <%- include('partials/footer'); -%>

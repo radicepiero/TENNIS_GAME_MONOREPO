@@ -1,36 +1,19 @@
-import { fetchJson } from "./utils.js";
+import {
+  normalizeYmd,
+  formatDmyShort,
+  localDateTimeToIso,
+  toYear,
+  parseHttpStatusFromError,
+  setText,
+} from "/js/utils.js";
 
-function $(id) {
-  return document.getElementById(id);
-}
+import { roundLabels } from "/js/icons.js";
 
-function setText(el, text) {
-  if (!el) return;
-  el.textContent = text;
-}
-
-function toYmd(value) {
-  if (!value) return "";
-  if (value instanceof Date) return value.toISOString().slice(0, 10);
-  const s = String(value);
-  if (s.length >= 10) return s.slice(0, 10);
-  return s;
-}
-
-function formatDateItUtc(value) {
-  const ymd = toYmd(value);
-  if (!ymd || ymd.length !== 10) return ymd;
-  const m = ymd.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  if (!m) return ymd;
-  const [, yyyy, mm, dd] = m;
-  return `${dd}/${mm}/${yyyy}`;
-}
-
-function toYear(dateStr) {
-  if (!dateStr) return "";
-  const m = toYmd(dateStr).match(/^(\d{4})-/);
-  return m ? m[1] : "";
-}
+import { treeApi } from "/js/api/treeApi.js";
+import { predictionApi } from "/js/api/predictionApi.js";
+import { rankingApi } from "/js/api/rankingApi.js";
+import { tournamentApi } from "/js/api/tournamentApi.js";
+import { pronosticoApi } from "/js/api/pronosticoApi.js";
 
 function rowHtml(t) {
   const safe = (v) => (v === null || typeof v === "undefined" ? "" : String(v));
@@ -52,8 +35,8 @@ function rowHtml(t) {
         <div>${safe(t.name)}</div>
         ${nickname ? `<div style="font-size: 12px; opacity: 0.8; margin-top: 4px;">${safe(nickname)}</div>` : ""}
       </td>
-      <td style="border-bottom: 1px solid #eee; padding: 8px;">${safe(formatDateItUtc(t.datainizio))}</td>
-      <td style="border-bottom: 1px solid #eee; padding: 8px;">${safe(formatDateItUtc(t.datafine))}</td>
+      <td style="border-bottom: 1px solid #eee; padding: 8px;">${safe(formatDmyShort(t.datainizio))}</td>
+      <td style="border-bottom: 1px solid #eee; padding: 8px;">${safe(formatDmyShort(t.datafine))}</td>
       <td style="border-bottom: 1px solid #eee; padding: 8px;">${safe(t.status)}</td>
       <td style="border-bottom: 1px solid #eee; padding: 8px;">${predCountText}</td>
       <td style="border-bottom: 1px solid #eee; padding: 8px;">
@@ -67,60 +50,34 @@ function rowHtml(t) {
   `;
 }
 
-async function apiFetch(url, options = {}) {
-  return await fetchJson(url, {
-    ...options,
-    credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      ...(options.headers || {}),
-    },
-  });
-}
-
-function parseHttpStatusFromError(err) {
-  const msg = err && err.message ? String(err.message) : "";
-  const m = msg.match(/HTTP\s+(\d+)/i);
-  return m ? Number(m[1]) : null;
-}
-
-async function loadTrees(apiUrl) {
-  try {
-    const json = await apiFetch(`${apiUrl}/trees?includeMatches=false`, { method: "GET" });
-    return Array.isArray(json) ? json : [];
-  } catch (e) {
-    return [];
-  }
-}
-
-async function loadPredictionCounts(apiUrl) {
-  try {
-    const json = await apiFetch(`${apiUrl}/predictions/counts/tournaments`, { method: "GET" });
-    return (json && json.data) || [];
-  } catch (e) {
-    return [];
-  }
-}
-
-async function loadRankingDates(apiUrl) {
-  try {
-    const json = await apiFetch(`${apiUrl}/rankings/dates`, { method: "GET" });
-    return (json && json.data) || [];
-  } catch (e) {
-    return [];
-  }
-}
-
 function fillRankingDatesSelect(selectEl, dates) {
   if (!selectEl) return;
   const current = selectEl.value || "";
   const opts = [
     `<option value="">(vuoto)</option>`,
     ...(dates || []).map((d) => {
-      const ymd = toYmd(d);
+      const ymd = normalizeYmd(d) || "";
       return `<option value="${ymd}">${ymd}</option>`;
     }),
   ];
+  selectEl.innerHTML = opts.join("");
+  selectEl.value = current;
+}
+
+function fillRoundsSelect(selectEl) {
+  if (!selectEl) return;
+  const current = selectEl.value || "";
+
+  // roundLabels: ["Pronostici", "128-esimi", ..., "Finale"]
+  // Nella UI admin vogliamo escludere "Pronostici" e mappare:
+  // 1 -> Finale, 2 -> Semifinali, ..., 8 -> 128-esimi
+  const opts = [`<option value="">(vuoto)</option>`];
+  const maxRound = roundLabels.length - 1;
+  for (let value = 1; value <= maxRound; value += 1) {
+    const label = roundLabels[roundLabels.length - value];
+    opts.push(`<option value="${value}">${label} (${value})</option>`);
+  }
+
   selectEl.innerHTML = opts.join("");
   selectEl.value = current;
 }
@@ -191,6 +148,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const form = document.getElementById("create-tournament");
   const createStatus = document.getElementById("create-status");
   const rankingDateSelect = document.getElementById("ranking-date");
+  const roundsSelect = document.getElementById("rounds");
 
   const createModal = setupCreateModal();
 
@@ -203,6 +161,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
   let all = [];
   let rankingDates = [];
+
+  fillRoundsSelect(roundsSelect);
 
   async function runRankingImport() {
     if (!rankingImportRun || !rankingImportFile || !rankingImportDate) return;
@@ -219,21 +179,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     setText(rankingImportStatus, "Upload... ");
     try {
-      const fd = new FormData();
-      fd.append("file", file);
-      fd.append("ranking_date", date);
-
-      const json = await fetchJson(
-        `${apiUrl}/rankings/import-csv`,
-        {
-          method: "POST",
-          body: fd,
-          credentials: "include",
-        },
-        {
-          buildErrorMessage: ({ json }) => (json && (json.message || json.error)) || "",
-        }
-      );
+      const json = await rankingApi.importRankingsCsv(file, date, apiUrl);
 
       const data = json && json.data ? json.data : null;
       if (data) {
@@ -247,7 +193,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       rankingImportFile.value = "";
       try {
-        rankingDates = await loadRankingDates(apiUrl);
+        rankingDates = await rankingApi.getRankingDates(apiUrl);
         fillRankingDatesSelect(rankingDateSelect, rankingDates);
       } catch (e) {}
     } catch (e) {
@@ -274,7 +220,7 @@ document.addEventListener("DOMContentLoaded", () => {
     setText(listStatus, "Caricamento...");
     try {
       try {
-        rankingDates = await loadRankingDates(apiUrl);
+        rankingDates = await rankingApi.getRankingDates(apiUrl);
         fillRankingDatesSelect(rankingDateSelect, rankingDates);
       } catch (e) {
         rankingDates = [];
@@ -282,8 +228,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       try {
-        const json = await apiFetch(`${apiUrl}/tournaments`, { method: "GET" });
-        all = Array.isArray(json) ? json : [];
+        all = await tournamentApi.listTournaments(apiUrl);
       } catch (e) {
         const st = parseHttpStatusFromError(e);
         setText(listStatus, `Errore: ${st || ""}`.trim());
@@ -292,7 +237,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       let predCounts = [];
       try {
-        predCounts = await loadPredictionCounts(apiUrl);
+        predCounts = await predictionApi.getPredictionCountsByTournament(apiUrl);
       } catch (e) {
         predCounts = [];
       }
@@ -302,7 +247,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
       let trees = [];
       try {
-        trees = await loadTrees(apiUrl);
+        const json = await treeApi.getTrees({ includeMatches: false }, apiUrl);
+        trees = Array.isArray(json) ? json : [];
       } catch (e) {
         trees = [];
       }
@@ -347,32 +293,18 @@ document.addEventListener("DOMContentLoaded", () => {
     setText(listStatus, "Eliminazione...");
     try {
       try {
-        const prJson = await fetchJson(
-          `${apiUrl}/predictions/tournaments/${id}`,
-          { method: "GET", credentials: "include" },
-          { allowStatus: [404] }
-        );
-        const preds = (prJson && prJson.data) || [];
+        const preds = await predictionApi.getTournamentPredictions(id, apiUrl);
         const avatarUrls = (preds || [])
           .map((p) => (p && p.avatar_url ? String(p.avatar_url) : ""))
           .filter((u) => u && u.startsWith("/uploads/predictions/"));
 
         if (avatarUrls.length > 0) {
-          await fetchJson(
-            "/pronostico/delete-avatars",
-            {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ avatar_urls: avatarUrls }),
-              credentials: "include",
-            },
-            { allowStatus: [404] }
-          ).catch(() => null);
+          await pronosticoApi.deleteAvatars(avatarUrls).catch(() => null);
         }
       } catch (e3) {}
 
       try {
-        await apiFetch(`${apiUrl}/tournaments/${id}`, { method: "DELETE" });
+        await tournamentApi.deleteTournament(id, apiUrl);
       } catch (e) {
         const st = parseHttpStatusFromError(e);
         setText(listStatus, `Errore delete: ${st || ""}`.trim());
@@ -398,22 +330,24 @@ document.addEventListener("DOMContentLoaded", () => {
     if (data.rounds === "") delete data.rounds;
     if (typeof data.costopartecipazione !== "undefined") data.costopartecipazione = Number(data.costopartecipazione);
     if (data.ranking_date === "") delete data.ranking_date;
-    if (typeof data.ranking_date === "string") data.ranking_date = toYmd(data.ranking_date);
+    if (typeof data.ranking_date === "string") data.ranking_date = normalizeYmd(data.ranking_date);
 
     if (data.chiusuraPronostici === "") {
       delete data.chiusuraPronostici;
     } else if (typeof data.chiusuraPronostici === "string") {
-      const d = new Date(data.chiusuraPronostici);
-      if (!Number.isNaN(d.getTime())) data.chiusuraPronostici = d.toISOString();
+      const iso = localDateTimeToIso(data.chiusuraPronostici);
+      if (iso) {
+        data.chiusuraPronostici = iso;
+      } else {
+        alert("Chiusura Pronostici non valida");
+        return;
+      }
     }
 
     try {
       let created;
       try {
-        created = await apiFetch(`${apiUrl}/tournaments`, {
-          method: "POST",
-          body: JSON.stringify(data),
-        });
+        created = await tournamentApi.createTournament(data, apiUrl);
       } catch (e1) {
         const st = parseHttpStatusFromError(e1);
         setText(createStatus, `Errore: ${st || ""}`.trim());

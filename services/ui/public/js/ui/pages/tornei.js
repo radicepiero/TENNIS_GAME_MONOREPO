@@ -1,15 +1,10 @@
-import { APP_ICONS } from "./icons.js";
-import { buildTournamentCard } from "./tournamentCard.js";
+import { buildTournamentCard } from "/js/ui/components/tournamentCard.js";
+import { tournamentApi } from "/js/api/tournamentApi.js";
+import { APP_ICONS } from "/js/icons.js";
 
 async function loadTournaments({ apiUrl }) {
   try {
-    const url = `${apiUrl}/tournaments`;
-    const response = await fetch(url);
-    if (!response.ok) {
-      throw new Error("Errore nel caricamento dei dati dei tornei");
-    }
-
-    const tournaments = await response.json();
+    const tournaments = await tournamentApi.listTournaments(apiUrl);
     const tournamentGrid = document.getElementById("tournament-grid");
     if (!tournamentGrid) return;
 

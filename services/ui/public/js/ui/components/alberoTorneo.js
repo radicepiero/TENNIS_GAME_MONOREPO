@@ -1,13 +1,14 @@
 // /js/alberoTorneo.js
-import { Tree } from "/js/Tree.js";
-import Player from "/js/Player.js";
-import { PennaDialogo } from "/js/pennaDialogo.js";
-import { toTreantNodeStructure } from "/js/TreeTreantAdapter.js";
-import { treeApiClient } from "/js/TreeApiClient.js";
-export const emojiWinner = "👍";
-export const emojiLooser = "👎";
+import { Tree } from "/js/domain/Tree.js";
+import Player from "/js/domain/Player.js";
+import { PennaDialogo } from "/js/ui/components/pennaDialogo.js";
+import { toTreantNodeStructure } from "/js/ui/components/TreeTreantAdapter.js";
+import { treeApiClient } from "/js/ui/components/TreeApiClient.js";
+import { treeApi } from "/js/api/treeApi.js";
+import { buildPlayerInfoElement } from "/js/ui/components/playerCard.js";
+import { APP_BUTTONS, APP_ICONS } from "/js/icons.js";
 let players = {};
-let albero = {};
+let albero = null;
 let dialog = {};
 let tournament = {};
 let user = {};
@@ -72,17 +73,6 @@ function captureScrollSnapshot(sourceEl = null) {
   };
 }
 
-export const roundLabels = [
-  "128-esimi",
-  "64-esimi",
-  "32-esimi",
-  "16-esimi",
-  "Ottavi",
-  "Quarti",
-  "Semifinali",
-  "Finali",
-];
-
 export async function setup(torneo, utente, _apiUrl) {
   tournament = torneo;
   user = utente;
@@ -90,18 +80,8 @@ export async function setup(torneo, utente, _apiUrl) {
   players = await Player.fetchByTournament(tournament, apiUrl);
   const giocatoreNull = new Player({
     id: 0,
-    name: "🫸 giocatore da stabilire",
+    name: APP_BUTTONS.PLAYER_TBD,
   });
-  giocatoreNull.createInfoElement = function () {
-    const playerDiv = document.createElement("div");
-    playerDiv.id = this.id;
-    playerDiv.dataset.playerid = this.id;
-    playerDiv.className = "player";
-    const nameDiv = document.createElement("span");
-    nameDiv.textContent = this.name;
-    playerDiv.append(nameDiv);
-    return playerDiv;
-  };
   players.push(giocatoreNull);
 
   // La modale (PennaDialogo) serve anche quando si modifica un albero esistente.
@@ -141,15 +121,12 @@ export async function getAlberoMatches(treeId) {
 }
 //la funzione chiede genericamente gli alberi all'api, sarà lei a selezionare quali alberi saranno messi a disposizione.
 export async function getAlberi(tournament) {
-  return await treeApiClient.getTrees(
-    { tournamentId: tournament.id, includeMatches: false },
-    apiUrl
-  );
+  return await treeApi.getTrees({ tournamentId: tournament.id, includeMatches: false }, apiUrl);
 }
 
 export async function deleteAlbero() {
   //console.log("albero.id", albero.uuid);
-  return await treeApiClient.deleteTree(albero.uuid, apiUrl);
+  return await treeApi.deleteTree(albero.uuid, apiUrl);
 }
 
 export function getCurrentTree() {
@@ -175,7 +152,7 @@ export async function saveNewAlbero() {
 }
 
 export function setupPlayerElement(player) {
-  const newElement = player.createInfoElement();
+  const newElement = buildPlayerInfoElement(player);
   newElement.addEventListener("click", handlePlayerClick);
   return newElement;
 }
@@ -261,7 +238,7 @@ function handlePlayerClick(event) {
 export function creaComodino(onClick = () => {}) {
   const comodino = document.createElement("span");
   comodino.className = "toggle-winner";
-  comodino.textContent = emojiLooser;
+  comodino.textContent = APP_ICONS.LOOSER;
   if (!winnersEditable) {
     comodino.style.display = "none";
   } else {
@@ -298,8 +275,8 @@ export function costruisciLetto(giocatore1, giocatore2) {
 }
 
 function setGiocatoreVincente(vincente, perdente) {
-  vincente.textContent = emojiWinner;
-  perdente.textContent = emojiLooser;
+  vincente.textContent = APP_ICONS.WINNER;
+  perdente.textContent = APP_ICONS.LOOSER;
   vincente.parentElement.classList.add("winner");
   vincente.parentElement.classList.remove("looser");
   perdente.parentElement.classList.add("looser");
@@ -358,7 +335,10 @@ function aggiornaVincitore(comodino1, comodino2) {
     player1.emoji = comodino1.textContent;
     player2.emoji = comodino2.textContent;
 
-    if (player1.emoji === emojiLooser && player2.emoji === emojiLooser) {
+    if (
+      player1.emoji === APP_ICONS.LOOSER &&
+      player2.emoji === APP_ICONS.LOOSER
+    ) {
       if (playerCliccato === player1.id) {
         player1.wins = true;
         player2.wins = false;
@@ -366,10 +346,13 @@ function aggiornaVincitore(comodino1, comodino2) {
         player1.wins = false;
         player2.wins = true;
       }
-    } else if (player1.emoji === emojiWinner && player2.emoji === emojiWinner) {
+    } else if (
+      player1.emoji === APP_ICONS.WINNER &&
+      player2.emoji === APP_ICONS.WINNER
+    ) {
       player1.wins = false;
       player2.wins = false;
-    } else if (player1.emoji === emojiLooser) {
+    } else if (player1.emoji === APP_ICONS.LOOSER) {
       player1.wins = true;
       player2.wins = false;
     } else {

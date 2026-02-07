@@ -1,5 +1,5 @@
-import { formatDmyShort } from "./utils.js";
-import { countryToFlag, countryToFlagIconUrl } from "./icons.js";
+import { formatDmyShort } from "/js/utils.js";
+import { countryToFlag, countryToFlagIconUrl } from "/js/icons.js";
 
 const superuserTreeExistsCacheByApi = new Map();
 

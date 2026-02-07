@@ -36,6 +36,55 @@
   margin: 12px;
 }
 
+/* Floating draggable toolbar for tree actions */
+.floating-toolbar {
+  position: fixed;
+  top: 90px;
+  right: 16px;
+  z-index: 10000;
+  display: inline-flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
+  backdrop-filter: blur(6px);
+}
+
+.floating-toolbar__handle {
+  cursor: grab;
+  user-select: none;
+  font-size: 12px;
+  opacity: 0.75;
+}
+
+.floating-toolbar.dragging .floating-toolbar__handle {
+  cursor: grabbing;
+}
+
+.floating-toolbar__content {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.floating-toolbar__content a {
+  text-decoration: none;
+}
+
+@media (max-width: 640px) {
+  .floating-toolbar {
+    left: auto;
+    right: 10px;
+    top: auto;
+    bottom: 10px;
+    max-width: calc(100vw - 20px);
+  }
+}
+
 .node {
   padding: 5px 10px;
   border: 1px solid #999;

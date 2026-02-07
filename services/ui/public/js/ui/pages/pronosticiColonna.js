@@ -1,46 +1,11 @@
-import { normalizeYmd, fetchJson } from "./utils.js";
+import { normalizeYmd } from "/js/utils.js";
+import { tournamentApi } from "/js/api/tournamentApi.js";
+import { playerApi } from "/js/api/playerApi.js";
+import { treeApi } from "/js/api/treeApi.js";
+import { predictionApi } from "/js/api/predictionApi.js";
+import RankingContext from "/js/domain/RankingContext.js";
 
 const apiUrl = document.documentElement.dataset.apiUrl || "/api";
-
-function parseRankingNumber(rawRanking) {
-  let ranking = Number(rawRanking);
-  if (!Number.isFinite(ranking)) {
-    const m = String(rawRanking).match(/\d+/);
-    ranking = m ? Number(m[0]) : NaN;
-  }
-  return Number.isFinite(ranking) ? ranking : null;
-}
-
-function getPlayerRanking(player, rankingDate = null) {
-  if (!player) return null;
-  const targetDate = normalizeYmd(rankingDate);
-
-  if (player.Rankings && player.Rankings.length) {
-    let chosen = null;
-    if (targetDate) {
-      const anyHasDate = Boolean(player.Rankings.find((r) => r && r.date));
-      chosen = anyHasDate
-        ? player.Rankings.find((r) => normalizeYmd(r && r.date) === targetDate) || null
-        : player.Rankings[0];
-    }
-    if (!chosen) chosen = player.Rankings[0];
-    if (chosen && typeof chosen.ranking !== "undefined") {
-      return parseRankingNumber(chosen.ranking);
-    }
-  }
-
-  if (typeof player.ranking !== "undefined") return parseRankingNumber(player.ranking);
-  return null;
-}
-
-function hasRankingForDate(player, rankingDate) {
-  const targetDate = normalizeYmd(rankingDate);
-  if (!targetDate) return false;
-  if (!player || !player.Rankings || !player.Rankings.length) return false;
-  const anyHasDate = Boolean(player.Rankings.find((r) => r && r.date));
-  if (!anyHasDate) return true;
-  return Boolean(player.Rankings.find((r) => normalizeYmd(r && r.date) === targetDate));
-}
 
 function computeMatchWinnerId(match) {
   if (!match) return null;
@@ -107,19 +72,6 @@ function pointsCountForPick({ pickType, status, selectedRound, reachedSemifinal 
   return pointsCountForStatus(status);
 }
 
-function sanitizeUrl(v) {
-  if (v === null || typeof v === "undefined") return "";
-  const s = String(v).trim();
-  if (!s) return "";
-  if (s.toLowerCase() === "null" || s.toLowerCase() === "undefined") return "";
-  return s;
-}
-
-function getPlayerImageSrc(player) {
-  const candidate = sanitizeUrl(player && (player.image_src || player.img));
-  return candidate;
-}
-
 function aggiornaStileGiocatore(playerElement, risultatoTurno) {
   if (!playerElement) return;
   playerElement.classList.remove("hidden", "out", "transparent", "highlight");
@@ -154,10 +106,11 @@ function createCell({ player, status, isWinner = false, extraClasses = [] }) {
     if (c) cell.classList.add(c);
   });
   aggiornaStileGiocatore(cell, status);
+  const imgSrc = (player && (player.image_src || player.img)) || "";
   cell.innerHTML = `
     <div class="title">punti: ${typeof player._points === "number" ? player._points : 0}</div>
     <div class="player">
-      <img src="${getPlayerImageSrc(player)}" alt="${player.name}" />
+      <img src="${imgSrc}" alt="${player.name}" />
       ${player.name}
     </div>
     <div class="title">classifica: ${player && player._rankingIssue ? "N/D" : (player && typeof player._ranking === "number" ? player._ranking : "")}</div>
@@ -223,38 +176,6 @@ function faseToRound(faseMenu) {
   return 7 - fase;
 }
 
-async function fetchTournamentBasic(tournamentId) {
-  const json = await fetchJson(`${apiUrl}/tournaments/${tournamentId}`, { method: "GET" });
-  if (json && json.data && Array.isArray(json.data) && json.data[0]) return json.data[0];
-  if (json && json.data && !Array.isArray(json.data) && typeof json.data === "object") return json.data;
-  return json;
-}
-
-async function fetchTournamentScripts(tournamentId) {
-  const json = await fetchJson(`${apiUrl}/tournaments/${tournamentId}/scripts/`, { method: "GET" });
-  if (json && json.data && Array.isArray(json.data) && json.data[0]) return json.data[0];
-  if (json && json.data && !Array.isArray(json.data) && typeof json.data === "object") return json.data;
-  return json;
-}
-
-async function fetchPlayersByRankingDate(rankingDate) {
-  const normalizedDate = normalizeYmd(rankingDate);
-  const url = normalizedDate
-    ? `${apiUrl}/players/ranking/${encodeURIComponent(normalizedDate)}`
-    : `${apiUrl}/players/ranking`;
-  const json = await fetchJson(url, { method: "GET" });
-  return (json && json.data) || [];
-}
-
-async function fetchSuperuserTreeByTournament(tournamentId) {
-  return await fetchJson(`${apiUrl}/trees/superuser/${tournamentId}`, { method: "GET" });
-}
-
-async function fetchMatchesByTreeId(treeId) {
-  const json = await fetchJson(`${apiUrl}/matches/tree/${treeId}`, { method: "GET" });
-  return Array.isArray(json) ? json : [];
-}
-
 function buildPointFunctions(tournamentScripts) {
   let pointsWinnerFn = () => 0;
   let pointsSemiFn = () => 0;
@@ -289,8 +210,7 @@ async function renderColumnsForPhase(faseMenu) {
 
   columnContainer.innerHTML = "";
 
-  const json = await fetchJson(`${apiUrl}/predictions/user`, { method: "GET" });
-  const predictions = (json && json.data) || [];
+  const predictions = await predictionApi.getUserPredictions(apiUrl);
 
   const uniqueTournamentIds = Array.from(new Set(predictions.map((p) => String(p.tournament_id)).filter(Boolean)));
 
@@ -298,7 +218,7 @@ async function renderColumnsForPhase(faseMenu) {
   const tournamentsMeta = await Promise.all(
     uniqueTournamentIds.map(async (tid) => {
       try {
-        const t = await fetchTournamentBasic(tid);
+        const t = await tournamentApi.getTournamentBasic(tid, apiUrl);
         return { tid, t };
       } catch (e) {
         return { tid, t: null };
@@ -323,16 +243,17 @@ async function renderColumnsForPhase(faseMenu) {
 
     const completed = isTournamentCompleted(tournament);
 
-    const tournamentScripts = await fetchTournamentScripts(tid).catch(() => null);
+    const tournamentScripts = await tournamentApi.getTournamentScripts(tid, apiUrl).catch(() => null);
     const tournamentRankingDate = tournament && tournament.ranking_date ? normalizeYmd(tournament.ranking_date) : null;
-    const players = await fetchPlayersByRankingDate(tournamentRankingDate).catch(() => []);
+    const rankingCtx = new RankingContext(tournamentRankingDate);
+    const players = await playerApi.getPlayersByRankingDate(tournamentRankingDate, apiUrl).catch(() => []);
 
     let matches = [];
     if (round !== null || completed) {
       try {
-        const tree = await fetchSuperuserTreeByTournament(tid);
+        const tree = await treeApi.getSuperuserTreeByTournament(tid, apiUrl);
         const treeId = tree && (tree.id || tree.uuid);
-        if (treeId) matches = await fetchMatchesByTreeId(treeId);
+        if (treeId) matches = await treeApi.getMatchesByTreeId(treeId, apiUrl);
       } catch (e) {
         matches = [];
       }
@@ -365,10 +286,10 @@ async function renderColumnsForPhase(faseMenu) {
 
     const attachPoints = (p, isW) => {
       if (!p) return;
-      const hasTournamentRanking = tournamentRankingDate ? hasRankingForDate(p, tournamentRankingDate) : false;
-      const r = tournamentRankingDate && hasTournamentRanking ? getPlayerRanking(p, tournamentRankingDate) : null;
+      const hasTournamentRanking = rankingCtx.hasRankingForPlayer(p);
+      const r = hasTournamentRanking ? rankingCtx.getPlayerRanking(p) : null;
       p._ranking = r;
-      p._rankingIssue = !tournamentRankingDate || !hasTournamentRanking || r === null;
+      p._rankingIssue = !rankingCtx.hasDate() || !hasTournamentRanking || r === null;
       if (p._rankingIssue) {
         p._points = 0;
         return;

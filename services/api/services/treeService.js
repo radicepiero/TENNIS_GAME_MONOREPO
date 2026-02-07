@@ -70,7 +70,8 @@ async function createTree(treeData) {
     await Match.bulkCreate(matchesToCreate, { transaction });
     await transaction.commit();
 
-    return this.getTreeById(tree.id, { Tree, Match });
+    const result = await getTree({ treeId: tree.id });
+    return result && result.length > 0 ? result[0] : null;
   } catch (error) {
     await transaction.rollback();
     throw error;
@@ -160,7 +161,8 @@ async function updateTree(id, treeData) {
     await Match.bulkCreate(matchesToCreate, { transaction });
     await transaction.commit();
 
-    return this.getTreeById(id, { Tree, Match });
+    const result = await getTree({ treeId: id });
+    return result && result.length > 0 ? result[0] : null;
   } catch (error) {
     await transaction.rollback();
     throw error;

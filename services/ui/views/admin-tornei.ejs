@@ -1,15 +1,16 @@
 <%- include('partials/head'); -%>
 <link rel="stylesheet" href="/css/hamburger.css" />
+<link rel="stylesheet" href="/css/admin.css" />
 <%- include('partials/header'); -%> <%- include('partials/hamburger'); -%>
 
 <h1>Admin Tornei</h1>
 
-<div id="admin-tournaments" data-api-url="<%= apiUrl %>">
+<div id="admin-tournaments" class="admin-page" data-api-url="<%= apiUrl %>">
   <div style="max-width: 1100px; margin: 0 auto; text-align: left; padding: 0 12px;">
-    <div style="margin-top: 14px; padding: 12px; border: 1px solid #ddd; border-radius: 8px;">
+    <div class="admin-card admin-card--compact" style="margin-top: 14px;">
       <h2 style="margin: 0 0 10px 0;">Aggiorna ranking tennisti</h2>
-      <div style="display:flex; gap: 12px; align-items: center; flex-wrap: wrap;">
-        <label style="margin: 0;">Ranking date
+      <div class="admin-actionbar">
+        <label>Ranking date
           <input id="ranking-import-date" type="date" />
         </label>
         <input id="ranking-import-file" type="file" accept=".csv,text/csv" />
@@ -18,20 +19,20 @@
       </div>
     </div>
 
-    <div style="margin-top: 20px; display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+    <div class="admin-section admin-row admin-row--between">
       <h2 style="margin: 0;">Tornei</h2>
       <button id="open-create" type="button" aria-label="Aggiungi torneo" title="Aggiungi torneo" style="width: 36px; height: 36px; font-size: 22px; line-height: 1;">+</button>
     </div>
 
-    <div id="create-modal" style="display: none; position: fixed; inset: 0; z-index: 9999;">
-      <div id="create-modal-overlay" style="position: absolute; inset: 0; background: rgba(0,0,0,0.55);"></div>
-      <div style="position: relative; max-width: 980px; margin: 60px auto; background: #fff; border-radius: 8px; padding: 16px; box-shadow: 0 12px 40px rgba(0,0,0,0.3);">
-        <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
-          <h3 style="margin: 0;">Nuovo torneo</h3>
+    <div id="create-modal" class="admin-modal">
+      <div id="create-modal-overlay" class="admin-modal__overlay"></div>
+      <div class="admin-modal__panel">
+        <div class="admin-modal__header">
+          <h3>Nuovo torneo</h3>
           <button id="close-create" type="button" aria-label="Chiudi" title="Chiudi">X</button>
         </div>
 
-        <form id="create-tournament" style="margin-top: 12px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px;">
+        <form id="create-tournament" class="admin-modal__form">
           <label>Nome<input name="name" type="text" required /></label>
           <label>Href<input name="href" type="text" required /></label>
           <label>Categoria<input name="category" type="text" /></label>
@@ -77,20 +78,12 @@
           <label>Rounds
             <select name="rounds" id="rounds">
               <option value="">(vuoto)</option>
-              <option value="1">Finali (1)</option>
-              <option value="2">Semifinali (2)</option>
-              <option value="3">Quarti (3)</option>
-              <option value="4">Ottavi (4)</option>
-              <option value="5">16-esimi (5)</option>
-              <option value="6">32-esimi (6)</option>
-              <option value="7">64-esimi (7)</option>
-              <option value="8">128-esimi (8)</option>
             </select>
           </label>
           <label>Costo partecipazione<input name="costopartecipazione" type="number" step="0.5" value="5" required /></label>
 
-          <div style="grid-column: 1 / -1; display: flex; gap: 10px; align-items: center; justify-content: flex-end;">
-            <span id="create-status" style="margin-right: auto;"></span>
+          <div class="admin-modal__footer">
+            <span id="create-status" class="admin-status-inline"></span>
             <button type="button" id="cancel-create">Annulla</button>
             <button type="submit">Crea</button>
           </div>
@@ -98,18 +91,10 @@
       </div>
     </div>
 
-    <style>
-      @media (max-width: 820px) {
-        #create-tournament {
-          grid-template-columns: minmax(0, 1fr) !important;
-        }
-      }
-    </style>
-
     <h2 style="margin-top: 30px;">Elenco tornei</h2>
-    <div style="margin: 10px 0; display: flex; gap: 12px; align-items: center;">
-      <label style="margin: 0;">Filtro nome<input id="filter-name" type="text" placeholder="cerca..." /></label>
-      <label style="margin: 0;">Anno
+    <div class="admin-filterbar">
+      <label>Filtro nome<input id="filter-name" type="text" placeholder="cerca..." /></label>
+      <label>Anno
         <select id="filter-year">
           <option value="">Tutti</option>
           <option value="2025">2025</option>
@@ -120,18 +105,18 @@
       <span id="list-status"></span>
     </div>
 
-    <div style="overflow-x: auto;">
-      <table id="tournaments-table" style="width: 100%; border-collapse: collapse;">
+    <div class="admin-table-wrap" style="overflow-x: auto;">
+      <table id="tournaments-table" class="admin-table" style="width: 100%; border-collapse: collapse;">
         <thead>
           <tr>
-            <th style="text-align:left; border-bottom: 1px solid #ddd; padding: 8px;">ID</th>
-            <th style="text-align:left; border-bottom: 1px solid #ddd; padding: 8px;">Nome</th>
-            <th style="text-align:left; border-bottom: 1px solid #ddd; padding: 8px;">Inizio</th>
-            <th style="text-align:left; border-bottom: 1px solid #ddd; padding: 8px;">Fine</th>
-            <th style="text-align:left; border-bottom: 1px solid #ddd; padding: 8px;">Status</th>
-            <th style="text-align:left; border-bottom: 1px solid #ddd; padding: 8px;">Pronostici</th>
-            <th style="text-align:left; border-bottom: 1px solid #ddd; padding: 8px;">Albero</th>
-            <th style="text-align:left; border-bottom: 1px solid #ddd; padding: 8px;">Azioni</th>
+            <th>ID</th>
+            <th>Nome</th>
+            <th>Inizio</th>
+            <th>Fine</th>
+            <th>Status</th>
+            <th>Pronostici</th>
+            <th>Albero</th>
+            <th>Azioni</th>
           </tr>
         </thead>
         <tbody></tbody>
@@ -140,5 +125,5 @@
   </div>
 </div>
 
-<script type="module" src="/js/admin-tornei.js"></script>
+<script type="module" src="/js/ui/pages/admin-tornei.js"></script>
 <%- include('partials/footer'); -%>

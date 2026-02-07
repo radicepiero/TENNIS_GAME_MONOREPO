@@ -309,7 +309,12 @@ router.get("/tornei/:id/edit", requireAdmin, async (req, res) => {
         return da - db;
       });
 
-    res.render("edit-tournament", { tournament, predictionsTable, playersWithPoints });
+    res.render("edit-tournament", {
+      tournament,
+      predictionsTable,
+      playersWithPoints,
+      apiUrl: req.app.locals.apiUrl || "/api",
+    });
   } catch (err) {
     console.error("Errore nel recupero torneo:", err);
     res.status(500).send("Errore nel recupero dei dati.");
@@ -675,7 +680,7 @@ router.get("/tennisti/:id/edit", async (req, res) => {
     const json = await risposta.json();
     console.log("Risposta JSON:", json.data[0].Rankings);
     const player = json.data[0];
-    res.render("edit-player", { player });
+    res.render("edit-player", { player, apiUrl: req.app.locals.apiUrl || "/api" });
   } catch (err) {
     console.error("Errore nel recupero del giocatore:", err);
     res.status(500).send("Errore nel recupero dei dati.");

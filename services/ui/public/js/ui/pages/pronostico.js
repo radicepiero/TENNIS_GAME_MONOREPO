@@ -1,142 +1,39 @@
-import { countryToFlag } from "./icons.js";
+import Player from "/js/domain/Player.js";
+import { tournamentApi } from "/js/api/tournamentApi.js";
+import { predictionApi } from "/js/api/predictionApi.js";
+import { fetchJson } from "/js/utils.js";
+import { setupPredictionAvatar } from "/js/ui/components/predictionAvatar.js";
+import { buildSelectablePlayerCard } from "/js/ui/components/playerCard.js";
+
+function readBootstrap() {
+  const el = document.getElementById("bootstrap");
+  const raw = el ? el.textContent || "{}" : "{}";
+  try {
+    return JSON.parse(raw);
+  } catch (e) {
+    return {};
+  }
+}
 
 document.addEventListener("DOMContentLoaded", async () => {
   // Funzione per ottenere i giocatori
   //---------------------------------------------------------------
 
-  class PlayerCard {
-    constructor(player, onCheckboxChange) {
-      this.player = player;
-      this.onCheckboxChange = onCheckboxChange;
-      this.element = this.createPlayerElement();
-    }
-
-    createPlayerElement() {
-      const div = document.createElement("div");
-      div.id = `player-${this.player.name}`;
-      div.classList.add("player");
-
-      const checkbox = document.createElement("input");
-      checkbox.type = "checkbox";
-      checkbox.value = this.player.name;
-
-      if (this.onCheckboxChange) {
-        checkbox.onchange = (event) =>
-          this.onCheckboxChange(event, this.player);
-      }
-
-      const img = document.createElement("img");
-      img.src = this.player.image_src || "default.jpg";
-      img.alt = this.player.image_alt || this.player.name;
-
-      const playerId = this.player && this.player.id !== undefined && this.player.id !== null ? String(this.player.id) : "";
-      const friendHref = playerId ? `/friend/player/${encodeURIComponent(playerId)}` : "";
-
-      const imgWrap = document.createElement(friendHref ? "a" : "div");
-      if (friendHref) {
-        imgWrap.href = friendHref;
-        imgWrap.style.textDecoration = "none";
-      }
-      imgWrap.appendChild(img);
-
-      const punteggio = document.createElement("div");
-      punteggio.textContent = this.player.Rankings.length
-        ? `${this.player.Rankings[0].ranking} : ${this.player.puntiSemifinalist} / ${this.player.puntiWinner}`
-        : "N/D";
-
-      const label = document.createElement("label");
-      label.textContent = this.player.name;
-
-      const labelWrap = document.createElement(friendHref ? "a" : "div");
-      if (friendHref) {
-        labelWrap.href = friendHref;
-        labelWrap.style.textDecoration = "none";
-        labelWrap.style.color = "inherit";
-      }
-      labelWrap.appendChild(label);
-
-      const country = document.createElement("div");
-      const c = this.player && this.player.country ? String(this.player.country) : "";
-      const flag = c ? countryToFlag(c) : "";
-      country.textContent = c ? `${flag ? `${flag} ` : ""}${c}` : "";
-
-      div.append(punteggio, imgWrap, checkbox, labelWrap, country);
-      return div;
-    }
-
-    getElement() {
-      return this.element;
-    }
+  function getTournamentIdFromPath() {
+    const path = String(window.location.pathname || "");
+    const m = path.match(/(\d+)(?!.*\d)/);
+    return m ? m[1] : "";
   }
 
-  async function fetchPlayers(rankingDate) {
+  const { apiUrl = "" } = readBootstrap();
+
+  document.addEventListener("predictionAvatarUploaded", () => {
     try {
-      const response = await fetch(
-        `<%= apiUrl %>/players/ranking/:${rankingDate}`
-      );
-      if (!response.ok) throw new Error("Errore nel caricamento dei giocatori");
-      const players = (await response.json()).data;
-      console.log(players);
-      let _punteggioWinner = {};
-      let _punteggioSemifinalist = {};
-      if (tournament.Scripts.length) {
-        _punteggioWinner = tournament.Scripts.find((el) => {
-          return el.name === "punteggioWinner";
-        });
-        _punteggioSemifinalist = tournament.Scripts.find((el) => {
-          return el.name === "punteggioSemifinalist";
-        });
-        console.log(_punteggioSemifinalist.script);
-        eval(_punteggioWinner.script);
-        eval(_punteggioSemifinalist.script);
-        players.forEach((player) => {
-          if (player.Rankings.length) {
-            player.puntiSemifinalist = punteggioSemifinalist(
-              player.Rankings[0].ranking
-            );
-            player.puntiWinner = punteggioWinner(player.Rankings[0].ranking);
-          }
-        });
+      if (!isLockedTournament && submitButton) {
+        submitButton.className = "visible";
       }
-      //console.log(players);
-      return players;
-    } catch (error) {
-      console.error(error);
-      return [];
-    }
-  }
-
-  async function fetchTournament() {
-    try {
-      console.log(window.location.pathname.split("/")[2]);
-      console.log(`<%= apiUrl %>`);
-      let response = await fetch(
-        `<%= apiUrl %>/tournaments/${
-          window.location.pathname.split("/")[4]
-        }/scripts`
-      );
-      return await response.json();
-    } catch (error) {
-      console.error(error);
-    }
-  }
-
-  // Funzione per ottenere una prediction esistente
-  async function fetchPrediction() {
-    try {
-      const tournament_id = window.location.pathname.split("/")[2];
-      const url = `<%= apiUrl %>/predictions/tournaments/${tournament_id}/user`;
-      const pred = await fetch(url);
-      if (!pred.ok) predictionEsiste = false;
-      const { data } = await pred.json();
-      if (data[0].rows) {
-        predictionEsiste = true;
-        return data[0].rows;
-      }
-    } catch (error) {
-      console.error("Errore nel recupero della prediction:", error);
-    }
-  }
+    } catch (e) {}
+  });
 
   // Funzione per aggiornare i semifinalisti
   async function updateSemifinalists(prediction = false) {
@@ -177,6 +74,29 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
     }
 
+    const refreshPredictionUi = () => {
+      const totalEl = document.getElementById("total-points");
+      if (totalEl) {
+        const total = (semifinalists || []).reduce((acc, p) => {
+          if (!p) return acc;
+          if (p.prediction === "winner") return acc + (Number(p.puntiWinner) || 0);
+          return acc + (Number(p.puntiSemifinalist) || 0);
+        }, 0);
+        totalEl.textContent = String(total);
+      }
+
+      const winnerTitle = document.getElementById("winner-title");
+      const canPickWinner = (semifinalists || []).length === 4;
+      if (winnerTitle) winnerTitle.style.display = canPickWinner ? "block" : "none";
+
+      if (!isLockedTournament && submitButton) {
+        submitButton.className =
+          canPickWinner && !(semifinalists || []).every((p) => p.prediction !== "winner")
+            ? "visible"
+            : "hidden";
+      }
+    };
+
     semifinalists.forEach((player) => {
       //inizializzo tutti a "semifinalist"
       if (!prediction) {
@@ -198,76 +118,126 @@ document.addEventListener("DOMContentLoaded", async () => {
         updateSemifinalists();
       }
 
-      //costruisco la playercard
-      const playerCard = new PlayerCard(player, checkBoxChange);
-      // console.log("playercard", playerCard.getElement());
-      const playerElement = playerCard.getElement();
+      const playerElement = buildSelectablePlayerCard(player, { onCheckboxChange: checkBoxChange });
       const checkbox = playerElement.querySelector("input[type='checkbox']");
       checkbox.checked = true;
       //console.log("semifinalist", playerCard.getElement());
       //aggiungo il radio button per indicare il finalista
       const radio = document.createElement("input");
       radio.type = "radio";
-      radio.id = "rd";
+      radio.id = `rd-${player.id}`;
       radio.name = "winner";
       radio.value = player.name;
       const label = document.createElement("label");
-      label.for = radio.id;
+      label.htmlFor = radio.id;
       label.innerHTML = "Vincitore";
       const d = document.createElement("div");
       player.prediction === "winner"
         ? (radio.checked = true)
         : (radio.checked = false);
-      d.append(label, radio);
+      d.append(radio, label);
       radio.onchange = function radioOnchange(event) {
         //metto tutti a "semifinalist" ma il target a "winner"
         //winnerName.innerText = "this.player.name";
         if (event.target.checked) {
-          console.log("event.target.checked", event.target.checked);
           semifinalists.forEach((p) => (p.prediction = "semifinalist"));
           player.prediction = "winner";
           //aggiorno lo stile aggiornando le classi
           document
             .querySelectorAll(".winner")
             .forEach((el) => el.classList.remove("winner"));
-          document
-            .getElementById(`player-${player.name}`)
-            .classList.add("winner");
+          const winnerEl = semifinalistsList.querySelector(
+            `.player[data-playerid="${String(player.id)}"]`
+          );
+          if (winnerEl) winnerEl.classList.add("winner");
+          refreshPredictionUi();
         }
       };
-      const sem = playerCard.getElement();
+      const sem = playerElement;
       player.prediction === "winner"
         ? sem.classList.add("winner")
         : sem.classList.add("semifinalist");
-      sem.appendChild(d);
-      console.log(sem);
+      sem.insertBefore(d, sem.firstChild);
       semifinalistsList.appendChild(sem);
       //predictionEsiste? deleteButton.
     });
+
+    refreshPredictionUi();
   }
   //-----------fine updateSemifinalsits
   //---------------------------------------------------------------
   let semifinalists = [];
   let predictionEsiste = false;
+  let isLockedTournament = false;
   const playersList = document.getElementById("players-list");
   const semifinalistsList = document.getElementById("semifinalists-list");
   //  const winnerName = document.getElementById("winner-name");
   const submitButton = document.getElementById("submit-button");
   const deleteButton = document.getElementById("delete-button");
-  const apiUrl = "<%=apiUrl %>";
-  console.log(apiUrl);
+  const hiddenUrl = document.getElementById("prediction_avatar_url");
   // Caricamento giocatori e creazione elementi
-  const tournament = (await fetchTournament()).data[0];
-  console.log("tournament", tournament);
-  const players = await fetchPlayers(tournament.ranking_date);
+  const tournamentId = getTournamentIdFromPath();
+  const tournament = await tournamentApi.getTournamentScripts(tournamentId, apiUrl);
+
+  isLockedTournament = ["completed", "in-progress", "excluded"].includes(String(tournament && tournament.status));
+
+  const titolo = document.getElementById("torneo");
+  if (titolo) titolo.innerHTML = tournament && tournament.name ? tournament.name : "";
+
+  const lockEl = document.getElementById("tournament-lock-message");
+  if (lockEl) {
+    const st = tournament && tournament.status ? String(tournament.status).toLowerCase() : "";
+    let msg = "";
+    if (st === "in-progress") {
+      msg = "Pronostico non modificabile: il torneo è in corso.";
+    } else if (st === "completed") {
+      msg = "Pronostico non modificabile: il torneo è completato.";
+    } else if (st === "excluded") {
+      msg = "Pronostico non modificabile: il torneo è escluso.";
+    }
+    if (msg) {
+      lockEl.textContent = msg;
+      lockEl.style.display = "block";
+    } else {
+      lockEl.style.display = "none";
+    }
+  }
+
+  const players = await Player.fetchByTournament(tournament, apiUrl);
   //console.log("players", players);
-  const prediction = await fetchPrediction();
-  if (predictionEsiste) await updateSemifinalists(prediction);
+  const predictionObj = await predictionApi.getUserPredictionByTournament(tournamentId, apiUrl).catch(() => null);
+  const prediction = (predictionObj && predictionObj.rows) || [];
+  predictionEsiste = Array.isArray(prediction) && prediction.length > 0;
+
+  try {
+    const hiddenUrl = document.getElementById("prediction_avatar_url");
+    const existingAvatarUrl = predictionObj && predictionObj.avatar_url ? String(predictionObj.avatar_url) : "";
+    if (hiddenUrl && existingAvatarUrl) hiddenUrl.value = existingAvatarUrl;
+  } catch (e) {}
+
+  await setupPredictionAvatar();
+
+  if (predictionEsiste) {
+    await updateSemifinalists(prediction);
+    if (deleteButton) deleteButton.className = "visible";
+    if (submitButton) submitButton.textContent = "Salva Pronostico";
+  } else {
+    if (deleteButton) deleteButton.className = "hidden";
+  }
+
+  if (isLockedTournament) {
+    if (submitButton) submitButton.className = "hidden";
+    if (deleteButton) deleteButton.className = "hidden";
+  }
   //console.log("prediction", prediction);
 
   players.forEach((player) => {
     // Funzione per gestire la selezione del giocatore
     function checkBoxChange(event, player) {
+      if (isLockedTournament) {
+        event.target.checked = false;
+        return;
+      }
       if (event.target.checked) {
         if (semifinalists.length < 4) {
           player.prediction = "semifinalist";
@@ -286,9 +256,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       (el) => el.name === player.name
     );
 
-    const playerCard = new PlayerCard(player, checkBoxChange);
-    // console.log("playercard", playerCard.getElement());
-    const playerElement = playerCard.getElement();
+    const playerElement = buildSelectablePlayerCard(player, { onCheckboxChange: checkBoxChange });
     // Aggiorna lo stato della checkbox
     const checkbox = playerElement.querySelector("input[type='checkbox']");
     if (checkbox) {
@@ -300,8 +268,13 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // Gestione invio pronostico
   submitButton.addEventListener("click", async () => {
+    if (isLockedTournament) {
+      alert("Pronostici bloccati per questo torneo");
+      return;
+    }
     const pronostico = {
-      tournament_id: window.location.pathname.split("/")[2],
+      tournament_id: tournamentId,
+      avatar_url: hiddenUrl && hiddenUrl.value ? hiddenUrl.value : undefined,
       rows: semifinalists.map((player) => ({
         player_id: player.id,
         prediction: player.prediction,
@@ -317,23 +290,33 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     try {
-      const response = await fetch("<%= apiUrl %>/predictions", {
-        method: "POST",
-        //credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(pronostico),
-      });
-
-      if (!response.ok) throw new Error(`Errore HTTP: ${response.status}`);
+      await predictionApi.createPrediction(pronostico, apiUrl);
       alert("Pronostico inviato con successo!");
+      location.reload();
     } catch (error) {
       console.error("Errore nell'invio dei dati:", error);
     }
   });
 
   deleteButton.addEventListener("click", async () => {
+    if (isLockedTournament) {
+      alert("Pronostici bloccati per questo torneo");
+      return;
+    }
+
+    try {
+      const avatarToDelete = hiddenUrl && hiddenUrl.value ? String(hiddenUrl.value) : "";
+      if (avatarToDelete && avatarToDelete.startsWith("/uploads/predictions/")) {
+        await fetchJson("/pronostico/delete-avatar", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ avatar_url: avatarToDelete }),
+        }).catch(() => null);
+      }
+    } catch (e) {}
+
     const pronostico = {
-      tournament_id: window.location.pathname.split("/")[2],
+      tournament_id: tournamentId,
       rows: semifinalists.map((player) => ({
         player_id: player.id,
         prediction: player.prediction,
@@ -349,14 +332,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     try {
-      const response = await fetch("<%= apiUrl %>/predictions", {
-        method: "DELETE",
-        //credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(pronostico),
-      });
-
-      if (!response.ok) throw new Error(`Errore HTTP: ${response.status}`);
+      await predictionApi.deletePrediction(pronostico, apiUrl);
       location.reload();
       alert("Pronostico eliminato!");
     } catch (error) {

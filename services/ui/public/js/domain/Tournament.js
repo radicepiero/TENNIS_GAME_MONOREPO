@@ -1,3 +1,5 @@
+import RankingContext from "./RankingContext.js";
+
 export class Tournament {
   /*
    * Significato dello status del torneo:
@@ -47,6 +49,10 @@ export class Tournament {
     return `${this.datainizio} → ${this.datafine}`;
   }
 
+  getRankingContext() {
+    return RankingContext.fromTournament(this);
+  }
+
   isUpcoming() {
     return this.status === "upcoming";
   }
@@ -77,7 +83,7 @@ export class Tournament {
     }`;
   }
   static async fetchTournament(tournament_id, apiUrl) {
-    const { fetchJson } = await import("./utils.js");
+    const { fetchJson } = await import("../utils.js");
     return await fetchJson(`${apiUrl}/tournaments/${tournament_id}/scripts`, {
       method: "GET",
       credentials: "include",

@@ -1,5 +1,5 @@
 import Player from "./Player.js";
-import { normalizeKeys } from "./utils.js";
+import { normalizeKeys } from "../utils.js";
 export class Ranking {
   constructor({ player_name, date, ranking, player = null }) {
     this.player_name = player_name;

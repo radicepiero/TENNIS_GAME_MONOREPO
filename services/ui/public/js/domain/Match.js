@@ -1,3 +1,5 @@
+import { roundLabels } from "/js/icons.js";
+
 export class Match {
   constructor({
     uuid = crypto.randomUUID(),
@@ -72,17 +74,24 @@ export class Match {
   }
 
   getRoundLabel() {
-    const labels = ["Finale", "Semifinale", "Quarti", "Ottavi", "16-esimi", "32-esimi", "64-esimi"];
-    return labels[this.round - 1] || `Round ${this.round}`;
+    // roundLabels include anche "Pronostici" (indice 0). Per i Match usiamo i round del tabellone:
+    // round=1 -> Finale, round=2 -> Semifinali, ...
+    const labels = roundLabels.slice(1).reverse();
+    return labels[this.round - 1] ?? `Round ${this.round}`;
   }
 
   toJSON() {
+    const uuid = this.uuid;
+    const normalizePlayerId = (v) => {
+      const n = typeof v === "string" ? Number(v) : v;
+      return Number.isFinite(n) && n > 0 ? n : null;
+    };
     return {
-      uuid: this.uuid,
+      uuid,
       treeId: this.tree?.uuid || null,
       round: this.round,
-      player1: this.player1,
-      player2: this.player2,
+      player1: normalizePlayerId(this.player1),
+      player2: normalizePlayerId(this.player2),
       p1Wins: this.p1Wins,
       p2Wins: this.p2Wins,
       date: this.date,

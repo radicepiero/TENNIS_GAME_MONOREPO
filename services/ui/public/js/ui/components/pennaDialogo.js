@@ -1,5 +1,5 @@
 // pennaDialogo.js
-import { ensureStyleLoaded } from "../js/utils.js";
+import { ensureStyleLoaded } from "/js/utils.js";
 
 export class PennaDialogo {
   constructor(container, options = {}) {

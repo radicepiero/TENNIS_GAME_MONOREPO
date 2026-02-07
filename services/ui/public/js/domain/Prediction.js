@@ -1,4 +1,4 @@
-import { fetchJson } from "./utils.js";
+import { fetchJson } from "../utils.js";
 
 export class Prediction {
   constructor({ id, user_uuid, tournament_id, img, createdAt, updatedAt }) {

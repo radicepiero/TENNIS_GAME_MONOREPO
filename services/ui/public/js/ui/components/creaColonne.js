@@ -1,8 +1,9 @@
-import { normalizeYmd } from "./utils.js";
-import { tournamentApi } from "./api/tournamentApi.js";
-import { playerApi } from "./api/playerApi.js";
-import { predictionApi } from "./api/predictionApi.js";
-import { treeApi } from "./api/treeApi.js";
+import { normalizeYmd } from "/js/utils.js";
+import { tournamentApi } from "/js/api/tournamentApi.js";
+import { playerApi } from "/js/api/playerApi.js";
+import { predictionApi } from "/js/api/predictionApi.js";
+import { treeApi } from "/js/api/treeApi.js";
+import RankingContext from "/js/domain/RankingContext.js";
 
 const punteggi = [];
 
@@ -27,48 +28,6 @@ function didPlayRound(playerId, round, matches) {
         (Number(x.player1Id) === Number(playerId) || Number(x.player2Id) === Number(playerId))
     )
   );
-}
-
-function parseRankingNumber(rawRanking) {
-  let ranking = Number(rawRanking);
-  if (!Number.isFinite(ranking)) {
-    const m = String(rawRanking).match(/\d+/);
-    ranking = m ? Number(m[0]) : NaN;
-  }
-  return Number.isFinite(ranking) ? ranking : null;
-}
-
-function hasRankingForDate(player, rankingDate) {
-  const targetDate = normalizeYmd(rankingDate);
-  if (!targetDate) return false;
-  if (!player || !player.Rankings || !player.Rankings.length) return false;
-  // If API doesn't provide ranking.date, we cannot check: assume endpoint already filtered by rankingDate.
-  const anyHasDate = Boolean(player.Rankings.find((r) => r && r.date));
-  if (!anyHasDate) return true;
-  return Boolean(player.Rankings.find((r) => normalizeYmd(r && r.date) === targetDate));
-}
-
-function getPlayerRanking(player, rankingDate = null) {
-  if (!player) return null;
-  const targetDate = normalizeYmd(rankingDate);
-
-  if (player.Rankings && player.Rankings.length) {
-    let chosen = null;
-    if (targetDate) {
-      // If Rankings don't include date info, fallback to first element (API likely filtered already).
-      const anyHasDate = Boolean(player.Rankings.find((r) => r && r.date));
-      chosen = anyHasDate
-        ? player.Rankings.find((r) => normalizeYmd(r && r.date) === targetDate) || null
-        : player.Rankings[0];
-    }
-    if (!chosen) chosen = player.Rankings[0];
-    if (chosen && typeof chosen.ranking !== "undefined") {
-      return parseRankingNumber(chosen.ranking);
-    }
-  }
-
-  if (typeof player.ranking !== "undefined") return parseRankingNumber(player.ranking);
-  return null;
 }
 
 function pointsCountForStatus(status) {
@@ -128,19 +87,6 @@ function computePlayerStatusForRound(playerId, round, matches) {
 
   return Number(winnerId) === Number(playerId) ? "ok" : "esce";
 }
-
-function sanitizeUrl(v) {
-  if (v === null || typeof v === "undefined") return "";
-  const s = String(v).trim();
-  if (!s) return "";
-  if (s.toLowerCase() === "null" || s.toLowerCase() === "undefined") return "";
-  return s;
-}
-
-function getPlayerImageSrc(player) {
-  const candidate = sanitizeUrl(player && (player.image_src || player.img));
-  return candidate;
-}
 // Assumendo che tu abbia una funzione per aggiungere i giocatori alla DOM
 function aggiornaStileGiocatore(playerElement, risultatoTurno) {
   if (!playerElement) return;
@@ -181,7 +127,8 @@ function createCell({ title, player, status, isWinner = false }) {
 
   const playerId = player && player.id !== undefined && player.id !== null ? String(player.id) : "";
   const friendHref = playerId ? `/friend/player/${encodeURIComponent(playerId)}` : "";
-  const imgHtml = `<img src="${getPlayerImageSrc(player)}" alt="${player.name}" />`;
+  const imgSrc = (player && (player.image_src || player.img)) || "";
+  const imgHtml = `<img src="${imgSrc}" alt="${player.name}" />`;
   const nameHtml = `${player && player.name ? String(player.name) : ""}`;
   const playerInnerHtml = friendHref
     ? `<a href="${friendHref}" style="text-decoration:none; color: inherit; display: inline-flex; align-items: center; gap: 8px;">${imgHtml}<span>${nameHtml}</span></a>`
@@ -232,6 +179,7 @@ export async function creaColonne(tournamentID, faseMenu, apiUrl, loggedUserUuid
   }
 
   const tournamentRankingDate = tournament && tournament.ranking_date ? normalizeYmd(tournament.ranking_date) : null;
+  const rankingCtx = new RankingContext(tournamentRankingDate);
   try {
     players = await playerApi.getPlayersByRankingDate(tournamentRankingDate, apiUrl);
   } catch (e) {
@@ -317,10 +265,10 @@ export async function creaColonne(tournamentID, faseMenu, apiUrl, loggedUserUuid
     // enrich players with points for display
     const attachPoints = (p, isW) => {
       if (!p) return;
-      const hasTournamentRanking = tournamentRankingDate ? hasRankingForDate(p, tournamentRankingDate) : false;
-      const r = tournamentRankingDate && hasTournamentRanking ? getPlayerRanking(p, tournamentRankingDate) : null;
+      const hasTournamentRanking = rankingCtx.hasRankingForPlayer(p);
+      const r = hasTournamentRanking ? rankingCtx.getPlayerRanking(p) : null;
       p._ranking = r;
-      p._rankingIssue = !tournamentRankingDate || !hasTournamentRanking || r === null;
+      p._rankingIssue = !rankingCtx.hasDate() || !hasTournamentRanking || r === null;
       if (p._rankingIssue) {
         p._points = 0;
         return;

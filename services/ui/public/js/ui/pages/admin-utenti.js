@@ -1,23 +1,4 @@
-function $(id) {
-  return document.getElementById(id);
-}
-
-function setText(el, text) {
-  if (!el) return;
-  el.textContent = text || "";
-}
-
-async function apiFetch(url, options = {}) {
-  const res = await fetch(url, {
-    ...options,
-    credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      ...(options.headers || {}),
-    },
-  });
-  return res;
-}
+import { $, setText, fetchJson, parseHttpStatusFromError } from "/js/utils.js";
 
 document.addEventListener("DOMContentLoaded", () => {
   const root = $("admin-users");
@@ -57,17 +38,13 @@ document.addEventListener("DOMContentLoaded", () => {
   async function loadUsers() {
     setText(listStatus, "Caricamento...");
     try {
-      const res = await apiFetch(`${apiUrl}/users`, { method: "GET" });
-      if (!res.ok) {
-        setText(listStatus, `Errore: ${res.status}`);
-        return;
-      }
-      const json = await res.json();
+      const json = await fetchJson(`${apiUrl}/users`, { method: "GET" });
       allUsers = Array.isArray(json) ? json : [];
       tbody.innerHTML = allUsers.map(rowHtml).join("");
       setText(listStatus, `OK (${allUsers.length})`);
     } catch (e) {
-      setText(listStatus, "Errore caricamento");
+      const st = parseHttpStatusFromError(e);
+      setText(listStatus, `Errore: ${st || ""}`.trim());
     }
   }
 
@@ -91,8 +68,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
       setText(createStatus, "Creazione...");
       try {
-        const res = await apiFetch(`${apiUrl}/users`, {
+        await fetchJson(`${apiUrl}/users`, {
           method: "POST",
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             email,
             password,
@@ -102,13 +80,6 @@ document.addEventListener("DOMContentLoaded", () => {
           }),
         });
 
-        const json = await res.json().catch(() => null);
-        if (!res.ok) {
-          const msg = (json && (json.error || json.message)) || `Errore: ${res.status}`;
-          setText(createStatus, msg);
-          return;
-        }
-
         setText(createStatus, "Creato");
         if (emailEl) emailEl.value = "";
         if (soprannomeEl) soprannomeEl.value = "";
@@ -116,7 +87,8 @@ document.addEventListener("DOMContentLoaded", () => {
         if (pwd2El) pwd2El.value = "";
         await loadUsers();
       } catch (e) {
-        setText(createStatus, "Errore creazione");
+        const st = parseHttpStatusFromError(e);
+        setText(createStatus, `Errore: ${st || ""}`.trim());
       }
     });
   }
@@ -132,16 +104,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
     setText(listStatus, "Eliminazione...");
     try {
-      const res = await apiFetch(`${apiUrl}/users/${encodeURIComponent(uuid)}`, { method: "DELETE" });
-      if (!res.ok) {
-        setText(listStatus, `Errore delete: ${res.status}`);
-        return;
-      }
+      await fetchJson(`${apiUrl}/users/${encodeURIComponent(uuid)}`, { method: "DELETE" });
       allUsers = allUsers.filter((u) => String(u.uuid) !== String(uuid));
       tbody.innerHTML = allUsers.map(rowHtml).join("");
       setText(listStatus, "Eliminato");
     } catch (e2) {
-      setText(listStatus, "Errore delete");
+      const st = parseHttpStatusFromError(e2);
+      setText(listStatus, `Errore delete: ${st || ""}`.trim());
     }
   });
 
