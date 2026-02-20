@@ -26,6 +26,20 @@ const postSignup = (req, res) => {
     })
     .then((data) => {
       user = data;
+
+      return db.sequelize
+        .query(
+          `
+          INSERT INTO public.room_members (room_id, user_uuid, role, status)
+          SELECT r.id, :user_uuid, 'member', 'accepted'
+          FROM public.rooms r
+          WHERE lower(r.name) = lower('Arena')
+          LIMIT 1
+          ON CONFLICT (room_id, user_uuid) DO NOTHING;
+        `,
+          { replacements: { user_uuid: user.uuid } }
+        )
+        .catch(() => null);
       //return spedisciMailConferma(user.email,  user.uuid);
       return spedisciMailConferma("radice.p@gmail.com", user.uuid);
     })

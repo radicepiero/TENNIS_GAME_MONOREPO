@@ -119,14 +119,15 @@ function aggiornaStileGiocatore(playerElement, risultatoTurno) {
   }
 }
 //FUNZIONE CHE CREA UNA CELLA PER CIASCUN GIOCATORE DEL PRONOSTICO
-function createCell({ title, player, status, isWinner = false }) {
+function createCell({ title, player, status, isWinner = false, roomId } = {}) {
   const cell = document.createElement("div");
   cell.className = isWinner ? "winner" : "cell";
 
   aggiornaStileGiocatore(cell, status);
 
   const playerId = player && player.id !== undefined && player.id !== null ? String(player.id) : "";
-  const friendHref = playerId ? `/friend/player/${encodeURIComponent(playerId)}` : "";
+  const qs = roomId ? `?room_id=${encodeURIComponent(String(roomId))}` : "";
+  const friendHref = playerId ? `/friend/player/${encodeURIComponent(playerId)}${qs}` : "";
   const imgSrc = (player && (player.image_src || player.img)) || "";
   const imgHtml = `<img src="${imgSrc}" alt="${player.name}" />`;
   const nameHtml = `${player && player.name ? String(player.name) : ""}`;
@@ -146,7 +147,7 @@ function createCell({ title, player, status, isWinner = false }) {
   return cell;
 }
 
-export async function creaColonne(tournamentID, faseMenu, apiUrl, loggedUserUuid) {
+export async function creaColonne(tournamentID, faseMenu, apiUrl, loggedUserUuid, roomId) {
   const tournamentId = tournamentID;
   const columnContainer = document.getElementById("columns");
 
@@ -188,7 +189,7 @@ export async function creaColonne(tournamentID, faseMenu, apiUrl, loggedUserUuid
   }
 
   try {
-    predictions = await predictionApi.getTournamentPredictions(tournamentId, apiUrl);
+    predictions = await predictionApi.getTournamentPredictions(tournamentId, apiUrl, { roomId });
   } catch (e) {
     console.error("Errore fetch predictions:", e);
     predictions = [];
@@ -321,6 +322,7 @@ export async function creaColonne(tournamentID, faseMenu, apiUrl, loggedUserUuid
           player: winner,
           status,
           isWinner: true,
+          roomId,
         })
       );
     }
@@ -344,6 +346,7 @@ export async function creaColonne(tournamentID, faseMenu, apiUrl, loggedUserUuid
           title: "SEMIFINALISTA",
           player: semi1,
           status,
+          roomId,
         })
       );
     }
@@ -367,6 +370,7 @@ export async function creaColonne(tournamentID, faseMenu, apiUrl, loggedUserUuid
           title: "SEMIFINALISTA",
           player: semi2,
           status,
+          roomId,
         })
       );
     }
@@ -390,6 +394,7 @@ export async function creaColonne(tournamentID, faseMenu, apiUrl, loggedUserUuid
           title: "SEMIFINALISTA",
           player: semi3,
           status,
+          roomId,
         })
       );
     }

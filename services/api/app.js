@@ -103,6 +103,169 @@ const ensurePredictionExtras = async () => {
   }
 };
 
+const ensureRoomsExtras = async () => {
+  try {
+    await db.sequelize.query(`
+      CREATE TABLE IF NOT EXISTS public.rooms (
+        id SERIAL PRIMARY KEY,
+        name TEXT NOT NULL UNIQUE,
+        short_description TEXT,
+        long_description TEXT,
+        created_by_user_uuid UUID REFERENCES public.users(uuid),
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+    `);
+  } catch (e) {
+    console.error("Errore creazione tabella rooms:", e.message || e);
+  }
+
+  try {
+    await db.sequelize.query(`
+      CREATE TABLE IF NOT EXISTS public.room_members (
+        id SERIAL PRIMARY KEY,
+        room_id INTEGER NOT NULL REFERENCES public.rooms(id) ON DELETE CASCADE,
+        user_uuid UUID NOT NULL REFERENCES public.users(uuid) ON DELETE CASCADE,
+        role TEXT NOT NULL DEFAULT 'member',
+        status TEXT NOT NULL DEFAULT 'accepted',
+        invited_by_user_uuid UUID REFERENCES public.users(uuid),
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        UNIQUE(room_id, user_uuid)
+      );
+    `);
+  } catch (e) {
+    console.error("Errore creazione tabella room_members:", e.message || e);
+  }
+
+  try {
+    await db.sequelize.query(`
+      CREATE TABLE IF NOT EXISTS public.room_tournaments (
+        id SERIAL PRIMARY KEY,
+        room_id INTEGER NOT NULL REFERENCES public.rooms(id) ON DELETE CASCADE,
+        tournament_id INTEGER NOT NULL REFERENCES public.tournaments(id) ON DELETE CASCADE,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        UNIQUE(room_id, tournament_id)
+      );
+    `);
+  } catch (e) {
+    console.error("Errore creazione tabella room_tournaments:", e.message || e);
+  }
+
+  try {
+    await db.sequelize.query(
+      "ALTER TABLE public.predictions ADD COLUMN IF NOT EXISTS room_id INTEGER REFERENCES public.rooms(id);"
+    );
+  } catch (e) {
+    console.error("Errore aggiunta colonna predictions.room_id:", e.message || e);
+  }
+
+  // Unique constraint per stanza: (user_uuid, tournament_id, room_id)
+  try {
+    await db.sequelize.query(`
+      DO $$
+      BEGIN
+        IF EXISTS (
+          SELECT 1
+          FROM pg_indexes
+          WHERE schemaname = 'public'
+            AND tablename = 'predictions'
+            AND indexname = 'unique_user_tournament'
+        ) THEN
+          BEGIN
+            EXECUTE 'DROP INDEX public.unique_user_tournament';
+          EXCEPTION WHEN others THEN
+            -- ignore
+          END;
+        END IF;
+
+        IF EXISTS (
+          SELECT 1
+          FROM pg_constraint
+          WHERE conname = 'unique_user_tournament'
+            AND conrelid = 'public.predictions'::regclass
+        ) THEN
+          BEGIN
+            EXECUTE 'ALTER TABLE public.predictions DROP CONSTRAINT unique_user_tournament';
+          EXCEPTION WHEN others THEN
+            -- ignore
+          END;
+        END IF;
+
+        IF NOT EXISTS (
+          SELECT 1
+          FROM pg_indexes
+          WHERE schemaname = 'public'
+            AND tablename = 'predictions'
+            AND indexname = 'unique_user_tournament_room'
+        ) THEN
+          EXECUTE 'CREATE UNIQUE INDEX unique_user_tournament_room ON public.predictions (user_uuid, tournament_id, room_id)';
+        END IF;
+      END $$;
+    `);
+  } catch (e) {
+    console.error("Errore gestione indice unico predictions per stanza:", e.message || e);
+  }
+
+  // Backfill DB esistente: stanza 'pionieri' creata da radice.p@gmail.com,
+  // membership per tutti gli user e assegnazione di tutti i pronostici esistenti.
+  try {
+    await db.sequelize.query(`
+      DO $$
+      DECLARE
+        creator_uuid UUID;
+        pionieri_id INTEGER;
+        arena_id INTEGER;
+      BEGIN
+        SELECT uuid INTO creator_uuid FROM public.users WHERE lower(email) = lower('radice.p@gmail.com') LIMIT 1;
+        IF creator_uuid IS NULL THEN
+          RAISE NOTICE 'Seed rooms: creator radice.p@gmail.com non trovato; skip.';
+          RETURN;
+        END IF;
+
+        IF NOT EXISTS (SELECT 1 FROM public.rooms WHERE name = 'pionieri') THEN
+          INSERT INTO public.rooms (name, short_description, long_description, created_by_user_uuid)
+          VALUES ('pionieri', 'pionieri', 'pionieri', creator_uuid);
+        END IF;
+
+        SELECT id INTO pionieri_id FROM public.rooms WHERE name = 'pionieri' LIMIT 1;
+        IF pionieri_id IS NULL THEN
+          RAISE NOTICE 'Seed rooms: room pionieri non trovata dopo insert; skip.';
+          RETURN;
+        END IF;
+
+        INSERT INTO public.room_members (room_id, user_uuid, role, status)
+        SELECT pionieri_id, u.uuid, 'member', 'accepted'
+        FROM public.users u
+        ON CONFLICT (room_id, user_uuid) DO NOTHING;
+
+        UPDATE public.predictions
+        SET room_id = pionieri_id
+        WHERE room_id IS NULL;
+
+        IF NOT EXISTS (SELECT 1 FROM public.rooms WHERE name = 'Arena') THEN
+          INSERT INTO public.rooms (name, short_description, long_description, created_by_user_uuid)
+          VALUES ('Arena', 'Arena', 'Arena', creator_uuid);
+        END IF;
+
+        SELECT id INTO arena_id FROM public.rooms WHERE name = 'Arena' LIMIT 1;
+        IF arena_id IS NULL THEN
+          RAISE NOTICE 'Seed rooms: room Arena non trovata dopo insert; skip membership.';
+          RETURN;
+        END IF;
+
+        INSERT INTO public.room_members (room_id, user_uuid, role, status)
+        SELECT arena_id, u.uuid, 'member', 'accepted'
+        FROM public.users u
+        ON CONFLICT (room_id, user_uuid) DO NOTHING;
+      END $$;
+    `);
+  } catch (e) {
+    console.error("Errore seed/backfill stanza pionieri:", e.message || e);
+  }
+};
+
 const authenticateWithRetry = async ({ retries, delayMs }) => {
   let lastError;
   for (let attempt = 1; attempt <= retries; attempt++) {
@@ -112,6 +275,7 @@ const authenticateWithRetry = async ({ retries, delayMs }) => {
 
       await ensureTournamentExtras();
       await ensurePredictionExtras();
+      await ensureRoomsExtras();
       return;
     } catch (err) {
       lastError = err;

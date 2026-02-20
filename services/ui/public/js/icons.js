@@ -13,6 +13,8 @@ export const APP_ICONS = {
   CLOSE: "❌",
   SETTINGS: "⚙️",
   MOVE: "⤢",
+  EXPAND: "➕",
+  COLLAPSE: "➖",
   DEFAULT_PLAYER: "👤",
 };
 export const APP_BUTTONS = {

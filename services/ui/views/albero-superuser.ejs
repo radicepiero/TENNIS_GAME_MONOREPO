@@ -7,12 +7,14 @@
 
 <h1 id="nome-torneo"><%= tournamentId %></h1>
 
+<% if (user && (user.level === 'admin' || user.level === 'super')) { %>
 <div id="floating-toolbar" class="floating-toolbar">
   <div class="floating-toolbar__handle">Azioni</div>
   <div class="floating-toolbar__content">
     <a href="/admin/tornei">Admin tornei</a>
   </div>
 </div>
+<% } %>
 
 <div id="filter-bar" style="display:flex; gap: 12px; justify-content:center; align-items:center; flex-wrap: wrap; margin: 10px 0 12px;">
   <label class="filter-label">

@@ -6,33 +6,43 @@
     <h1 id="torneo"></h1>
     <div id="tournament-lock-message" style="display:none; text-align:center; margin: -10px 0 18px; padding: 10px 12px; border: 1px solid rgba(0,0,0,0.12); border-radius: 12px; background: rgba(255, 214, 0, 0.18);"></div>
 
-    <div id="prediction-avatar" style="text-align:center; margin: 12px 0 18px;">
-      <input id="prediction_avatar_url" type="hidden" value="" />
-      <div
-        id="prediction-avatar-uploader"
-        data-upload-url="/pronostico/upload-avatar"
-        data-preview-id="prediction-avatar-preview"
-        data-image-url-input-id="prediction_avatar_url"
-        data-status-id="prediction-avatar-status"
-        style="display:inline-block;"
-      >
-        <button id="choose-prediction-avatar" type="button">scegli il tuo avatar per questo pronostico</button>
-        <button id="save-prediction-avatar" type="button" style="display:none; margin-left: 10px;">Salva avatar</button>
-        <input id="prediction_avatar_file" type="file" accept="image/*" style="display:none;" />
-      </div>
-      <div style="margin-top: 10px;">
-        <img id="prediction-avatar-preview" alt="avatar" style="width: 44px; height: 44px; border-radius: 999px; object-fit: cover; border: 1px solid #ddd; display:none;" />
-      </div>
-      <div>
-        <span id="prediction-avatar-status" style="display:inline-block; margin-top: 6px;"></span>
-      </div>
-    </div>
-
     <h2 id="winner-title" style="display:none;">Seleziona il vincitore</h2>
     <div id="semifinalists-list" class="semifinalists-container"></div>
     <h2>Totale punteggio: <span id="total-points">0</span></h2>
     <button id="submit-button" class="">Invia Pronostico</button>
     <button id="delete-button" class="">cancella Pronostico</button>
+
+    <div style="text-align:center; margin: 14px 0 18px;">
+      <div style="display:flex; flex-direction: column; align-items: center; gap: 10px;">
+        <div id="prediction-avatar" style="text-align:center; margin: 12px 0 8px;">
+          <input id="prediction_avatar_url" type="hidden" value="" />
+          <div
+            id="prediction-avatar-uploader"
+            data-upload-url="/pronostico/upload-avatar"
+            data-preview-id="prediction-avatar-preview"
+            data-image-url-input-id="prediction_avatar_url"
+            data-status-id="prediction-avatar-status"
+            style="display:inline-block;"
+          >
+            <button id="choose-prediction-avatar" type="button">scegli il tuo avatar per questo pronostico</button>
+            <button id="save-prediction-avatar" type="button" style="display:none; margin-left: 10px;">Salva avatar</button>
+            <input id="prediction_avatar_file" type="file" accept="image/*" style="display:none;" />
+          </div>
+          <div style="margin-top: 10px;">
+            <img id="prediction-avatar-preview" alt="avatar" style="width: 44px; height: 44px; border-radius: 999px; object-fit: cover; border: 1px solid #ddd; display:none;" />
+          </div>
+          <div>
+            <span id="prediction-avatar-status" style="display:inline-block; margin-top: 6px;"></span>
+          </div>
+        </div>
+        <div style="display:flex; align-items:center; justify-content:center; gap: 10px; flex-wrap: wrap;">
+          <button id="room-copy-button" type="button">Copia in</button>
+          <select id="room-copy-select" style="max-width: 320px;"></select>
+        </div>
+        <div id="room-copy-status"></div>
+      </div>
+    </div>
+
     <h2>Seleziona i semifinalisti (max 4)</h2>
     <div id="players-list" class="players-container"></div>
   <script src="/js/ui/components/avatarUploader.js"></script>

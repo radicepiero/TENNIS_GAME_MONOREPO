@@ -18,6 +18,7 @@ router.get(
 );
 router.get("/:id", controller.getPredictionById); //get player by ID
 router.post("/", controller.postPrediction);
+router.post("/copy", requireAuth, controller.copyPredictionToRoom);
 router.patch("/", controller.postPrediction);
 router.put("/", controller.postPrediction);
 router.delete("/", controller.deletePredictionById);

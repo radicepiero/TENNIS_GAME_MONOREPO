@@ -1,9 +1,12 @@
 import { buildTournamentCard } from "/js/ui/components/tournamentCard.js";
 import { tournamentApi } from "/js/api/tournamentApi.js";
 import { APP_ICONS } from "/js/icons.js";
+import { getEffectiveRoomId } from "/js/ui/utils/roomSelection.js";
 
 async function loadTournaments({ apiUrl }) {
   try {
+    const currentRoomId = getEffectiveRoomId();
+
     const tournaments = await tournamentApi.listTournaments(apiUrl);
     const tournamentGrid = document.getElementById("tournament-grid");
     if (!tournamentGrid) return;
@@ -152,7 +155,7 @@ async function loadTournaments({ apiUrl }) {
             return aTime - bTime;
           })
           .forEach((tournament) => {
-            tournamentGrid.appendChild(buildTournamentCard(tournament, { apiUrl }));
+            tournamentGrid.appendChild(buildTournamentCard(tournament, { apiUrl, roomId: currentRoomId }));
           });
       };
 
@@ -160,7 +163,23 @@ async function loadTournaments({ apiUrl }) {
       paint();
     };
 
-    if (!isFriendsView) return;
+    const renderDefault = () => {
+      tournamentGrid.innerHTML = "";
+      (tournaments || [])
+        .sort((a, b) => {
+          const aTime = new Date(a && (a.dataopen || a.datainizio || a.datafine) || 0).getTime();
+          const bTime = new Date(b && (b.dataopen || b.datainizio || b.datafine) || 0).getTime();
+          return aTime - bTime;
+        })
+        .forEach((tournament) => {
+          tournamentGrid.appendChild(buildTournamentCard(tournament, { apiUrl, roomId: currentRoomId }));
+        });
+    };
+
+    if (!isFriendsView) {
+      renderDefault();
+      return;
+    }
     try {
       if (window.sessionStorage) {
         const keys = [];

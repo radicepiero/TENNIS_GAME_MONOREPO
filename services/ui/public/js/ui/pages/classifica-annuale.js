@@ -1,4 +1,5 @@
 import { fetchJson, $ } from "/js/utils.js";
+import { getEffectiveRoomId } from "/js/ui/utils/roomSelection.js";
 
 function readBootstrap() {
   const el = document.getElementById("bootstrap");
@@ -67,8 +68,9 @@ function render(data, { headerRow, bodyEl, totalsRow }) {
   });
 }
 
-async function fetchAnnualRanking(year, apiUrl) {
-  const json = await fetchJson(`${apiUrl}/annual-ranking/${encodeURIComponent(String(year))}`, {
+async function fetchAnnualRanking(year, apiUrl, roomId) {
+  const qs = roomId ? `?room_id=${encodeURIComponent(String(roomId))}` : "";
+  const json = await fetchJson(`${apiUrl}/annual-ranking/${encodeURIComponent(String(year))}${qs}`, {
     method: "GET",
     headers: { Accept: "application/json" },
   });
@@ -78,6 +80,7 @@ async function fetchAnnualRanking(year, apiUrl) {
 async function init() {
   const { apiUrl = "", initialYear = null } = readBootstrap();
 
+  const currentRoomId = getEffectiveRoomId();
   const yearSelect = $("yearSelect");
   const headerRow = $("annualRankingHeader");
   const bodyEl = $("annualRankingBody");
@@ -100,7 +103,7 @@ async function init() {
   const load = async () => {
     const y = yearSelect.value;
     try {
-      const data = await fetchAnnualRanking(y, apiUrl);
+      const data = await fetchAnnualRanking(y, apiUrl, currentRoomId);
       render(data, { headerRow, bodyEl, totalsRow });
     } catch (e) {
       console.error("Errore caricamento classifica annuale:", e);
@@ -110,7 +113,11 @@ async function init() {
 
   yearSelect.addEventListener("change", () => {
     const y = yearSelect.value;
-    window.history.replaceState({}, "", `/classifica-annuale/${encodeURIComponent(String(y))}`);
+    const url = new URL(window.location.href);
+    url.pathname = `/classifica-annuale/${encodeURIComponent(String(y))}`;
+    if (currentRoomId) url.searchParams.set("room_id", String(currentRoomId));
+    else url.searchParams.delete("room_id");
+    window.history.replaceState({}, "", url.toString());
     load();
   });
 

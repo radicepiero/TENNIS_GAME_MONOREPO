@@ -4,8 +4,11 @@ import { playerApi } from "/js/api/playerApi.js";
 import { treeApi } from "/js/api/treeApi.js";
 import { predictionApi } from "/js/api/predictionApi.js";
 import RankingContext from "/js/domain/RankingContext.js";
+import { getEffectiveRoomId } from "/js/ui/utils/roomSelection.js";
 
 const apiUrl = document.documentElement.dataset.apiUrl || "/api";
+
+let currentRoomId = getEffectiveRoomId();
 
 function computeMatchWinnerId(match) {
   if (!match) return null;
@@ -210,7 +213,7 @@ async function renderColumnsForPhase(faseMenu) {
 
   columnContainer.innerHTML = "";
 
-  const predictions = await predictionApi.getUserPredictions(apiUrl);
+  const predictions = await predictionApi.getUserPredictions(apiUrl, { roomId: currentRoomId });
 
   const uniqueTournamentIds = Array.from(new Set(predictions.map((p) => String(p.tournament_id)).filter(Boolean)));
 
@@ -396,6 +399,7 @@ async function renderColumnsForPhase(faseMenu) {
 
 (async function init() {
   try {
+    await setupRoomSelector();
     await renderColumnsForPhase(0);
   } catch (e) {
     const el = document.getElementById("columns");

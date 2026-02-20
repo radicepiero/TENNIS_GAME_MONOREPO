@@ -24,9 +24,10 @@ function statusLabel(statusRaw) {
   return st;
 }
 
-function statusHref(t) {
+function statusHref(t, { roomId } = {}) {
   const st = getTournamentStatus(t);
-  if (st === "open") return `/tornei/${t.id}/pronostico`;
+  const qs = roomId ? `?room_id=${encodeURIComponent(String(roomId))}` : "";
+  if (st === "open") return `/tornei/${t.id}/pronostico${qs}`;
   if (st === "in-progress" || st === "completed") return `/tornei/${t.id}/sviluppo`;
   return "";
 }
@@ -77,7 +78,7 @@ async function checkSuperuserTreeExists(apiUrl, tournamentId) {
   return ok;
 }
 
-export function buildTournamentCard(tournament, { apiUrl } = {}) {
+export function buildTournamentCard(tournament, { apiUrl, roomId } = {}) {
   const container = document.createElement("div");
   container.className = [
     "tournament-card",
@@ -118,7 +119,7 @@ export function buildTournamentCard(tournament, { apiUrl } = {}) {
   meta.className = "tournament-card__meta";
 
   const statusText = statusLabel(tournament.status);
-  const href = statusHref(tournament);
+  const href = statusHref(tournament, { roomId });
   const statusEl = href
     ? `<a class="tournament-status-link" href="${href}">${statusText}</a>`
     : `<button type="button" class="tournament-status-link tournament-status-link--disabled" aria-disabled="true">${statusText}</button>`;
@@ -131,7 +132,7 @@ export function buildTournamentCard(tournament, { apiUrl } = {}) {
 
   const st = getTournamentStatus(tournament);
   const maybeEasyWin = st === "open"
-    ? `<a class="tournament-status-link tournament-easywin-btn is-hidden" data-easywin-btn data-tournament-id="${tournament.id}" href="/tornei/${tournament.id}/albero-pronostico">usa il tabellone per vincere facile</a>`
+    ? `<a class="tournament-status-link tournament-easywin-btn is-hidden" data-easywin-btn data-tournament-id="${tournament.id}" href="/tornei/${tournament.id}/albero-pronostico${roomId ? `?room_id=${encodeURIComponent(String(roomId))}` : ""}">usa il tabellone per vincere facile</a>`
     : "";
 
   const superLabel = st === "open" ? "tabellone" : "guarda i risultati";

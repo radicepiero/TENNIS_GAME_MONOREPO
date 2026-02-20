@@ -3,6 +3,7 @@ import { APP_ICONS, phaseLabels } from "/js/icons.js";
 import { tournamentApi } from "/js/api/tournamentApi.js";
 import { predictionApi } from "/js/api/predictionApi.js";
 import { treeApi } from "/js/api/treeApi.js";
+import { getEffectiveRoomId } from "/js/ui/utils/roomSelection.js";
 
 function readBootstrap() {
   const el = document.getElementById("bootstrap");
@@ -22,6 +23,8 @@ function showError(msg) {
 
 document.addEventListener("DOMContentLoaded", async () => {
   const { tournamentId, tournamentName, apiUrl, loggedUserUuid } = readBootstrap();
+
+  const currentRoomId = getEffectiveRoomId();
 
   console.log("sviluppoTorneo init", {
     tournamentId,
@@ -137,7 +140,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     try {
       const tournament = await tournamentApi.getTournamentBasic(tournamentId, apiUrl);
 
-      const predictions = await predictionApi.getTournamentPredictions(tournamentId, apiUrl);
+      const predictions = await predictionApi.getTournamentPredictions(tournamentId, apiUrl, { roomId: currentRoomId });
       const predictedPlayerIds = getPredictedPlayerIds(predictions);
 
       const treeJson = await treeApi.getSuperuserTreeByTournament(tournamentId, apiUrl);
@@ -174,7 +177,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     try {
       const columnContainer = document.getElementById("columns");
       if (columnContainer) columnContainer.innerHTML = "";
-      await creaColonne(String(tournamentId || ""), String(currentPhase), String(apiUrl || ""), String(loggedUserUuid || ""));
+      await creaColonne(String(tournamentId || ""), String(currentPhase), String(apiUrl || ""), String(loggedUserUuid || ""), currentRoomId);
     } catch (error) {
       console.error("Errore durante lo sviluppo:", error);
       showError("Errore durante il caricamento dati sviluppo");

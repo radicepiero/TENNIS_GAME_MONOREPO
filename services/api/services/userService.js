@@ -52,7 +52,21 @@ const postUser = async (emailOrPayload, password, soprannome) => {
     if (typeof payload.active !== "undefined") createPayload.active = payload.active;
     if (typeof payload.image_url !== "undefined") createPayload.image_url = payload.image_url;
 
-    return User.create(createPayload);
+    const user = await User.create(createPayload);
+    try {
+      await db.sequelize.query(
+        `
+        INSERT INTO public.room_members (room_id, user_uuid, role, status)
+        SELECT r.id, :user_uuid, 'member', 'accepted'
+        FROM public.rooms r
+        WHERE lower(r.name) = lower('Arena')
+        LIMIT 1
+        ON CONFLICT (room_id, user_uuid) DO NOTHING;
+      `,
+        { replacements: { user_uuid: user.uuid } }
+      );
+    } catch (e) {}
+    return user;
   } catch (error) {
     console.error("errore durante la creazione dello User");
     throw error;

@@ -11,6 +11,40 @@
   </div>
 
   <div style="margin-top: 12px;">
+    <a href="/stanze">Stanze</a>
+  </div>
+
+  <div style="margin-top: 18px; max-width: 640px; margin-left: auto; margin-right: auto;">
+    <h3 style="margin: 0 0 10px;">Crea stanza</h3>
+    <div style="border: 1px solid rgba(0,0,0,0.12); border-radius: 12px; padding: 10px 12px; background: rgba(255,255,255,0.9);">
+      <div style="display: grid; gap: 10px;">
+        <label>
+          Nome
+          <input id="create-room-name" type="text" placeholder="Nome stanza" style="width: 100%; padding: 10px; border-radius: 10px; border: 1px solid #ccc;" />
+        </label>
+        <label>
+          Descrizione breve
+          <input id="create-room-short" type="text" placeholder="(opzionale)" style="width: 100%; padding: 10px; border-radius: 10px; border: 1px solid #ccc;" />
+        </label>
+        <label>
+          Descrizione lunga
+          <textarea id="create-room-long" placeholder="(opzionale)" style="width: 100%; min-height: 80px; padding: 10px; border-radius: 10px; border: 1px solid #ccc;"></textarea>
+        </label>
+        <div style="display:flex; gap: 10px; align-items:center; flex-wrap: wrap;">
+          <button id="create-room-btn" type="button">Crea</button>
+          <span id="create-room-status"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-top: 18px; max-width: 640px; margin-left: auto; margin-right: auto;">
+    <h3 style="margin: 0 0 10px;">Inviti ricevuti</h3>
+    <div id="my-invitations" style="border: 1px solid rgba(0,0,0,0.12); border-radius: 12px; padding: 10px 12px; background: rgba(255,255,255,0.9);"></div>
+    <div id="my-invitations-status" style="margin-top: 8px;"></div>
+  </div>
+
+  <div style="margin-top: 12px;">
     <label for="soprannome"><strong>Soprannome</strong></label>
     <input id="soprannome" name="soprannome" type="text" value="<%= user && user.soprannome ? user.soprannome : '' %>" style="text-align: center;" />
   </div>

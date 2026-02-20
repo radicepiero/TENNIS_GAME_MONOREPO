@@ -24,6 +24,14 @@ module.exports = function (sequelize, DataTypes) {
           key: "id",
         },
       },
+      room_id: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        references: {
+          model: "rooms",
+          key: "id",
+        },
+      },
       img: {
         type: DataTypes.TEXT,
         allowNull: true,
@@ -47,7 +55,7 @@ module.exports = function (sequelize, DataTypes) {
         {
           name: "unique_user_tournament",
           unique: true,
-          fields: [{ name: "user_uuid" }, { name: "tournament_id" }],
+          fields: [{ name: "user_uuid" }, { name: "tournament_id" }, { name: "room_id" }],
         },
       ],
     }

@@ -6,6 +6,18 @@ const User = db.User;
 const Tournament = db.Tournament;
 const { fn, col } = require("sequelize");
 
+const DEFAULT_ROOM_NAME = "Arena";
+
+const resolveRoomIdOrDefault = async (roomId) => {
+  if (roomId) return Number(roomId);
+  const [rows] = await db.sequelize.query(
+    "SELECT id FROM public.rooms WHERE name = :name LIMIT 1;",
+    { replacements: { name: DEFAULT_ROOM_NAME } }
+  );
+  const id = rows && rows[0] && rows[0].id ? Number(rows[0].id) : null;
+  return id;
+};
+
 /*
 const esempio_prediction = {
   user_uuid: "4630665c-9eb7-4e3b-94d7-4854111e1c0f",
@@ -42,6 +54,62 @@ const countPredictionsByTournament = async () => {
   }
 };
 
+const copyPredictionToRoom = async ({ user_uuid, tournament_id, from_room_id, to_room_id, overwrite }) => {
+  const fromRoomId = await resolveRoomIdOrDefault(from_room_id);
+  const toRoomId = await resolveRoomIdOrDefault(to_room_id);
+  if (!fromRoomId || !toRoomId) {
+    const err = new Error("room_id non risolto");
+    err.code = "ROOM_NOT_FOUND";
+    throw err;
+  }
+
+  const source = await readPredictionByUserIdTournamentId(user_uuid, tournament_id, fromRoomId);
+  if (!source || source.length === 0) {
+    const err = new Error("Pronostico sorgente non trovato");
+    err.code = "SOURCE_NOT_FOUND";
+    throw err;
+  }
+
+  const existing = await readPredictionByUserIdTournamentId(user_uuid, tournament_id, toRoomId);
+  if (existing && existing.length > 0 && !overwrite) {
+    const err = new Error("Esiste già un pronostico nella stanza di destinazione");
+    err.code = "TARGET_EXISTS";
+    throw err;
+  }
+
+  const src = source[0];
+  const rows = (src.rows || []).map((r) => ({ player_id: r.player_id, prediction: r.prediction }));
+
+  return await sequelize.transaction(async (t) => {
+    if (existing && existing.length > 0) {
+      await PredictionRow.destroy({ where: { prediction_id: existing[0].id }, transaction: t });
+      await Prediction.destroy({ where: { id: existing[0].id }, transaction: t });
+    }
+
+    const prediction = await Prediction.create(
+      {
+        user_uuid,
+        tournament_id,
+        room_id: toRoomId,
+        avatar_url: src.avatar_url || null,
+      },
+      { transaction: t }
+    );
+
+    const predictionId = prediction.id;
+    const rowsData = rows.map((row) => ({
+      prediction_id: predictionId,
+      player_id: row.player_id,
+      prediction: row.prediction,
+    }));
+    if (rowsData.length > 0) {
+      await PredictionRow.bulkCreate(rowsData, { transaction: t });
+    }
+
+    return prediction;
+  });
+};
+
 const readPredictionRow = async (prediction_id) => {
   try {
     return await PredictionRow.findAll({
@@ -53,11 +121,12 @@ const readPredictionRow = async (prediction_id) => {
   }
 };
 
-const readPredictions = async (user_uuid, tournament_id, prediction_id) => {
+const readPredictions = async (user_uuid, tournament_id, prediction_id, room_id) => {
   const whereClause = {};
   if (user_uuid) whereClause.user_uuid = user_uuid;
   if (tournament_id) whereClause.tournament_id = tournament_id;
   if (prediction_id) whereClause.id = prediction_id;
+  if (room_id) whereClause.room_id = room_id;
   const predictions = [];
   try {
     const __predictions = await Prediction.findAll({
@@ -85,6 +154,7 @@ const readPredictions = async (user_uuid, tournament_id, prediction_id) => {
         created_at: prediction.createdAt,
         updated_at: prediction.updatedAt,
         user_uuid: prediction.user_uuid,
+        room_id: prediction.room_id,
         user_email: User ? User.email : "",
         user_soprannome: User ? User.soprannome : "",
         user_image_url: User ? User.image_url : "",
@@ -143,20 +213,23 @@ const readPredictionsBK = async (user_uuid, tournament_id, prediction_id) => {
   }
 };
 
-const readPredictionsUser = async (user_uuid) => {
-  return await readPredictions(user_uuid, false, false);
+const readPredictionsUser = async (user_uuid, room_id) => {
+  const rid = await resolveRoomIdOrDefault(room_id);
+  return await readPredictions(user_uuid, false, false, rid);
 };
 
-const readPredictionsUserForPlayer = async (user_uuid, player_id) => {
+const readPredictionsUserForPlayer = async (user_uuid, player_id, room_id) => {
   const pid = player_id ? String(player_id) : "";
   if (!pid) return [];
-  const all = await readPredictions(user_uuid, false, false);
+  const rid = await resolveRoomIdOrDefault(room_id);
+  const all = await readPredictions(user_uuid, false, false, rid);
   return (all || [])
     .map((p) => {
       const rows = (p && p.rows) || [];
       const row = rows.find((r) => r && String(r.player_id) === pid);
       if (!row) return null;
       return {
+        room_id: p.room_id,
         tournament_id: p.tournament_id,
         tournament_name: p.tournament_name,
         tournament_nickname: p.tournament_nickname,
@@ -168,14 +241,16 @@ const readPredictionsUserForPlayer = async (user_uuid, player_id) => {
     })
     .filter(Boolean);
 };
-const readPredictionsTournament = async (tournament_id) => {
-  return await readPredictions(false, tournament_id, false);
+const readPredictionsTournament = async (tournament_id, room_id) => {
+  const rid = await resolveRoomIdOrDefault(room_id);
+  return await readPredictions(false, tournament_id, false, rid);
 };
 const readPrediction = async (prediction_id) => {
-  return await readPredictions(false, false, prediction_id);
+  return await readPredictions(false, false, prediction_id, false);
 };
-const readPredictionByUserIdTournamentId = async (user_uuid, tournament_id) => {
-  const risultato = await readPredictions(user_uuid, tournament_id, false);
+const readPredictionByUserIdTournamentId = async (user_uuid, tournament_id, room_id) => {
+  const rid = await resolveRoomIdOrDefault(room_id);
+  const risultato = await readPredictions(user_uuid, tournament_id, false, rid);
   return risultato;
 };
 const getPredictions = async (filters) => {
@@ -207,10 +282,14 @@ const getPredictions = async (filters) => {
 };
 
 const createPrediction = async (predictionData) => {
-  const { user_uuid, tournament_id, rows, avatar_url } = predictionData;
+  const { user_uuid, tournament_id, rows, avatar_url, room_id } = predictionData;
   console.log("Creazione di una nuova prediction:", predictionData);
 
   try {
+    const rid = await resolveRoomIdOrDefault(room_id);
+    if (!rid) {
+      throw new Error("room_id non risolto (default room mancante)");
+    }
     // Inizia una transazione per garantire l'atomicità delle operazioni
     const result = await sequelize.transaction(async (t) => {
       // 1. Inserisci il record nella tabella predictions
@@ -218,6 +297,7 @@ const createPrediction = async (predictionData) => {
         {
           user_uuid: user_uuid,
           tournament_id: tournament_id,
+          room_id: rid,
           avatar_url: avatar_url,
         },
         { transaction: t }
@@ -261,7 +341,7 @@ const updatePrediction = async (updateData) => {
 
       // 2. Elimina le righe esistenti per questa prediction
       await PredictionRow.destroy({
-        where: { id },
+        where: { prediction_id: id },
         transaction: t,
       });
 
@@ -360,6 +440,7 @@ module.exports = {
   readPrediction,
   readPredictionByUserIdTournamentId,
   createPrediction,
+  copyPredictionToRoom,
   updatePrediction,
   deletePrediction,
   patchPrediction,

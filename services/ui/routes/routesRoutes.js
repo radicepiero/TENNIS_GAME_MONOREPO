@@ -323,7 +323,15 @@ router.get("/tornei/:id/edit", requireAdmin, async (req, res) => {
 
 router.get("/tornei/:id/pronostico", (req, res) => {
   //res.render("pronostico", { tournamentId: req.params.id });
-  res.render("pronostico");
+  res.render("pronostico", {
+    apiUrl: req.app.locals.apiUrl || "/api",
+  });
+});
+
+router.get("/stanze", (req, res) => {
+  res.render("stanze", {
+    apiUrl: req.app.locals.apiUrl || "/api",
+  });
 });
 
 router.get("/tornei/:id/sviluppo", async (req, res) => {

@@ -82,7 +82,7 @@ const computePlayerPointsById = async (tournament) => {
   return playerPointsById;
 };
 
-const getAnnualRanking = async (year) => {
+const getAnnualRanking = async (year, room_id) => {
   const y = Number(year);
   if (!Number.isFinite(y)) {
     throw new Error("year non valido");
@@ -107,7 +107,7 @@ const getAnnualRanking = async (year) => {
   for (const tournament of tournamentsInYear) {
     const tId = String(tournament.id);
 
-    const predictions = await predictionService.readPredictionsTournament(tournament.id);
+    const predictions = await predictionService.readPredictionsTournament(tournament.id, room_id);
 
     const tree = superuserId
       ? await db.Tree.findOne({

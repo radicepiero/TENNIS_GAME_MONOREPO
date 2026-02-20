@@ -46,6 +46,9 @@
   flex-direction: column;
   gap: 8px;
   padding: 10px;
+  max-width: min(360px, calc(100vw - 32px));
+  max-height: min(520px, calc(100vh - 140px));
+  overflow: auto;
   background: rgba(255, 255, 255, 0.95);
   border: 1px solid rgba(0, 0, 0, 0.12);
   border-radius: 12px;
@@ -60,15 +63,76 @@
   opacity: 0.75;
 }
 
+.floating-toolbar__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.floating-toolbar__toggle {
+  font-size: 12px;
+  padding: 6px 8px;
+  border-radius: 10px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  background: rgba(255, 255, 255, 0.9);
+  cursor: pointer;
+}
+
 .floating-toolbar.dragging .floating-toolbar__handle {
   cursor: grabbing;
 }
 
 .floating-toolbar__content {
   display: flex;
+  flex-direction: column;
   gap: 10px;
-  align-items: center;
-  flex-wrap: wrap;
+  align-items: stretch;
+  flex-wrap: nowrap;
+}
+
+.floating-toolbar__content > button,
+.floating-toolbar__content > a,
+.floating-toolbar__content > #filter-bar {
+  width: 100%;
+}
+
+.floating-toolbar__content > button {
+  display: inline-flex;
+  justify-content: center;
+}
+
+.floating-toolbar.collapsed {
+  max-height: none;
+  overflow: visible;
+}
+
+.floating-toolbar.collapsed .floating-toolbar__content {
+  display: none;
+}
+
+.floating-toolbar #filter-bar.visible {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+}
+
+.floating-toolbar .filter-box {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.85);
+}
+
+.floating-toolbar .filter-label {
+  justify-content: space-between !important;
+}
+
+.floating-toolbar .filter-label select {
+  min-width: 160px;
 }
 
 .floating-toolbar__content a {
@@ -82,6 +146,7 @@
     top: auto;
     bottom: 10px;
     max-width: calc(100vw - 20px);
+    max-height: calc(100vh - 120px);
   }
 }
 

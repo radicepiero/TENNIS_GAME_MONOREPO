@@ -30,9 +30,14 @@
   import { buildTournamentCard } from "/js/ui/components/tournamentCard.js";
   import { formatDmyShort } from "/js/utils.js";
   import { PlayerCard } from "/js/ui/components/playerCard.js";
+  import { roomApi } from "/js/api/roomApi.js";
+  import { getEffectiveRoomId, setSelectedRoomId } from "/js/ui/utils/roomSelection.js";
 
   (function () {
     const apiUrl = "<%= apiUrl %>";
+
+    let currentRoomId = getEffectiveRoomId();
+    const roomSelect = document.getElementById("room-select");
 
     const warningEl = document.getElementById("warning");
     const currentEl = document.getElementById("currentTournament");
@@ -60,7 +65,7 @@
       currentEl.innerHTML = `<div class="card__title">Torneo in corso</div>`;
       const grid = document.createElement("div");
       grid.className = "tournament-grid";
-      grid.appendChild(buildTournamentCard(t, { apiUrl }));
+      grid.appendChild(buildTournamentCard(t, { apiUrl, roomId: currentRoomId }));
       currentEl.appendChild(grid);
     }
 
@@ -76,7 +81,7 @@
         empty.textContent = "Nessun torneo disponibile";
         nextEl.appendChild(empty);
       } else {
-        topTwo.forEach((t) => grid.appendChild(buildTournamentCard(t, { apiUrl })));
+        topTwo.forEach((t) => grid.appendChild(buildTournamentCard(t, { apiUrl, roomId: currentRoomId })));
         nextEl.appendChild(grid);
       }
 
@@ -112,7 +117,7 @@
 
       const grid = document.createElement("div");
       grid.className = "tournament-grid";
-      topTwo.forEach((t) => grid.appendChild(buildTournamentCard(t, { apiUrl })));
+      topTwo.forEach((t) => grid.appendChild(buildTournamentCard(t, { apiUrl, roomId: currentRoomId })));
       recentEl.appendChild(grid);
     }
 
@@ -258,7 +263,8 @@
 
     async function load() {
       try {
-        const res = await fetch(`${apiUrl}/friend/dashboard`, { credentials: "include" });
+        const qs = currentRoomId ? `?room_id=${encodeURIComponent(String(currentRoomId))}` : "";
+        const res = await fetch(`${apiUrl}/friend/dashboard${qs}`, { credentials: "include" });
         if (!res.ok) {
           const txt = await res.text().catch(() => "");
           throw new Error(txt || `HTTP ${res.status}`);
@@ -280,7 +286,9 @@
       }
     }
 
-    load();
+    (async () => {
+      await load();
+    })();
   })();
 </script>
 

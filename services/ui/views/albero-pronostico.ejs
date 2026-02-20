@@ -9,21 +9,25 @@
 <h1 id="nome-torneo"><%= tournamentId %></h1>
 
 <div id="floating-toolbar" class="floating-toolbar">
-  <div class="floating-toolbar__handle" id="floating-toolbar-handle"></div>
+  <div class="floating-toolbar__header">
+    <div class="floating-toolbar__handle" id="floating-toolbar-handle"></div>
+    <button id="floating-toolbar-toggle" type="button" class="floating-toolbar__toggle"></button>
+  </div>
   <div class="floating-toolbar__content">
     <button id="saveButton" class="hidden">SALVA</button>
     <button id="deleteButton" class="hidden">ELIMINA</button>
     <button id="generatePredictionButton" class="hidden">GENERA PRONOSTICO</button>
-    <a id="goPronostico" class="hidden" href="/tornei/<%= tournamentId %>/pronostico">VAI AL PRONOSTICO</a>
     <div id="filter-bar" class="hidden">
-      <label class="filter-label">
-        <span class="label-text">Da:</span>
-        <select id="fromRound"></select>
-      </label>
-      <label class="filter-label">
-        <span class="label-text">A:</span>
-        <select id="toRound"></select>
-      </label>
+      <div class="filter-box">
+        <label class="filter-label">
+          <span class="label-text">Da:</span>
+          <select id="fromRound"></select>
+        </label>
+        <label class="filter-label">
+          <span class="label-text">A:</span>
+          <select id="toRound"></select>
+        </label>
+      </div>
     </div>
   </div>
 </div>

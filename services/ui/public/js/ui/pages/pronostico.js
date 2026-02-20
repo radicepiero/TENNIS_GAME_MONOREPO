@@ -4,6 +4,11 @@ import { predictionApi } from "/js/api/predictionApi.js";
 import { fetchJson } from "/js/utils.js";
 import { setupPredictionAvatar } from "/js/ui/components/predictionAvatar.js";
 import { buildSelectablePlayerCard } from "/js/ui/components/playerCard.js";
+import { roomApi } from "/js/api/roomApi.js";
+import {
+  getEffectiveRoomId,
+  setSelectedRoomId,
+} from "/js/ui/utils/roomSelection.js";
 
 function readBootstrap() {
   const el = document.getElementById("bootstrap");
@@ -27,11 +32,141 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   const { apiUrl = "" } = readBootstrap();
 
+  let currentRoomId = getEffectiveRoomId();
+  const roomCopySelect = document.getElementById("room-copy-select");
+  const roomCopyButton = document.getElementById("room-copy-button");
+  const roomCopyStatus = document.getElementById("room-copy-status");
+
+  const isPredictionReady = () => {
+    return (
+      Array.isArray(semifinalists) &&
+      semifinalists.length === 4 &&
+      !(semifinalists || []).every((p) => p && p.prediction !== "winner")
+    );
+  };
+
+  const updateActionsVisibility = () => {
+    const ready = isPredictionReady();
+
+    if (!isLockedTournament && submitButton) {
+      submitButton.className = ready ? "visible" : "hidden";
+    }
+
+    const showCopy = !isLockedTournament && predictionEsiste && ready;
+    if (roomCopyButton) roomCopyButton.style.display = showCopy ? "" : "none";
+    if (roomCopySelect) roomCopySelect.style.display = showCopy ? "" : "none";
+    if (roomCopyStatus) roomCopyStatus.style.display = showCopy ? "" : "none";
+  };
+
+  const setCopyStatus = (text) => {
+    if (!roomCopyStatus) return;
+    roomCopyStatus.textContent = text || "";
+  };
+
+  const parseHttpStatusFromError = (err) => {
+    const msg = err && err.message ? String(err.message) : "";
+    const m = msg.match(/HTTP\s+(\d{3})\b/);
+    return m ? Number(m[1]) : null;
+  };
+
+  try {
+    const rooms = await roomApi.getMyRooms(apiUrl);
+    if (!currentRoomId && rooms && rooms.length) {
+      const arena = (rooms || []).find((r) => r && String(r.name || "").toLowerCase() === "arena");
+      if (arena && arena.id) currentRoomId = String(arena.id);
+      else if (rooms[0] && rooms[0].id) currentRoomId = String(rooms[0].id);
+    }
+    if (currentRoomId) {
+      setSelectedRoomId(String(currentRoomId));
+    }
+
+    if (roomCopySelect) {
+      roomCopySelect.innerHTML = "";
+      const currentIdStr = currentRoomId ? String(currentRoomId) : "";
+      const others = (rooms || []).filter((r) => String(r.id) !== currentIdStr);
+      others.forEach((r) => {
+        const opt = document.createElement("option");
+        opt.value = String(r.id);
+        opt.textContent = r && r.name ? String(r.name) : String(r.id);
+        roomCopySelect.appendChild(opt);
+      });
+    }
+
+    if (roomCopyButton) {
+      roomCopyButton.addEventListener("click", async () => {
+        const toRoomId = roomCopySelect && roomCopySelect.value ? String(roomCopySelect.value) : "";
+        if (!toRoomId) {
+          setCopyStatus("Seleziona una stanza di destinazione");
+          return;
+        }
+
+        if (String(toRoomId) === String(currentRoomId || "")) {
+          setCopyStatus("La stanza di destinazione è già quella corrente");
+          return;
+        }
+
+        setCopyStatus("Copia in corso...");
+        try {
+          await predictionApi.copyPredictionToRoom(
+            {
+              tournamentId,
+              fromRoomId: currentRoomId || null,
+              toRoomId,
+              overwrite: false,
+            },
+            apiUrl
+          );
+
+          setSelectedRoomId(String(toRoomId));
+          const url = new URL(window.location.href);
+          url.searchParams.set("room_id", String(toRoomId));
+          window.location.href = url.toString();
+        } catch (e) {
+          const status = parseHttpStatusFromError(e);
+          if (status === 409) {
+            const ok = window.confirm(
+              "Esiste già un pronostico nella stanza di destinazione. Vuoi sovrascriverlo?"
+            );
+            if (!ok) {
+              setCopyStatus("Copia annullata");
+              return;
+            }
+
+            try {
+              await predictionApi.copyPredictionToRoom(
+                {
+                  tournamentId,
+                  fromRoomId: currentRoomId || null,
+                  toRoomId,
+                  overwrite: true,
+                },
+                apiUrl
+              );
+
+              setSelectedRoomId(String(toRoomId));
+              const url = new URL(window.location.href);
+              url.searchParams.set("room_id", String(toRoomId));
+              window.location.href = url.toString();
+              return;
+            } catch (e2) {
+              console.error(e2);
+              setCopyStatus("Errore durante la sovrascrittura");
+              return;
+            }
+          }
+
+          console.error(e);
+          setCopyStatus("Errore durante la copia");
+        }
+      });
+    }
+  } catch (e) {
+    // Non bloccare la pagina se rooms API non è disponibile
+  }
+
   document.addEventListener("predictionAvatarUploaded", () => {
     try {
-      if (!isLockedTournament && submitButton) {
-        submitButton.className = "visible";
-      }
+      updateActionsVisibility();
     } catch (e) {}
   });
 
@@ -89,12 +224,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       const canPickWinner = (semifinalists || []).length === 4;
       if (winnerTitle) winnerTitle.style.display = canPickWinner ? "block" : "none";
 
-      if (!isLockedTournament && submitButton) {
-        submitButton.className =
-          canPickWinner && !(semifinalists || []).every((p) => p.prediction !== "winner")
-            ? "visible"
-            : "hidden";
-      }
+      updateActionsVisibility();
     };
 
     semifinalists.forEach((player) => {
@@ -205,7 +335,9 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   const players = await Player.fetchByTournament(tournament, apiUrl);
   //console.log("players", players);
-  const predictionObj = await predictionApi.getUserPredictionByTournament(tournamentId, apiUrl).catch(() => null);
+  const predictionObj = await predictionApi
+    .getUserPredictionByTournament(tournamentId, apiUrl, { roomId: currentRoomId })
+    .catch(() => null);
   const prediction = (predictionObj && predictionObj.rows) || [];
   predictionEsiste = Array.isArray(prediction) && prediction.length > 0;
 
@@ -229,6 +361,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (submitButton) submitButton.className = "hidden";
     if (deleteButton) deleteButton.className = "hidden";
   }
+
+  updateActionsVisibility();
   //console.log("prediction", prediction);
 
   players.forEach((player) => {
@@ -290,7 +424,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     try {
-      await predictionApi.createPrediction(pronostico, apiUrl);
+      await predictionApi.createPrediction(pronostico, apiUrl, { roomId: currentRoomId });
       alert("Pronostico inviato con successo!");
       location.reload();
     } catch (error) {
@@ -332,7 +466,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     try {
-      await predictionApi.deletePrediction(pronostico, apiUrl);
+      await predictionApi.deletePrediction(pronostico, apiUrl, { roomId: currentRoomId });
       location.reload();
       alert("Pronostico eliminato!");
     } catch (error) {

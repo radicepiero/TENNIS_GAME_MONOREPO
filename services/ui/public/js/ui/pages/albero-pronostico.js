@@ -4,6 +4,7 @@ import { APP_ICONS, roundLabels } from "/js/icons.js";
 import { enableFloatingToolbar } from "/js/ui/components/floatingToolbar.js";
 import { treeApi } from "/js/api/treeApi.js";
 import { predictionApi } from "/js/api/predictionApi.js";
+import { getEffectiveRoomId } from "/js/ui/utils/roomSelection.js";
 import {
   setup,
   renderTree,
@@ -91,11 +92,62 @@ async function init() {
   const deleteBtn = $("deleteButton");
   const generatePredictionBtn = $("generatePredictionButton");
   const warn = $("warning");
-  const goPronostico = $("goPronostico");
   const toolbarHandle = $("floating-toolbar-handle");
-  if (toolbarHandle) toolbarHandle.textContent = APP_ICONS.MOVE;
+  if (toolbarHandle) toolbarHandle.textContent = `${APP_ICONS.MOVE} Azioni`;
+
+  const toolbarToggleBtn = $("floating-toolbar-toggle");
+
+  if (saveBtn) saveBtn.textContent = APP_ICONS.SAVE;
+  if (deleteBtn) deleteBtn.textContent = APP_ICONS.DELETE;
 
   enableFloatingToolbar({ toolbarId: "floating-toolbar", storageKey: `floatingToolbar:albero-pronostico:${tournamentId}` });
+
+  const toolbarEl = document.getElementById("floating-toolbar");
+  const collapsedKey = `floatingToolbar:collapsed:albero-pronostico:${tournamentId}`;
+  const setToggleLabel = () => {
+    if (!toolbarToggleBtn || !toolbarEl) return;
+    const isCollapsed = toolbarEl.classList.contains("collapsed");
+    toolbarToggleBtn.textContent = isCollapsed ? APP_ICONS.EXPAND : APP_ICONS.COLLAPSE;
+    const label = isCollapsed ? "Mostra di più" : "Mostra di meno";
+    toolbarToggleBtn.title = label;
+    toolbarToggleBtn.setAttribute("aria-label", label);
+  };
+  const setCollapsed = (next) => {
+    if (!toolbarEl) return;
+    const v = Boolean(next);
+    if (v) toolbarEl.classList.add("collapsed");
+    else toolbarEl.classList.remove("collapsed");
+    setToggleLabel();
+    try {
+      window.localStorage && window.localStorage.setItem(collapsedKey, v ? "1" : "0");
+    } catch (_) {}
+  };
+  const loadCollapsed = () => {
+    try {
+      const raw = window.localStorage ? window.localStorage.getItem(collapsedKey) : null;
+      return raw === "1";
+    } catch (_) {
+      return false;
+    }
+  };
+  setCollapsed(loadCollapsed());
+
+  if (toolbarToggleBtn) {
+    toolbarToggleBtn.type = "button";
+    toolbarToggleBtn.addEventListener("click", () => {
+      if (!toolbarEl) return;
+      setCollapsed(!toolbarEl.classList.contains("collapsed"));
+    });
+    setToggleLabel();
+  }
+
+  if (toolbarHandle) {
+    toolbarHandle.title = "Doppio click per aprire/chiudere";
+    toolbarHandle.addEventListener("dblclick", () => {
+      if (!toolbarEl) return;
+      setCollapsed(!toolbarEl.classList.contains("collapsed"));
+    });
+  }
 
   let dirty = false;
   function setDirty(next) {
@@ -168,7 +220,6 @@ async function init() {
       setDirty(false);
       if (deleteBtn) deleteBtn.classList.remove("hidden");
       updateGeneratePredictionVisibility();
-      if (goPronostico) goPronostico.classList.remove("hidden");
       return;
     }
 
@@ -208,6 +259,7 @@ async function init() {
   if (generatePredictionBtn) {
     generatePredictionBtn.addEventListener("click", async () => {
       try {
+        const roomId = getEffectiveRoomId();
         const tree = getCurrentTree();
         const pred = computePredictionFromTree(tree);
         if (!pred.ready) {
@@ -215,7 +267,7 @@ async function init() {
           return;
         }
 
-        const alreadyExists = await predictionApi.userPredictionExistsByTournament(tournamentId, apiUrl);
+        const alreadyExists = await predictionApi.userPredictionExistsByTournament(tournamentId, apiUrl, { roomId });
         if (alreadyExists) {
           const ok = confirm(
             "Esiste già un pronostico per questo torneo. Continuando il nuovo pronostico sostituirà il precedente. Vuoi continuare?"
@@ -224,8 +276,9 @@ async function init() {
         }
 
         generatePredictionBtn.disabled = true;
-        await predictionApi.createPrediction({ tournament_id: tournamentId, rows: pred.rows }, apiUrl);
-        location.href = `/tornei/${encodeURIComponent(tournamentId)}/pronostico`;
+        await predictionApi.createPrediction({ tournament_id: tournamentId, rows: pred.rows }, apiUrl, { roomId });
+        const qs = roomId ? `?room_id=${encodeURIComponent(String(roomId))}` : "";
+        location.href = `/tornei/${encodeURIComponent(tournamentId)}/pronostico${qs}`;
       } catch (e) {
         generatePredictionBtn.disabled = false;
         showWarning((e && e.message) || "Errore generazione pronostico");

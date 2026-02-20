@@ -24,8 +24,131 @@ document.addEventListener("DOMContentLoaded", () => {
   const changePasswordBtn = document.getElementById("change-password");
   const passwordStatus = document.getElementById("password-status");
 
+  const createRoomName = document.getElementById("create-room-name");
+  const createRoomShort = document.getElementById("create-room-short");
+  const createRoomLong = document.getElementById("create-room-long");
+  const createRoomBtn = document.getElementById("create-room-btn");
+  const createRoomStatus = document.getElementById("create-room-status");
+
+  const invitationsEl = document.getElementById("my-invitations");
+  const invitationsStatus = document.getElementById("my-invitations-status");
+
   let initialSoprannome = soprannomeInput ? soprannomeInput.value : "";
   let initialImageUrl = imageUrlInput ? imageUrlInput.value : "";
+
+  const setCreateRoomStatus = (text) => {
+    if (!createRoomStatus) return;
+    createRoomStatus.textContent = text || "";
+  };
+
+  const setInvitationsStatus = (text) => {
+    if (!invitationsStatus) return;
+    invitationsStatus.textContent = text || "";
+  };
+
+  const renderInvitations = (rows) => {
+    if (!invitationsEl) return;
+    const list = Array.isArray(rows) ? rows : [];
+    if (!list.length) {
+      invitationsEl.innerHTML = "<div>Nessun invito</div>";
+      return;
+    }
+
+    invitationsEl.innerHTML = "";
+    list.forEach((inv) => {
+      const wrap = document.createElement("div");
+      wrap.style.display = "flex";
+      wrap.style.justifyContent = "space-between";
+      wrap.style.alignItems = "center";
+      wrap.style.gap = "10px";
+      wrap.style.padding = "8px 0";
+      wrap.style.borderBottom = "1px solid rgba(0,0,0,0.08)";
+
+      const left = document.createElement("div");
+      const roomName = inv && inv.room && inv.room.name ? String(inv.room.name) : String(inv.room_id);
+      const inviterEmail = inv && inv.inviter && inv.inviter.email ? String(inv.inviter.email) : "";
+      left.textContent = inviterEmail ? `${roomName} (da ${inviterEmail})` : roomName;
+
+      const actions = document.createElement("div");
+      actions.style.display = "flex";
+      actions.style.gap = "8px";
+
+      const accept = document.createElement("button");
+      accept.type = "button";
+      accept.textContent = "Accetta";
+      accept.addEventListener("click", async () => {
+        setInvitationsStatus("Aggiornamento...");
+        try {
+          const res = await fetch(`${apiUrl}/rooms/${encodeURIComponent(String(inv.room_id))}/invitations/accept`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: "{}",
+          });
+          const json = await res.json().catch(() => null);
+          if (!res.ok || !json || json.success !== true) {
+            setInvitationsStatus((json && (json.message || json.error)) || "Errore");
+            return;
+          }
+          setInvitationsStatus("");
+          await refreshInvitations();
+        } catch (e) {
+          setInvitationsStatus("Errore");
+        }
+      });
+
+      const decline = document.createElement("button");
+      decline.type = "button";
+      decline.textContent = "Rifiuta";
+      decline.addEventListener("click", async () => {
+        setInvitationsStatus("Aggiornamento...");
+        try {
+          const res = await fetch(`${apiUrl}/rooms/${encodeURIComponent(String(inv.room_id))}/invitations/decline`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: "{}",
+          });
+          const json = await res.json().catch(() => null);
+          if (!res.ok || !json || json.success !== true) {
+            setInvitationsStatus((json && (json.message || json.error)) || "Errore");
+            return;
+          }
+          setInvitationsStatus("");
+          await refreshInvitations();
+        } catch (e) {
+          setInvitationsStatus("Errore");
+        }
+      });
+
+      actions.append(accept, decline);
+      wrap.append(left, actions);
+      invitationsEl.appendChild(wrap);
+    });
+  };
+
+  const refreshInvitations = async () => {
+    if (!invitationsEl) return;
+    setInvitationsStatus("Caricamento...");
+    try {
+      const res = await fetch(`${apiUrl}/rooms/invitations/my`, {
+        method: "GET",
+        headers: { Accept: "application/json" },
+        credentials: "include",
+      });
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json || json.success !== true) {
+        invitationsEl.innerHTML = "<div>Errore caricamento inviti</div>";
+        setInvitationsStatus("");
+        return;
+      }
+      renderInvitations(json.data || []);
+      setInvitationsStatus("");
+    } catch (e) {
+      invitationsEl.innerHTML = "<div>Errore caricamento inviti</div>";
+      setInvitationsStatus("");
+    }
+  };
 
   const updateSaveVisibility = () => {
     if (!saveBtn) return;
@@ -52,7 +175,53 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  if (createRoomBtn) {
+    createRoomBtn.addEventListener("click", async () => {
+      const name = createRoomName ? String(createRoomName.value || "").trim() : "";
+      const short_description = createRoomShort ? String(createRoomShort.value || "").trim() : "";
+      const long_description = createRoomLong ? String(createRoomLong.value || "").trim() : "";
+
+      if (!name) {
+        setCreateRoomStatus("Inserisci un nome");
+        return;
+      }
+
+      setCreateRoomStatus("Creazione...");
+      try {
+        const res = await fetch(`${apiUrl}/rooms`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({
+            name,
+            short_description: short_description || null,
+            long_description: long_description || null,
+          }),
+        });
+
+        const json = await res.json().catch(() => null);
+        if (!res.ok || !json || json.success !== true) {
+          setCreateRoomStatus((json && (json.message || json.error)) || "Errore");
+          return;
+        }
+
+        const room = json.data || null;
+        const newId = room && room.id ? String(room.id) : "";
+        if (!newId) {
+          setCreateRoomStatus("Stanza creata");
+          return;
+        }
+
+        window.location.href = `/stanze?room_id=${encodeURIComponent(String(newId))}`;
+      } catch (e) {
+        setCreateRoomStatus("Errore");
+      }
+    });
+  }
+
   updateSaveVisibility();
+
+  refreshInvitations();
 
   saveBtn.addEventListener("click", async () => {
     setStatus(statusEl, "Salvataggio...");

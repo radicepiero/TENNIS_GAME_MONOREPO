@@ -37,7 +37,12 @@ async function init() {
   const apiUrl = bootstrap?.dataset?.apiUrl || "";
   const tournamentId = bootstrap?.dataset?.tournamentId || "";
 
-  enableFloatingToolbar({ toolbarId: "floating-toolbar", storageKey: `floatingToolbar:albero-superuser:${tournamentId}` });
+  if (document.getElementById("floating-toolbar")) {
+    enableFloatingToolbar({
+      toolbarId: "floating-toolbar",
+      storageKey: `floatingToolbar:albero-superuser:${tournamentId}`,
+    });
+  }
 
   const tournament = (await Tournament.fetchTournament(tournamentId, apiUrl)).data[0];
   document.title = `albero superuser ${tournament.name}`;

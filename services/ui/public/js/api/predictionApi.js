@@ -1,9 +1,10 @@
 import { fetchJson } from "../utils.js";
 
 export const predictionApi = {
-  async getTournamentPredictions(tournamentId, apiUrl) {
+  async getTournamentPredictions(tournamentId, apiUrl, { roomId } = {}) {
+    const qs = roomId ? `?room_id=${encodeURIComponent(String(roomId))}` : "";
     const json = await fetchJson(
-      `${apiUrl}/predictions/tournaments/${tournamentId}`,
+      `${apiUrl}/predictions/tournaments/${tournamentId}${qs}`,
       { method: "GET" },
       {
         allowStatus: [404],
@@ -20,9 +21,10 @@ export const predictionApi = {
     return (json && json.data) || [];
   },
 
-  async getUserPredictionByTournament(tournamentId, apiUrl) {
+  async getUserPredictionByTournament(tournamentId, apiUrl, { roomId } = {}) {
+    const qs = roomId ? `?room_id=${encodeURIComponent(String(roomId))}` : "";
     const json = await fetchJson(
-      `${apiUrl}/predictions/tournaments/${tournamentId}/user`,
+      `${apiUrl}/predictions/tournaments/${tournamentId}/user${qs}`,
       { method: "GET" },
       { allowStatus: [404] }
     );
@@ -31,14 +33,15 @@ export const predictionApi = {
     return first || null;
   },
 
-  async getUserPredictionRowsByTournament(tournamentId, apiUrl) {
-    const p = await predictionApi.getUserPredictionByTournament(tournamentId, apiUrl);
+  async getUserPredictionRowsByTournament(tournamentId, apiUrl, { roomId } = {}) {
+    const p = await predictionApi.getUserPredictionByTournament(tournamentId, apiUrl, { roomId });
     return (p && p.rows) || [];
   },
 
-  async userPredictionExistsByTournament(tournamentId, apiUrl) {
+  async userPredictionExistsByTournament(tournamentId, apiUrl, { roomId } = {}) {
+    const qs = roomId ? `?room_id=${encodeURIComponent(String(roomId))}` : "";
     const json = await fetchJson(
-      `${apiUrl}/predictions/tournaments/${tournamentId}/user`,
+      `${apiUrl}/predictions/tournaments/${tournamentId}/user${qs}`,
       { method: "GET" },
       { allowStatus: [404] }
     );
@@ -46,24 +49,40 @@ export const predictionApi = {
     return Array.isArray(data) ? data.length > 0 : Boolean(data);
   },
 
-  async createPrediction(pronostico, apiUrl) {
+  async createPrediction(pronostico, apiUrl, { roomId } = {}) {
+    const payload = roomId ? { ...pronostico, room_id: roomId } : pronostico;
     return await fetchJson(`${apiUrl}/predictions`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(pronostico),
+      body: JSON.stringify(payload),
     });
   },
 
-  async deletePrediction(pronostico, apiUrl) {
+  async deletePrediction(pronostico, apiUrl, { roomId } = {}) {
+    const payload = roomId ? { ...pronostico, room_id: roomId } : pronostico;
     return await fetchJson(`${apiUrl}/predictions`, {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(pronostico),
+      body: JSON.stringify(payload),
     });
   },
 
-  async getUserPredictions(apiUrl) {
-    const json = await fetchJson(`${apiUrl}/predictions/user`, { method: "GET" });
+  async copyPredictionToRoom({ tournamentId, fromRoomId, toRoomId, overwrite }, apiUrl) {
+    return await fetchJson(`${apiUrl}/predictions/copy`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        tournament_id: tournamentId,
+        from_room_id: fromRoomId,
+        to_room_id: toRoomId,
+        overwrite: Boolean(overwrite),
+      }),
+    });
+  },
+
+  async getUserPredictions(apiUrl, { roomId } = {}) {
+    const qs = roomId ? `?room_id=${encodeURIComponent(String(roomId))}` : "";
+    const json = await fetchJson(`${apiUrl}/predictions/user${qs}`, { method: "GET" });
     return (json && json.data) || [];
   },
 
