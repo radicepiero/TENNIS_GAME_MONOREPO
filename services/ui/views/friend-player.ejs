@@ -46,9 +46,14 @@
 
 <script type="module">
   import { countryToFlag } from "/js/icons.js";
+  import { roomApi } from "/js/api/roomApi.js";
+  import { getEffectiveRoomId, setSelectedRoomId } from "/js/ui/utils/roomSelection.js";
 
   const apiUrl = "<%= apiUrl %>";
   const playerId = "<%= playerId %>";
+
+  let currentRoomId = getEffectiveRoomId();
+  const roomSelect = document.getElementById("room-select");
 
   function el(tag, attrs = {}, ...children) {
     const n = document.createElement(tag);
@@ -154,7 +159,8 @@
         const title = (r && r.tournament_nickname) || tid;
         const ruolo = formatRole(r && r.prediction);
         const fine = r && r.tournament_datafine ? String(r.tournament_datafine).slice(0, 10) : "";
-        const href = tid ? `/tornei/${encodeURIComponent(tid)}/pronostico` : "";
+        const qs = currentRoomId ? `?room_id=${encodeURIComponent(String(currentRoomId))}` : "";
+        const href = tid ? `/tornei/${encodeURIComponent(tid)}/pronostico${qs}` : "";
 
         const card = el(
           "div",
@@ -281,7 +287,7 @@
       }
 
       const pickedRes = await fetch(
-        `${apiUrl}/predictions/user/player/${encodeURIComponent(playerId)}`,
+        `${apiUrl}/predictions/user/player/${encodeURIComponent(playerId)}${currentRoomId ? `?room_id=${encodeURIComponent(String(currentRoomId))}` : ""}`,
         { method: "GET", credentials: "include" }
       );
       if (pickedRes.ok) {
@@ -303,6 +309,10 @@
   } else {
     load();
   }
+
+  (async () => {
+    if (playerId) await load();
+  })();
 
   const searchInput = document.getElementById("playerSearch");
   const searchResults = document.getElementById("searchResults");
@@ -340,7 +350,8 @@
       row.textContent = `${name}${country ? ` (${flag ? `${flag} ` : ""}${country})` : ""}`;
       row.addEventListener("click", () => {
         if (!id) return;
-        window.location.href = `/friend/player/${encodeURIComponent(id)}`;
+        const qs = currentRoomId ? `?room_id=${encodeURIComponent(String(currentRoomId))}` : "";
+        window.location.href = `/friend/player/${encodeURIComponent(id)}${qs}`;
       });
       row.addEventListener("mouseover", () => {
         row.style.backgroundColor = "#f0f0f0";

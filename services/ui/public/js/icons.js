@@ -7,19 +7,51 @@ export const APP_ICONS = {
   VIEW: "👁️",
   CRYSTAL_BALL: "🔮",
   RESULTS: "📊",
+  PLAYER_TBD: "🫸",
+  WINNER: "👍",
+  LOOSER: "👎",
   CLOSE: "❌",
   SETTINGS: "⚙️",
+  MOVE: "⤢",
+  EXPAND: "➕",
+  COLLAPSE: "➖",
+  DEFAULT_PLAYER: "👤",
 };
 export const APP_BUTTONS = {
   EDIT: APP_ICONS.EDIT+" Modifica",
-  DELETE: "🗑️ Elimina",
-  SAVE: "💾 Salva",
-  ADD: "➕ Aggiungi",
-  SEARCH: "🔍 Cerca",
-  VIEW: "👁️ Visualizza",
-  CRYSTAL_BALL: "🔮 Pronostici",
-  RESULTS: "📊 Risultati",
+  DELETE: APP_ICONS.DELETE+" Elimina",
+  SAVE: APP_ICONS.SAVE+" Salva",
+  ADD: APP_ICONS.ADD+" Aggiungi",
+  SEARCH: APP_ICONS.SEARCH+" Cerca",
+  VIEW: APP_ICONS.VIEW+" Visualizza",
+  CRYSTAL_BALL: APP_ICONS.CRYSTAL_BALL+" Pronostici",
+  RESULTS: APP_ICONS.RESULTS+" Risultati",
+  PLAYER_TBD: APP_ICONS.PLAYER_TBD + " giocatore da stabilire",
 };
+
+export const DEFAULT_PLAYER_IMG = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
+
+export const roundLabels = [
+  "Pronostici",
+  "128-esimi",
+  "64-esimi",
+  "32-esimi",
+  "16-esimi",
+  "Ottavi",
+  "Quarti",
+  "Semifinali",
+  "Finale",
+];
+
+export const phaseLabels = [
+  roundLabels[0],
+  roundLabels[3],
+  roundLabels[4],
+  roundLabels[5],
+  roundLabels[6],
+  roundLabels[7],
+  roundLabels[8],
+];
 export const COUNTRY_CODE_MAP = {
 AD: { iso3: "AND", name_it: "Andorra" },
 AE: { iso3: "ARE", name_it: "Emirati Arabi Uniti" },
@@ -314,7 +346,12 @@ export function countryToFlagIconUrl(countryRaw, { format = "svg", size = 48 } =
   if (String(format).toLowerCase() === "png") return iso2ToFlagPngUrl(iso2, size);
   return iso2ToFlagSvgUrl(iso2);
 }
-
+export function countryToFlag(countryRaw) {
+  const iso2 = countryToIso2(countryRaw);
+  if (!iso2) return "";
+  if (!supportsFlagEmoji()) return iso2;
+  return iso2ToFlag(iso2);
+}
 export function countryToIso2(countryRaw) {
   const raw = String(countryRaw || "").trim();
   if (!raw) return "";
@@ -379,11 +416,6 @@ export function supportsFlagEmoji() {
   }
 }
 
-export function countryToFlag(countryRaw) {
-  const iso2 = countryToIso2(countryRaw);
-  if (!iso2) return "";
-  if (!supportsFlagEmoji()) return iso2;
-  return iso2ToFlag(iso2);
-}
+
 
 

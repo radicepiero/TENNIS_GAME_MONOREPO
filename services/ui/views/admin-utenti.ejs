@@ -1,13 +1,14 @@
 <%- include('partials/head'); -%>
 <link rel="stylesheet" href="/css/hamburger.css" />
+<link rel="stylesheet" href="/css/admin.css" />
 <%- include('partials/header'); -%> <%- include('partials/hamburger'); -%>
 
 <h1>Admin Utenti</h1>
 
-<div id="admin-users" data-api-url="<%= apiUrl %>" style="max-width: 900px; margin: 0 auto; padding: 0 12px;">
+<div id="admin-users" class="admin-page admin-page--users" data-api-url="<%= apiUrl %>">
   <h2>Crea utente friend</h2>
 
-  <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; max-width: 700px;">
+  <div class="admin-modal__form" style="max-width: 700px;">
     <label>Email
       <input id="new-email" type="email" placeholder="email" />
     </label>
@@ -22,28 +23,28 @@
     </label>
   </div>
 
-  <div style="margin-top: 12px; display:flex; gap: 10px; align-items:center;">
+  <div class="admin-actionbar admin-actionbar--compact" style="margin-top: 12px;">
     <button id="create-friend" type="button">Crea friend</button>
     <span id="create-status"></span>
   </div>
 
-  <hr style="margin: 22px 0;" />
+  <hr class="admin-hr" />
 
   <h2>Utenti</h2>
-  <div style="margin: 10px 0; display:flex; gap: 10px; align-items:center;">
+  <div class="admin-actionbar admin-actionbar--compact">
     <button id="reload" type="button">Ricarica</button>
     <span id="list-status"></span>
   </div>
 
-  <div style="overflow-x:auto;">
-    <table id="users-table" style="width:100%; border-collapse: collapse;">
+  <div class="admin-table-wrap" style="overflow-x:auto;">
+    <table id="users-table" class="admin-table" style="width:100%; border-collapse: collapse;">
       <thead>
         <tr>
-          <th style="text-align:left; border-bottom: 1px solid #ddd; padding: 8px;">UUID</th>
-          <th style="text-align:left; border-bottom: 1px solid #ddd; padding: 8px;">Email</th>
-          <th style="text-align:left; border-bottom: 1px solid #ddd; padding: 8px;">Soprannome</th>
-          <th style="text-align:left; border-bottom: 1px solid #ddd; padding: 8px;">Level</th>
-          <th style="text-align:left; border-bottom: 1px solid #ddd; padding: 8px;">Azioni</th>
+          <th>UUID</th>
+          <th>Email</th>
+          <th>Soprannome</th>
+          <th>Level</th>
+          <th>Azioni</th>
         </tr>
       </thead>
       <tbody></tbody>
@@ -51,5 +52,5 @@
   </div>
 </div>
 
-<script src="/js/admin-utenti.js"></script>
+<script type="module" src="/js/ui/pages/admin-utenti.js"></script>
 <%- include('partials/footer'); -%>

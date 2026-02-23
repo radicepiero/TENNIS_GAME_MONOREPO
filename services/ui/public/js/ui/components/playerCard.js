@@ -1,0 +1,140 @@
+import { countryToFlag, DEFAULT_PLAYER_IMG } from "/js/icons.js";
+
+class PlayerCard {
+  constructor(player) {
+    this.player = player;
+    this.element = this.createPlayerElement();
+  }
+
+  createPlayerElement() {
+    const div = document.createElement("div");
+    div.id = `player-${this.player.name}`;
+    div.classList.add("player");
+
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.style.display = "none";
+
+    const img = document.createElement("img");
+    img.src = this.player.image_src || DEFAULT_PLAYER_IMG;
+    img.alt = this.player.image_alt || this.player.name;
+
+    const playerId = this.player && this.player.id !== undefined && this.player.id !== null ? String(this.player.id) : "";
+    const friendHref = playerId ? `/friend/player/${encodeURIComponent(playerId)}` : "";
+
+    const imgWrap = document.createElement(friendHref ? "a" : "div");
+    if (friendHref) {
+      imgWrap.href = friendHref;
+      imgWrap.style.textDecoration = "none";
+    }
+    imgWrap.appendChild(img);
+
+    const punteggio = document.createElement("div");
+
+    const rankings = this.player && Array.isArray(this.player.Rankings) ? this.player.Rankings : [];
+    punteggio.textContent = rankings.length
+      ? `${rankings[0].ranking} : ${this.player.puntiSemifinalist} / ${this.player.puntiWinner}`
+      : "N/D";
+
+    const label = document.createElement("label");
+    label.textContent = this.player.name;
+
+    const labelWrap = document.createElement(friendHref ? "a" : "div");
+    if (friendHref) {
+      labelWrap.href = friendHref;
+      labelWrap.style.textDecoration = "none";
+      labelWrap.style.color = "inherit";
+    }
+    labelWrap.appendChild(label);
+
+    const country = document.createElement("div");
+    const c = this.player && this.player.country ? String(this.player.country) : "";
+    const flag = c ? countryToFlag(c) : "";
+    country.textContent = c ? `${flag ? `${flag} ` : ""}${c}` : "";
+
+    div.append(punteggio, imgWrap, checkbox, labelWrap, country);
+    return div;
+  }
+
+  getElement() {
+    return this.element;
+  }
+}
+
+export function buildPlayerInfoElement(player) {
+  const isPlaceholder = player && Number(player.id) === 0;
+  const playerDiv = document.createElement("div");
+  playerDiv.id = player && typeof player.id !== "undefined" ? player.id : "";
+  playerDiv.className = "player";
+  playerDiv.dataset.playerid = player && typeof player.id !== "undefined" ? player.id : "";
+
+  const img = document.createElement("img");
+  img.className = "player-avatar";
+  img.src = (player && player.image_src) || DEFAULT_PLAYER_IMG;
+  img.alt = isPlaceholder ? "" : (player && (player.image_alt || player.name)) || "";
+  if (isPlaceholder) img.style.display = "none";
+
+  const nameDiv = document.createElement("span");
+  nameDiv.textContent = (player && player.name) || "";
+
+  const ratingDiv = document.createElement("span");
+  const rankings = player && Array.isArray(player.Rankings) ? player.Rankings : [];
+  const ranking = rankings.length ? rankings[0].ranking : "N/D";
+  ratingDiv.textContent = isPlaceholder ? "" : `[${ranking}] `;
+
+  const prizeDiv = document.createElement("span");
+  const pw = player && typeof player.puntiWinner === "number" ? player.puntiWinner : 0;
+  const ps = player && typeof player.puntiSemifinalist === "number" ? player.puntiSemifinalist : 0;
+  prizeDiv.textContent = isPlaceholder ? "" : ` {${pw}/${ps}}`;
+
+  const c = player && player.country ? String(player.country) : "";
+  const flag = c ? countryToFlag(c) : "";
+  const countryDiv = document.createElement("span");
+  countryDiv.textContent = isPlaceholder ? "" : c ? ` ${flag ? `${flag} ` : ""}${c}` : "";
+
+  playerDiv.append(ratingDiv, img, nameDiv, countryDiv, prizeDiv);
+  return playerDiv;
+}
+
+export function buildSelectablePlayerCard(player, { onCheckboxChange } = {}) {
+  const el = buildPlayerInfoElement(player);
+
+  const checkbox = document.createElement("input");
+  checkbox.type = "checkbox";
+  checkbox.value = player && player.name ? player.name : "";
+  if (typeof onCheckboxChange === "function") {
+    checkbox.onchange = (event) => onCheckboxChange(event, player);
+  }
+
+  const playerId = player && player.id !== undefined && player.id !== null ? String(player.id) : "";
+  const friendHref = playerId ? `/friend/player/${encodeURIComponent(playerId)}` : "";
+
+  if (friendHref) {
+    const img = el.querySelector("img");
+    if (img && img.parentElement) {
+      const imgLink = document.createElement("a");
+      imgLink.href = friendHref;
+      imgLink.style.textDecoration = "none";
+      img.parentElement.replaceChild(imgLink, img);
+      imgLink.appendChild(img);
+    }
+
+    const nameSpan = img ? img.nextElementSibling : null;
+    if (nameSpan && nameSpan.tagName === "SPAN") {
+      const nameLink = document.createElement("a");
+      nameLink.href = friendHref;
+      nameLink.style.textDecoration = "none";
+      nameLink.style.color = "inherit";
+      nameSpan.parentElement.replaceChild(nameLink, nameSpan);
+      nameLink.appendChild(nameSpan);
+    }
+  }
+
+  const insertBeforeNode = el.children.length >= 2 ? el.children[2] : null;
+  if (insertBeforeNode) el.insertBefore(checkbox, insertBeforeNode);
+  else el.appendChild(checkbox);
+
+  return el;
+}
+
+export { PlayerCard };

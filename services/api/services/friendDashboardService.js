@@ -1,5 +1,17 @@
 const db = require("../models");
 
+const DEFAULT_ROOM_NAME = "Arena";
+
+const resolveRoomIdOrDefault = async (roomId) => {
+  if (roomId) return Number(roomId);
+  const [rows] = await db.sequelize.query(
+    "SELECT id FROM public.rooms WHERE name = :name LIMIT 1;",
+    { replacements: { name: DEFAULT_ROOM_NAME } }
+  );
+  const id = rows && rows[0] && rows[0].id ? Number(rows[0].id) : null;
+  return id;
+};
+
 const getSuperuserId = async () => {
   let superuserId = process.env.SUPERUSER;
   if (superuserId) return superuserId;
@@ -58,9 +70,10 @@ const buildPointFunctionsFromScripts = (scripts, tournamentId) => {
   }
 };
 
-async function buildMyPlayers(userUuid) {
+async function buildMyPlayers(userUuid, roomId) {
+  const rid = await resolveRoomIdOrDefault(roomId);
   const predictions = await db.Prediction.findAll({
-    where: { user_uuid: userUuid },
+    where: { user_uuid: userUuid, ...(rid ? { room_id: rid } : {}) },
     include: [
       {
         model: db.PredictionRow,
@@ -306,8 +319,10 @@ function normalizeStatus(s) {
   return s ? String(s).toLowerCase() : "";
 }
 
-async function getFriendDashboard(userUuid) {
+async function getFriendDashboard(userUuid, roomId) {
   if (!userUuid) throw new Error("userUuid mancante");
+
+  const rid = await resolveRoomIdOrDefault(roomId);
 
   const tournaments = await db.Tournament.findAll({
     order: [["datafine", "DESC"]],
@@ -355,6 +370,7 @@ async function getFriendDashboard(userUuid) {
     db.Prediction.findAll({
       where: {
         user_uuid: userUuid,
+        ...(rid ? { room_id: rid } : {}),
         ...(tournamentIds.length ? { tournament_id: tournamentIds } : {}),
       },
     }),
@@ -418,7 +434,7 @@ async function getFriendDashboard(userUuid) {
 
   const year = new Date().getFullYear();
 
-  const myPlayers = await buildMyPlayers(userUuid);
+  const myPlayers = await buildMyPlayers(userUuid, rid);
 
   return {
     currentYear: year,

@@ -1,0 +1,33 @@
+<%- include('partials/head'); -%>
+<link rel="stylesheet" href="/css/hamburger.css" />
+<%- include('partials/header'); -%>
+<%- include('partials/hamburger'); -%>
+
+<h1 style="text-align:center;">Stanze</h1>
+
+<div id="room-status" style="text-align:center; margin: 0 0 18px;"></div>
+
+<div style="max-width: 980px; margin: 0 auto; padding: 0 12px;">
+  <h2>Invita</h2>
+  <div style="border: 1px solid rgba(0,0,0,0.12); border-radius: 12px; padding: 10px 12px; background: rgba(255,255,255,0.9);">
+    <div style="display:flex; gap: 10px; flex-wrap: wrap; align-items:center;">
+      <input id="invite-search" type="text" placeholder="Cerca per email o soprannome..." style="flex: 1; min-width: 240px; padding: 10px; border-radius: 10px; border: 1px solid #ccc;" />
+      <button id="invite-search-btn" type="button">Cerca</button>
+    </div>
+    <div id="invite-results" style="margin-top: 10px;"></div>
+    <div id="invite-status" style="margin-top: 8px;"></div>
+  </div>
+
+  <h2>Membri</h2>
+  <div id="room-members"></div>
+
+  <h2 style="margin-top: 18px;">Invitati (in attesa)</h2>
+  <div id="room-invitees"></div>
+
+  <h2 style="margin-top: 18px;">Tornei</h2>
+  <div id="room-tournaments"></div>
+</div>
+
+<script type="application/json" id="bootstrap"><%- JSON.stringify({ apiUrl }) %></script>
+<script type="module" src="/js/ui/pages/stanze.js?v=<%= Date.now() %>"></script>
+<%- include('partials/footer'); -%>

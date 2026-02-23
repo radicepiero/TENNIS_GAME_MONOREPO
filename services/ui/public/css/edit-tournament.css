@@ -1,0 +1,113 @@
+#form {
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+}
+
+#form > label {
+  margin: 0;
+  min-width: 0;
+}
+
+.tournament-nav-arrow {
+  position: fixed;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 2500;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 999px;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  background: rgba(255, 255, 255, 0.92);
+  color: inherit;
+  text-decoration: none;
+  font-size: 28px;
+  line-height: 1;
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.18);
+}
+
+.tournament-nav-arrow--prev {
+  left: 10px;
+}
+
+.tournament-nav-arrow--next {
+  right: 10px;
+}
+
+#scripts-fieldset {
+  margin: 8px 0;
+  padding: 10px;
+}
+
+#scripts-fieldset legend {
+  font-size: 0.95em;
+}
+
+#scripts-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 6px 14px;
+}
+
+#scripts-list > label {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 4px 6px;
+  border-radius: 10px;
+  margin: 0;
+  font-size: 0.9em;
+  line-height: 1.2;
+  min-width: 0;
+}
+
+#scripts-list > label > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.predictions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 12px;
+  align-items: stretch;
+}
+
+.prediction-card {
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.92);
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.prediction-card__row {
+  display: grid;
+  grid-template-columns: 110px 1fr;
+  gap: 10px;
+  align-items: baseline;
+}
+
+.prediction-card__label {
+  font-weight: 800;
+  opacity: 0.75;
+  white-space: nowrap;
+}
+
+.prediction-card__value {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

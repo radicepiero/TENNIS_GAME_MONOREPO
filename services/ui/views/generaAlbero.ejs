@@ -37,9 +37,11 @@
 <script src="https://fperucic.github.io/treant-js/Treant.js"></script>
 
 <script type="module">
-  const user = <%- JSON.stringify(user || null) %>;
-  import { Tournament } from "/js/Tournament.js";
+  import { Tournament } from "/js/domain/Tournament.js";
   import { APP_ICONS } from "/js/icons.js";
+  import { roundLabels } from "/js/icons.js";
+
+  const user = <%- JSON.stringify(user || null) %>;
   const apiUrl = "<%= apiUrl %>";
   const tournamentId = "<%= tournamentId %>";
   const tournament = (await Tournament.fetchTournament(tournamentId, apiUrl))
@@ -56,7 +58,6 @@
   import {
     setup,
     renderTree,
-    roundLabels,
     populateRoundSelects,
     saveAlbero,
     saveNewAlbero,
@@ -66,12 +67,12 @@
     getAlberi,
     setEditable,
     setWinnersEditable,
-  } from "/js/alberoTorneo.js?v=<%= Date.now() %>";
+  } from "/js/ui/components/alberoTorneo.js?v=<%= Date.now() %>";
 
   document.title = `programma ${tournament.name}`;
   document.getElementById("nome-torneo").textContent = tournament.name;
 
-  populateRoundSelects(tournament, roundLabels);
+  populateRoundSelects(tournament, roundLabels.slice(1));
 
   setup(tournament, user, apiUrl);
 

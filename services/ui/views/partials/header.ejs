@@ -1,5 +1,8 @@
   </head>
   <body>
+    <script>
+      document.documentElement.dataset.apiUrl = "<%= typeof apiUrl !== 'undefined' ? apiUrl : '/api' %>";
+    </script>
     <nav>
       <h1><a href="/">Popostapo tennis</a></h1>
       <ul>
@@ -17,6 +20,12 @@
               />
             </a>
           </li>
+          <li>
+            <label for="room-select" style="display: inline-flex; align-items: center; gap: 6px;">
+              Stanza
+              <select id="room-select" style="max-width: 220px;"></select>
+            </label>
+          </li>
           <li><a href="/logout">Log out</a></li>
           <% } else { %>
           <li><a href="/login">Log in</a></li>
@@ -25,3 +34,6 @@
         </ul>
       </ul>
     </nav>
+    <% if (user) { %>
+    <script type="module" src="/js/ui/components/headerRoomSelect.js?v=<%= Date.now() %>"></script>
+    <% } %>

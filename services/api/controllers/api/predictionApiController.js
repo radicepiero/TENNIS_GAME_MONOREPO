@@ -32,6 +32,50 @@ const assertTournamentEditable = async (tournamentId, res) => {
   }
 };
 
+const copyPredictionToRoom = async (req, res) => {
+  try {
+    const user_uuid = res.locals.user.dataValues.uuid;
+    const body = req.body || {};
+    const tournament_id = body.tournament_id || body.tournamentId;
+    const from_room_id = body.from_room_id || body.fromRoomId || body.room_id || body.roomId || null;
+    const to_room_id = body.to_room_id || body.toRoomId;
+    const overwrite = Boolean(body.overwrite);
+
+    if (!tournament_id) {
+      return res.status(400).json({ success: false, message: "tournament_id mancante" });
+    }
+    if (!to_room_id) {
+      return res.status(400).json({ success: false, message: "to_room_id mancante" });
+    }
+
+    const ok = await assertTournamentEditable(tournament_id, res);
+    if (!ok) return;
+
+    const prediction = await predictionService.copyPredictionToRoom({
+      user_uuid,
+      tournament_id,
+      from_room_id,
+      to_room_id,
+      overwrite,
+    });
+
+    return res.status(200).json({ success: true, data: prediction });
+  } catch (e) {
+    const code = e && e.code ? String(e.code) : "";
+    if (code === "TARGET_EXISTS") {
+      return res.status(409).json({ success: false, message: e.message });
+    }
+    if (code === "SOURCE_NOT_FOUND") {
+      return res.status(404).json({ success: false, message: e.message });
+    }
+    if (code === "ROOM_NOT_FOUND") {
+      return res.status(400).json({ success: false, message: e.message });
+    }
+    console.error("Errore copyPredictionToRoom:", e);
+    return res.status(500).json({ success: false, message: "Errore interno del server" });
+  }
+};
+
 const getPredictions = async (req, res) => {
   try {
     const pr = await predictionService.readPredictions();
@@ -84,7 +128,8 @@ const getPredictionsByUser = async (req, res) => {
     if (!user_uuid) {
       return res.status(401).json({ success: false, message: "Unauthorized" });
     }
-    const predictions = await predictionService.readPredictionsUser(user_uuid);
+    const room_id = (req.query && (req.query.room_id || req.query.roomId)) || null;
+    const predictions = await predictionService.readPredictionsUser(user_uuid, room_id);
     res.status(200).json({ success: true, data: predictions });
   } catch (error) {
     console.error("Errore nel recupero delle predictions user:", error);
@@ -105,7 +150,8 @@ const getPredictionsByUserForPlayer = async (req, res) => {
       return res.status(400).json({ success: false, message: "playerId mancante" });
     }
 
-    const rows = await predictionService.readPredictionsUserForPlayer(user_uuid, playerId);
+    const room_id = (req.query && (req.query.room_id || req.query.roomId)) || null;
+    const rows = await predictionService.readPredictionsUserForPlayer(user_uuid, playerId, room_id);
     res.status(200).json({ success: true, data: rows });
   } catch (error) {
     console.error("Errore nel recupero delle predictions user per player:", error);
@@ -152,7 +198,8 @@ const getPredictionsByTournamentId = async (req, res) => {
       }
     }
 
-    const prediction = await predictionService.readPredictionsTournament(id);
+    const room_id = (req.query && (req.query.room_id || req.query.roomId)) || null;
+    const prediction = await predictionService.readPredictionsTournament(id, room_id);
     //console.log("DCcC", prediction);
     if (!prediction || prediction.length === 0) {
       return res
@@ -178,8 +225,13 @@ const getPredictionByUserIdTournamentId = async (req, res) => {
     }
     const user_uuid = res.locals.user.dataValues.uuid;
 
+    const room_id =
+      (req.query && (req.query.room_id || req.query.roomId)) ||
+      (req.body && (req.body.room_id || req.body.roomId)) ||
+      null;
+
     const prediction =
-      await predictionService.readPredictionByUserIdTournamentId(user_uuid, id);
+      await predictionService.readPredictionByUserIdTournamentId(user_uuid, id, room_id);
 
     if (!prediction || prediction.length === 0) {
       return res
@@ -201,6 +253,11 @@ const postPrediction = async (req, res) => {
 
   prediction.user_uuid = res.locals.user.dataValues.uuid;
 
+  prediction.room_id =
+    (prediction && (prediction.room_id || prediction.roomId)) ||
+    (req.query && (req.query.room_id || req.query.roomId)) ||
+    null;
+
   console.log(req.cookies.jwt, "prediction.user_uuid", prediction.user_uuid);
   try {
     const ok = await assertTournamentEditable(prediction.tournament_id, res);
@@ -209,7 +266,8 @@ const postPrediction = async (req, res) => {
     const esistePrediction =
       await predictionService.readPredictionByUserIdTournamentId(
         prediction.user_uuid,
-        prediction.tournament_id
+        prediction.tournament_id,
+        prediction.room_id
       );
     console.log("esistePrediction", esistePrediction);
     if (esistePrediction.length === 0) {
@@ -233,9 +291,15 @@ const deletePredictionById = async (req, res) => {
     const ok = await assertTournamentEditable(_prediction.tournament_id, res);
     if (!ok) return;
 
+    const room_id =
+      (_prediction && (_prediction.room_id || _prediction.roomId)) ||
+      (req.query && (req.query.room_id || req.query.roomId)) ||
+      null;
+
     pred = await predictionService.readPredictionByUserIdTournamentId(
       user_uuid,
-      _prediction.tournament_id
+      _prediction.tournament_id,
+      room_id
     );
     console.log("pred", pred);
     if (pred) {
@@ -258,6 +322,7 @@ module.exports = {
   getPredictionsByUserForPlayer,
   postPrediction,
   deletePredictionById,
+  copyPredictionToRoom,
 };
 
 const getUuidDaToken = async (token) => {
