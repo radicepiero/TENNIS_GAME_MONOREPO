@@ -399,7 +399,6 @@ async function renderColumnsForPhase(faseMenu) {
 
 (async function init() {
   try {
-    await setupRoomSelector();
     await renderColumnsForPhase(0);
   } catch (e) {
     const el = document.getElementById("columns");
