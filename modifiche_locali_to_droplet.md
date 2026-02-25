@@ -99,7 +99,7 @@ git clean -fd \
   -e .env.prod \
   -e services/ui/public/uploads \
   -e services/ui/public/immagini \
-  -e services/api/public/immagini
+  
 ```
 
 ## 3-bis) Droplet: blocco unico copia-incolla (conservativo)
@@ -113,7 +113,6 @@ git fetch origin \
     -e .env.prod \
     -e services/ui/public/uploads \
     -e services/ui/public/immagini \
-    -e services/api/public/immagini \
   && docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build
 ```
 

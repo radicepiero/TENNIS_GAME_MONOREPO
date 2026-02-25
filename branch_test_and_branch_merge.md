@@ -114,7 +114,7 @@ git fetch origin \
     -e .env.prod \
     -e services/ui/public/uploads \
     -e services/ui/public/immagini \
-    -e services/api/public/immagini
+ 
 ```
 
 ### 4.2 Rebuild e restart stack produzione
