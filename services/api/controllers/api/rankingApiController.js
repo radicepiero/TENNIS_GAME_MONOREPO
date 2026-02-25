@@ -1,7 +1,7 @@
 const serviceRanking = require("../../services/rankingService");
 const utils = require("../../services/utilsService");
 const fs = require("fs");
-const { importRankingFromCsv } = require("../../scripts/rankingImport");
+const { importRankingFromCsv } = require("../../services/rankingImportService");
 
 const getRankingByDate = async (req, res) => {
   try {
