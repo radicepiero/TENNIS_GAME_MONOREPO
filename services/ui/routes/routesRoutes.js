@@ -353,13 +353,10 @@ router.get("/tornei/:id/sviluppo", async (req, res) => {
     let tournamentName = "";
     if (response.ok) {
       const json = await response.json();
-      if (json && json.data && json.data[0] && json.data[0].name) {
-        tournamentName = json.data[0].name;
-      } else if (json && json.data && !Array.isArray(json.data) && json.data.name) {
-        tournamentName = json.data.name;
-      } else if (json && json.name) {
-        tournamentName = json.name;
-      }
+      const t = json && json.data && Array.isArray(json.data) ? json.data[0] : (json && json.data ? json.data : json);
+      const nick = t && t.nickname ? String(t.nickname).trim() : "";
+      const name = t && t.name ? String(t.name).trim() : "";
+      tournamentName = nick || name;
     }
 
     res.render("sviluppoTorneo", {
