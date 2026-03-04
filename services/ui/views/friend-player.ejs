@@ -45,7 +45,7 @@
 </div>
 
 <script type="module">
-  import { countryToFlag } from "/js/icons.js";
+  import { countryToFlagIconUrl } from "/js/icons.js";
   import { roomApi } from "/js/api/roomApi.js";
   import { getEffectiveRoomId, setSelectedRoomId } from "/js/ui/utils/roomSelection.js";
 
@@ -116,8 +116,19 @@
     const label = el("label", { text: player.name || "" });
 
     const c = player && player.country ? String(player.country) : "";
-    const flag = c ? countryToFlag(c) : "";
-    const country = el("div", { text: c ? `${flag ? `${flag} ` : ""}${c}` : "" });
+    const flagUrl = c ? countryToFlagIconUrl(c, { format: "svg" }) : "";
+    const country = el("div", {});
+    if (flagUrl) {
+      country.appendChild(
+        el("img", {
+          src: flagUrl,
+          alt: c,
+          loading: "lazy",
+          style: "width:18px; height:12px; object-fit:cover; vertical-align:middle; margin-right:6px;",
+        })
+      );
+    }
+    if (c) country.appendChild(document.createTextNode(c));
 
     div.append(punteggio, img, label, country);
     wrap.appendChild(div);
@@ -309,10 +320,6 @@
   } else {
     load();
   }
-
-  (async () => {
-    if (playerId) await load();
-  })();
 
   const searchInput = document.getElementById("playerSearch");
   const searchResults = document.getElementById("searchResults");

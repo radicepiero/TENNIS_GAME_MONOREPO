@@ -3,7 +3,7 @@
   align-items: center !important;
   justify-content: flex-start !important;
   gap: 8px !important;
-  margin-bottom: 10px !important;
+  margin-bottom: 6px !important;
   flex-wrap: wrap !important;
 }
 #filter-bar.visible {
@@ -13,27 +13,29 @@
   display: flex !important;
   align-items: center !important;
   gap: 4px !important;
-  height: 30px !important;
+  height: 24px !important;
+  margin: 0 !important;
+  padding: 0 !important;
 }
 
 .filter-label select {
-  height: 30px !important;
-  padding: 2px 6px !important;
-  font-size: 0.9rem !important;
+  height: 24px !important;
+  padding: 1px 6px !important;
+  font-size: 0.85rem !important;
 }
 
 .label-text {
   display: inline-flex !important;
   align-items: center !important;
-  height: 30px !important;
-  font-size: 0.9rem !important;
+  height: 24px !important;
+  font-size: 0.85rem !important;
 }
 
 #filter-bar button {
   align-items: center !important;
   font-size: 0.9rem !important;
   cursor: pointer !important;
-  margin: 12px;
+  margin: 6px;
 }
 
 /* Floating draggable toolbar for tree actions */
@@ -59,8 +61,8 @@
 .floating-toolbar__handle {
   cursor: grab;
   user-select: none;
-  font-size: 12px;
   opacity: 0.75;
+  touch-action: none;
 }
 
 .floating-toolbar__header {
@@ -120,8 +122,8 @@
 .floating-toolbar .filter-box {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding: 10px;
+  gap: 6px;
+  padding: 6px;
   border: 1px solid rgba(0, 0, 0, 0.12);
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.85);

@@ -1,4 +1,4 @@
-import { APP_ICONS, countryToFlag } from "/js/icons.js";
+import { APP_ICONS, countryToFlagIconUrl } from "/js/icons.js";
 import { playerApi } from "/js/api/playerApi.js";
 import { $ } from "/js/utils.js";
 
@@ -45,8 +45,19 @@ function renderPronosticoStyleCard(player) {
   const label = el("label", { text: player.name || "" });
 
   const c = player && player.country ? String(player.country) : "";
-  const flag = c ? countryToFlag(c) : "";
-  const country = el("div", { text: c ? `${flag ? `${flag} ` : ""}${c}` : "" });
+  const flagUrl = c ? countryToFlagIconUrl(c, { format: "svg" }) : "";
+  const country = el("div", {});
+  if (flagUrl) {
+    country.appendChild(
+      el("img", {
+        src: flagUrl,
+        alt: c,
+        loading: "lazy",
+        style: "width:18px; height:12px; object-fit:cover; vertical-align:middle; margin-right:6px;",
+      })
+    );
+  }
+  if (c) country.appendChild(document.createTextNode(c));
 
   div.append(punteggio, img, label, country);
   wrap.appendChild(div);

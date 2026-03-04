@@ -207,63 +207,6 @@ const ensureRoomsExtras = async () => {
   } catch (e) {
     console.error("Errore gestione indice unico predictions per stanza:", e.message || e);
   }
-
-  // Backfill DB esistente: stanza 'pionieri' creata da radice.p@gmail.com,
-  // membership per tutti gli user e assegnazione di tutti i pronostici esistenti.
-  try {
-    await db.sequelize.query(`
-      DO $$
-      DECLARE
-        creator_uuid UUID;
-        pionieri_id INTEGER;
-        arena_id INTEGER;
-      BEGIN
-        SELECT uuid INTO creator_uuid FROM public.users WHERE lower(email) = lower('radice.p@gmail.com') LIMIT 1;
-        IF creator_uuid IS NULL THEN
-          RAISE NOTICE 'Seed rooms: creator radice.p@gmail.com non trovato; skip.';
-          RETURN;
-        END IF;
-
-        IF NOT EXISTS (SELECT 1 FROM public.rooms WHERE name = 'pionieri') THEN
-          INSERT INTO public.rooms (name, short_description, long_description, created_by_user_uuid)
-          VALUES ('pionieri', 'pionieri', 'pionieri', creator_uuid);
-        END IF;
-
-        SELECT id INTO pionieri_id FROM public.rooms WHERE name = 'pionieri' LIMIT 1;
-        IF pionieri_id IS NULL THEN
-          RAISE NOTICE 'Seed rooms: room pionieri non trovata dopo insert; skip.';
-          RETURN;
-        END IF;
-
-        INSERT INTO public.room_members (room_id, user_uuid, role, status)
-        SELECT pionieri_id, u.uuid, 'member', 'accepted'
-        FROM public.users u
-        ON CONFLICT (room_id, user_uuid) DO NOTHING;
-
-        UPDATE public.predictions
-        SET room_id = pionieri_id
-        WHERE room_id IS NULL;
-
-        IF NOT EXISTS (SELECT 1 FROM public.rooms WHERE name = 'Arena') THEN
-          INSERT INTO public.rooms (name, short_description, long_description, created_by_user_uuid)
-          VALUES ('Arena', 'Arena', 'Arena', creator_uuid);
-        END IF;
-
-        SELECT id INTO arena_id FROM public.rooms WHERE name = 'Arena' LIMIT 1;
-        IF arena_id IS NULL THEN
-          RAISE NOTICE 'Seed rooms: room Arena non trovata dopo insert; skip membership.';
-          RETURN;
-        END IF;
-
-        INSERT INTO public.room_members (room_id, user_uuid, role, status)
-        SELECT arena_id, u.uuid, 'member', 'accepted'
-        FROM public.users u
-        ON CONFLICT (room_id, user_uuid) DO NOTHING;
-      END $$;
-    `);
-  } catch (e) {
-    console.error("Errore seed/backfill stanza pionieri:", e.message || e);
-  }
 };
 
 const authenticateWithRetry = async ({ retries, delayMs }) => {

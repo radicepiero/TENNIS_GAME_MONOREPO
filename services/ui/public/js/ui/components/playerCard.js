@@ -1,4 +1,4 @@
-import { countryToFlag, DEFAULT_PLAYER_IMG } from "/js/icons.js";
+import { countryToFlagIconUrl, DEFAULT_PLAYER_IMG } from "/js/icons.js";
 
 class PlayerCard {
   constructor(player) {
@@ -49,8 +49,20 @@ class PlayerCard {
 
     const country = document.createElement("div");
     const c = this.player && this.player.country ? String(this.player.country) : "";
-    const flag = c ? countryToFlag(c) : "";
-    country.textContent = c ? `${flag ? `${flag} ` : ""}${c}` : "";
+    const flagUrl = c ? countryToFlagIconUrl(c, { format: "svg" }) : "";
+    if (flagUrl) {
+      const flagImg = document.createElement("img");
+      flagImg.src = flagUrl;
+      flagImg.alt = c;
+      flagImg.loading = "lazy";
+      flagImg.style.width = "18px";
+      flagImg.style.height = "12px";
+      flagImg.style.objectFit = "cover";
+      flagImg.style.verticalAlign = "middle";
+      flagImg.style.marginRight = "6px";
+      country.appendChild(flagImg);
+    }
+    country.appendChild(document.createTextNode(c ? String(c) : ""));
 
     div.append(punteggio, imgWrap, checkbox, labelWrap, country);
     return div;
@@ -88,9 +100,25 @@ export function buildPlayerInfoElement(player) {
   prizeDiv.textContent = isPlaceholder ? "" : ` {${pw}/${ps}}`;
 
   const c = player && player.country ? String(player.country) : "";
-  const flag = c ? countryToFlag(c) : "";
   const countryDiv = document.createElement("span");
-  countryDiv.textContent = isPlaceholder ? "" : c ? ` ${flag ? `${flag} ` : ""}${c}` : "";
+  if (!isPlaceholder && c) {
+    const flagUrl = countryToFlagIconUrl(c, { format: "svg" });
+    if (flagUrl) {
+      const flagImg = document.createElement("img");
+      flagImg.src = flagUrl;
+      flagImg.alt = c;
+      flagImg.loading = "lazy";
+      flagImg.style.width = "16px";
+      flagImg.style.height = "11px";
+      flagImg.style.objectFit = "cover";
+      flagImg.style.verticalAlign = "middle";
+      flagImg.style.margin = "0 6px 0 6px";
+      countryDiv.appendChild(flagImg);
+    } else {
+      countryDiv.appendChild(document.createTextNode(" "));
+    }
+    countryDiv.appendChild(document.createTextNode(String(c)));
+  }
 
   playerDiv.append(ratingDiv, img, nameDiv, countryDiv, prizeDiv);
   return playerDiv;

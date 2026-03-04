@@ -20,10 +20,19 @@ async function initHeaderRoomSelect() {
       select.appendChild(opt);
     });
 
-    if (!currentRoomId && rooms && rooms.length) {
-      const arena = (rooms || []).find((r) => r && String(r.name || "").toLowerCase() === "arena");
-      if (arena && arena.id) currentRoomId = String(arena.id);
-      else if (rooms[0] && rooms[0].id) currentRoomId = String(rooms[0].id);
+    const roomIds = new Set(
+      (rooms || [])
+        .map((r) => (r && r.id !== undefined ? String(r.id) : ""))
+        .filter(Boolean)
+    );
+
+    const arena = (rooms || []).find(
+      (r) => r && String(r.name || "").toLowerCase() === "arena"
+    );
+    const arenaId = arena && arena.id !== undefined ? String(arena.id) : "";
+
+    if (!currentRoomId || !roomIds.has(String(currentRoomId))) {
+      currentRoomId = arenaId;
     }
 
     if (currentRoomId) {

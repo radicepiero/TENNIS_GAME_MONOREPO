@@ -3,7 +3,6 @@ export function enableFloatingToolbar({ toolbarId = "floating-toolbar", storageK
   if (!toolbar) return { reset: () => {} };
 
   const handle = toolbar.querySelector(".floating-toolbar__handle") || toolbar;
-  const isSmallScreen = () => window.matchMedia && window.matchMedia("(max-width: 640px)").matches;
 
   const clamp = (n, min, max) => Math.min(Math.max(n, min), max);
 
@@ -25,7 +24,16 @@ export function enableFloatingToolbar({ toolbarId = "floating-toolbar", storageK
       if (!raw) return null;
       const pos = JSON.parse(raw);
       if (!pos || typeof pos !== "object") return null;
-      return pos;
+      const rect = toolbar.getBoundingClientRect();
+      const w = rect.width || toolbar.offsetWidth || 0;
+      const h = rect.height || toolbar.offsetHeight || 0;
+
+      const maxLeft = Math.max(0, window.innerWidth - w);
+      const maxTop = Math.max(0, window.innerHeight - h);
+
+      const left = typeof pos.left === "number" ? clamp(pos.left, 0, maxLeft) : undefined;
+      const top = typeof pos.top === "number" ? clamp(pos.top, 0, maxTop) : undefined;
+      return { ...pos, left, top };
     } catch (_) {
       return null;
     }
@@ -38,14 +46,7 @@ export function enableFloatingToolbar({ toolbarId = "floating-toolbar", storageK
     } catch (_) {}
   }
 
-  if (!isSmallScreen()) {
-    applyPosition(loadPosition());
-  } else {
-    toolbar.style.left = "auto";
-    toolbar.style.top = "auto";
-    toolbar.style.right = "10px";
-    toolbar.style.bottom = "10px";
-  }
+  applyPosition(loadPosition());
 
   let dragging = false;
   let startX = 0;
@@ -54,7 +55,6 @@ export function enableFloatingToolbar({ toolbarId = "floating-toolbar", storageK
   let startTop = 0;
 
   const onPointerDown = (e) => {
-    if (isSmallScreen()) return;
     if (!e || (e.button !== undefined && e.button !== 0)) return;
 
     const rect = toolbar.getBoundingClientRect();
@@ -95,6 +95,8 @@ export function enableFloatingToolbar({ toolbarId = "floating-toolbar", storageK
 
     toolbar.style.left = `${left}px`;
     toolbar.style.top = `${top}px`;
+
+    if (e && typeof e.preventDefault === "function") e.preventDefault();
   };
 
   const onPointerUp = () => {
@@ -107,8 +109,33 @@ export function enableFloatingToolbar({ toolbarId = "floating-toolbar", storageK
   };
 
   handle.addEventListener("pointerdown", onPointerDown);
-  window.addEventListener("pointermove", onPointerMove);
+  window.addEventListener("pointermove", onPointerMove, { passive: false });
   window.addEventListener("pointerup", onPointerUp);
+
+  const content = toolbar.querySelector(".floating-toolbar__content");
+  let observer;
+  if (content && typeof MutationObserver !== "undefined") {
+    const hasVisibleActions = () => {
+      const items = content.querySelectorAll("button, a, #filter-bar");
+      for (const el of items) {
+        if (el && !el.classList.contains("hidden")) return true;
+      }
+      return false;
+    };
+
+    const ensureExpandedIfNeeded = () => {
+      if (!toolbar.classList.contains("collapsed")) return;
+      if (!hasVisibleActions()) return;
+
+      const toggle = toolbar.querySelector("#floating-toolbar-toggle");
+      if (toggle && typeof toggle.click === "function") toggle.click();
+      else toolbar.classList.remove("collapsed");
+    };
+
+    observer = new MutationObserver(ensureExpandedIfNeeded);
+    observer.observe(content, { attributes: true, subtree: true, attributeFilter: ["class"], childList: true });
+    ensureExpandedIfNeeded();
+  }
 
   const reset = () => {
     toolbar.style.left = "";

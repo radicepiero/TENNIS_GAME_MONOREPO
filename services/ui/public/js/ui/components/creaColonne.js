@@ -132,7 +132,7 @@ function createCell({ title, player, status, isWinner = false, roomId } = {}) {
   const imgHtml = `<img src="${imgSrc}" alt="${player.name}" />`;
   const nameHtml = `${player && player.name ? String(player.name) : ""}`;
   const playerInnerHtml = friendHref
-    ? `<a href="${friendHref}" style="text-decoration:none; color: inherit; display: inline-flex; align-items: center; gap: 8px;">${imgHtml}<span>${nameHtml}</span></a>`
+    ? `<a href="${friendHref}" target="_blank" rel="noopener noreferrer" style="text-decoration:none; color: inherit; display: inline-flex; align-items: center; gap: 8px;">${imgHtml}<span>${nameHtml}</span></a>`
     : `${imgHtml}${nameHtml}`;
 
   cell.innerHTML = `

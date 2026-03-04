@@ -178,9 +178,13 @@ label {
   display: block;
   margin: 20px 0 10px;
 }
-button {
+
+form button {
   margin: auto;
   margin-top: 30px;
+}
+
+button {
   border-radius: 36px;
   background: #fee996;
   border: 0;

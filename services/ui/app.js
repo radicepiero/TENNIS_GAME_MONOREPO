@@ -7,7 +7,7 @@ const cookieParser = require("cookie-parser");
 require("dotenv/config");
 const { requireAuth, checkUser } = require("./middleware/authMiddleware");
 const authRouter = require("./routes/authRoutes");
-const viewsRouter = require("./routes/routesRoutes");
+const viewsRouter = require("./routes/viewsRouter");
 
 //middleware
 app.use(express.static(path.join(__dirname, "public")));
@@ -24,7 +24,6 @@ app.get("/", (req, res) => res.render("home"));
 
 app.use(authRouter);
 app.use("/", requireAuth, viewsRouter);
-//app.use("/", viewsRouter);
 
 const PORT = process.env.PORT || 3000;
 http.createServer(app).listen(PORT, "0.0.0.0", () => {
