@@ -148,12 +148,20 @@ Caratteristiche:
 - monta le rotte sotto `/api`
 
 Esempio importante dal codice:
-- `app.use("/api", requireAuth, apiRouter);`
+- la maggior parte delle rotte passa da `requireAuth`:
+  - `app.use("/api", requireAuth, apiRouter);`
+- alcune rotte devono restare pubbliche (es. login API) e quindi vengono definite *prima* della riga sopra
 
 Quindi:
 - quasi tutte le rotte `/api/*` sono protette
 - esiste un endpoint pubblico per login API:
   - `POST /api/auth/login`
+
+Nota didattica:
+- `POST /api/auth/login` è implementato direttamente in `services/api/app.js` e restituisce JSON.
+- `requireAuth` distingue le richieste API dalle richieste “pagina”:
+  - per API risponde `401` con JSON
+  - per pagine fa redirect a `/login`
 
 ---
 
@@ -169,6 +177,13 @@ Vantaggi didattici:
 - possibilità di validare/controllare dati in modo centralizzato
 
 Nota: nel progetto esistono anche pezzi di **migrazione/seed** eseguiti all’avvio dell’API (query `ALTER TABLE`, `CREATE TABLE IF NOT EXISTS`, ecc.).
+
+Aggiornamento (refactoring recente):
+- queste operazioni sono incapsulate in funzioni tipo `ensureTournamentExtras`, `ensurePredictionExtras`, `ensureRoomsExtras` dentro `services/api/app.js`.
+- l’obiettivo è garantire che lo schema minimo esista (tabelle stanze, colonne extra, indici unici).
+- è stata rimossa la parte di *backfill automatico* che aggiungeva “tutti gli utenti” a stanze speciali all’avvio.
+- l’assegnazione dell’utente alla stanza di default **Arena** avviene al momento della registrazione:
+  - vedi `services/api/controllers/authController.js` (insert in `room_members` su signup)
 
 ---
 
