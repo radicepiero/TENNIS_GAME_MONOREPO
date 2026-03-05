@@ -12,6 +12,7 @@ export class Tournament {
   constructor({
     id,
     name,
+    nickname = null,
     href,
     category = null,
     location,
@@ -27,6 +28,7 @@ export class Tournament {
   }) {
     this.id = id;
     this.name = name;
+    this.nickname = nickname;
     this.href = href;
     this.category = category;
     this.location = location;

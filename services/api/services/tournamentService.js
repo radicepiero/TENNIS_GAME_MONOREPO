@@ -3,9 +3,23 @@ const db = require("../models");
 const Tournament = db.Tournament;
 const Script = db.Script;
 const { Op } = db.Sequelize;
+
+const ensureNickname = (t) => {
+  if (!t) return t;
+  const name = t.name;
+  const nick = t.nickname;
+  if (name && (!nick || !String(nick).trim())) {
+    if (typeof t.setDataValue === "function") t.setDataValue("nickname", name);
+    else t.nickname = name;
+  }
+  return t;
+};
+
 const getTournaments = async () => {
   try {
-    return await Tournament.findAll({ order: [["datafine", "ASC"]] });
+    const tournaments = await Tournament.findAll({ order: [["datafine", "ASC"]] });
+    for (const t of tournaments) ensureNickname(t);
+    return tournaments;
   } catch (error) {
     console.error("Errore nel recupero dei tornei:", error);
     throw error;
@@ -17,7 +31,7 @@ const getTournament = async (id) => {
     const tournament = await Tournament.findOne({
       where: { id },
     });
-    return tournament;
+    return ensureNickname(tournament);
   } catch (error) {
     console.error("Errore nel recupero del torneo:", error);
     throw error;
@@ -35,6 +49,7 @@ const getTournamentsScripts = async (tournamentId, scriptName) => {
       where: whereClause1,
       include: [{ model: Script, required: false, where: whereClause2 }],
     });
+    for (const t of scripts) ensureNickname(t);
     return scripts;
   } catch (error) {
     console.error("Errore durante il recupero degli script:", error);

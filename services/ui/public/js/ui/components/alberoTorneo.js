@@ -152,7 +152,10 @@ export async function saveNewAlbero() {
 }
 
 export function setupPlayerElement(player) {
-  const newElement = buildPlayerInfoElement(player);
+  const newElement = buildPlayerInfoElement(player, {
+    nameFormat: "initials",
+    showCountryCode: false,
+  });
   newElement.addEventListener("click", handlePlayerClick);
   return newElement;
 }

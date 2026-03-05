@@ -73,7 +73,7 @@ class PlayerCard {
   }
 }
 
-export function buildPlayerInfoElement(player) {
+export function buildPlayerInfoElement(player, opts = {}) {
   const isPlaceholder = player && Number(player.id) === 0;
   const playerDiv = document.createElement("div");
   playerDiv.id = player && typeof player.id !== "undefined" ? player.id : "";
@@ -87,7 +87,41 @@ export function buildPlayerInfoElement(player) {
   if (isPlaceholder) img.style.display = "none";
 
   const nameDiv = document.createElement("span");
-  nameDiv.textContent = (player && player.name) || "";
+
+  const getCompactPlayerName = (p) => {
+    if (!p) return "";
+    const first = p.first_name ? String(p.first_name).trim() : "";
+    const second = p.second_name ? String(p.second_name).trim() : "";
+    const base = first || second ? `${first} ${second}`.trim() : String(p.name || "").trim();
+    if (!base) return "";
+    if (Number(p.id) === 0) return base;
+
+    const compactFromParts = (parts) => {
+      const clean = (parts || []).map((s) => String(s || "").trim()).filter(Boolean);
+      if (clean.length === 0) return "";
+      if (clean.length === 1) return clean[0];
+      const firstInitial = clean[0] ? `${clean[0][0].toUpperCase()}.` : "";
+      const rest = clean.slice(1).join(" ");
+      return `${firstInitial} ${rest}`.trim();
+    };
+
+    if (first || second) {
+      const firstInitial = first ? `${first[0].toUpperCase()}.` : "";
+      return `${firstInitial} ${second}`.trim();
+    }
+
+    // Fallback su 'name': puntiamo solo la prima parola (se esiste un cognome dopo).
+    const parts = String(p.name || "")
+      .split(/\s+/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+    return compactFromParts(parts);
+  };
+
+  const nameFormat = opts.nameFormat === "initials" ? "initials" : "full";
+  const showCountryCode = opts.showCountryCode === false ? false : true;
+  nameDiv.textContent =
+    nameFormat === "initials" ? getCompactPlayerName(player) : (player && player.name) || "";
 
   const ratingDiv = document.createElement("span");
   const rankings = player && Array.isArray(player.Rankings) ? player.Rankings : [];
@@ -117,7 +151,9 @@ export function buildPlayerInfoElement(player) {
     } else {
       countryDiv.appendChild(document.createTextNode(" "));
     }
-    countryDiv.appendChild(document.createTextNode(String(c)));
+    if (showCountryCode) {
+      countryDiv.appendChild(document.createTextNode(String(c)));
+    }
   }
 
   playerDiv.append(ratingDiv, img, nameDiv, countryDiv, prizeDiv);
