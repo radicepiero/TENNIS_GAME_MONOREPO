@@ -3,16 +3,15 @@
 <link rel="stylesheet" href="/css/treantTree.css" />
 <link rel="stylesheet" href="/css/hamburger.css" />
 <title id="title"></title>
+<script>
+  document.documentElement.dataset.page = "albero-pronostico";
+</script>
 <%- include('partials/header'); -%>
 <%- include('partials/hamburger'); -%>
 
 <h1 id="nome-torneo"><%= tournamentId %></h1>
 
-<div id="floating-toolbar" class="floating-toolbar">
-  <div class="floating-toolbar__header">
-    <div class="floating-toolbar__handle" id="floating-toolbar-handle"></div>
-    <button id="floating-toolbar-toggle" type="button" class="floating-toolbar__toggle"></button>
-  </div>
+<div id="floating-toolbar" class="floating-toolbar floating-toolbar--inline">
   <div class="floating-toolbar__content">
     <button id="saveButton" class="hidden">SALVA</button>
     <button id="deleteButton" class="hidden">ELIMINA</button>
@@ -33,6 +32,11 @@
 </div>
 
 <div id="warning" class="hidden" style="margin: 10px 0; padding: 10px; border: 1px solid #f5c2c7; background: #f8d7da; color: #842029;"></div>
+
+<div id="round-nav" class="round-nav" aria-hidden="true">
+  <button id="round-prev" type="button" class="round-nav__btn" aria-label="Fase precedente"></button>
+  <button id="round-next" type="button" class="round-nav__btn" aria-label="Fase successiva"></button>
+</div>
 
 <div id="scroll-container">
   <div id="chart-container">

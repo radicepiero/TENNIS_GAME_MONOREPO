@@ -445,17 +445,13 @@ export function arreda(piano, abita = true) {
 
     const letto = costruisciLetto(giocatore1, giocatore2);
 
-    if (match.p1Wins === true) {
-      setGiocatoreVincente(
-        letto.firstChild.lastChild,
-        letto.lastChild.lastChild
-      );
+    const p1Wins = Boolean(match && match.p1Wins);
+    const p2Wins = Boolean(match && match.p2Wins);
+    if (p1Wins && !p2Wins) {
+      setGiocatoreVincente(letto.firstChild.lastChild, letto.lastChild.lastChild);
+    } else if (p2Wins && !p1Wins) {
+      setGiocatoreVincente(letto.lastChild.lastChild, letto.firstChild.lastChild);
     }
-    if (match.p2Wins === true)
-      setGiocatoreVincente(
-        letto.lastChild.lastChild,
-        letto.firstChild.lastChild
-      );
     stanza.appendChild(letto);
   }
 }

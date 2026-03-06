@@ -7,6 +7,8 @@ export const APP_ICONS = {
   VIEW: "👁️",
   CRYSTAL_BALL: "🔮",
   RESULTS: "📊",
+  ARROW_LEFT: "←",
+  ARROW_RIGHT: "→",
   PLAYER_TBD: "🫸",
   WINNER: "👍",
   LOOSER: "👎",

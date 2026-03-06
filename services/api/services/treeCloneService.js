@@ -91,8 +91,8 @@ const cloneSuperuserTreeToUser = async ({ tournamentId, user }) => {
       player1Id: m.player1Id,
       player2Id: m.player2Id,
       fatherId: newFather,
-      p1Wins: false,
-      p2Wins: false,
+      p1Wins: Boolean(m.p1Wins),
+      p2Wins: Boolean(m.p2Wins),
       date: m.date || null,
     };
   });

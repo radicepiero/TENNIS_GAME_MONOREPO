@@ -101,6 +101,19 @@ export class Tree {
       throw new Error("apiData is required");
     }
 
+    const toBool = (v) => {
+      if (v === true) return true;
+      if (v === false) return false;
+      if (v === 1 || v === "1") return true;
+      if (v === 0 || v === "0" || v === null || typeof v === "undefined") return false;
+      if (typeof v === "string") {
+        const s = v.trim().toLowerCase();
+        if (s === "true" || s === "t" || s === "yes" || s === "y") return true;
+        if (s === "false" || s === "f" || s === "no" || s === "n" || s === "") return false;
+      }
+      return Boolean(v);
+    };
+
     const treeData = {
       uuid: apiData.id ?? apiData.uuid,
       name: apiData.name,
@@ -117,8 +130,8 @@ export class Tree {
         player1: match.player1Id,
         player2: match.player2Id,
         fatherId: match.fatherId,
-        p1Wins: match.p1Wins,
-        p2Wins: match.p2Wins,
+        p1Wins: toBool(match.p1Wins),
+        p2Wins: toBool(match.p2Wins),
         date: match.date,
       })) || [];
 

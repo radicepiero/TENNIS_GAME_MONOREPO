@@ -58,6 +58,47 @@
   backdrop-filter: blur(6px);
 }
 
+/* Inline toolbar (albero-pronostico): placed under the tournament title, always expanded */
+.floating-toolbar.floating-toolbar--inline {
+  position: static;
+  top: auto;
+  right: auto;
+  left: auto;
+  bottom: auto;
+  margin: 10px auto 12px;
+  max-width: min(720px, calc(100vw - 24px));
+  max-height: none;
+  overflow: visible;
+}
+
+.floating-toolbar.floating-toolbar--inline .floating-toolbar__header {
+  display: none;
+}
+
+.floating-toolbar.floating-toolbar--inline .floating-toolbar__content {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+}
+
+.floating-toolbar.floating-toolbar--inline .floating-toolbar__content > button,
+.floating-toolbar.floating-toolbar--inline .floating-toolbar__content > a,
+.floating-toolbar.floating-toolbar--inline .floating-toolbar__content > #filter-bar {
+  width: auto;
+}
+
+.floating-toolbar.floating-toolbar--inline.collapsed .floating-toolbar__content {
+  display: flex;
+}
+
+.floating-toolbar.floating-toolbar--inline #filter-bar.visible {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+}
+
 .floating-toolbar__handle {
   cursor: grab;
   user-select: none;
@@ -142,6 +183,10 @@
 }
 
 @media (max-width: 640px) {
+  html[data-page="albero-pronostico"] nav {
+    display: none;
+  }
+
   .floating-toolbar {
     left: auto;
     right: 10px;
@@ -149,6 +194,55 @@
     bottom: 10px;
     max-width: calc(100vw - 20px);
     max-height: calc(100vh - 120px);
+  }
+
+  .floating-toolbar.floating-toolbar--inline {
+    position: static;
+    left: auto;
+    right: auto;
+    top: auto;
+    bottom: auto;
+    max-width: calc(100vw - 20px);
+    max-height: none;
+  }
+
+  /* Mobile: use arrow navigation instead of selects */
+  #filter-bar .filter-box {
+    display: none !important;
+  }
+
+  .round-nav {
+    position: fixed;
+    top: 50vh;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 10001;
+    display: flex;
+    gap: 34px;
+  }
+
+  .round-nav__btn {
+    width: 52px;
+    height: 52px;
+    border-radius: 999px;
+    border: 1px solid rgba(0, 0, 0, 0.28);
+    background: rgba(255, 255, 255, 0.98);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.22);
+    cursor: pointer;
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 1;
+  }
+
+  .round-nav__btn:disabled {
+    opacity: 0.35;
+    cursor: default;
+  }
+
+  #nome-torneo {
+    font-size: 1.35rem;
+    line-height: 1.2;
+    margin-bottom: 8px;
   }
 }
 
