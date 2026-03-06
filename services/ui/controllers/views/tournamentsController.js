@@ -69,8 +69,11 @@ const getEditTournament = async (req, res) => {
     tournament.dataopen = toYmd(tournament.dataopen);
     tournament.chiusuraPronostici = toDatetimeLocal(tournament.chiusuraPronostici);
 
+    const roomId = req.query && (req.query.room_id || req.query.roomId) ? String(req.query.room_id || req.query.roomId) : "";
+    const roomQs = roomId ? `?room_id=${encodeURIComponent(roomId)}` : "";
+
     const [predRes, tournamentScriptsRes, playersRes] = await Promise.all([
-      apiFetch(req, `/predictions/tournaments/${id}`, {}),
+      apiFetch(req, `/predictions/tournaments/${id}${roomQs}`, {}),
       apiFetch(req, `/tournaments/${id}/scripts/`, {}),
       apiFetch(
         req,
