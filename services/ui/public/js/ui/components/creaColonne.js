@@ -295,8 +295,7 @@ export async function creaColonne(tournamentID, faseMenu, apiUrl, loggedUserUuid
         round !== null &&
         Number(round) <= 2 &&
         reachedSemifinal &&
-        championId !== null &&
-        Number(championId) !== Number(winner.id);
+        (championId === null || Number(championId) !== Number(winner.id));
 
       const effectivePickType = shouldCountAsSemifinalist ? "semifinalist" : "winner";
 
