@@ -290,19 +290,20 @@ export async function creaColonne(tournamentID, faseMenu, apiUrl, loggedUserUuid
         : computeDisplayStatusForPick({ pickType: "winner", playerId: winner.id, selectedRound: round, matches });
 
       const reachedSemifinal = didPlayRound(winner.id, 2, matches);
+      const inFinal = didPlayRound(winner.id, 1, matches);
+      const finalDecided = championId !== null;
+      const winnerLostFinal = finalDecided && Number(championId) !== Number(winner.id);
+
       const shouldCountAsSemifinalist =
         !isPronosticiOnly &&
         round !== null &&
         Number(round) <= 2 &&
         reachedSemifinal &&
-        (championId === null || Number(championId) !== Number(winner.id));
+        (!inFinal || winnerLostFinal);
 
       const effectivePickType = shouldCountAsSemifinalist ? "semifinalist" : "winner";
-
-      // Per il caso speciale: winner pronosticato che non vince ma arriva in semifinale
-      // deve prendere il punteggio come semifinalista.
       if (shouldCountAsSemifinalist && !winner._rankingIssue && typeof winner._ranking === "number") {
-        const base = shouldCountAsSemifinalist ? pointsSemiFn(winner._ranking) : pointsWinnerFn(winner._ranking);
+        const base = pointsSemiFn(winner._ranking);
         winner._points = Number(base) || 0;
       }
 
