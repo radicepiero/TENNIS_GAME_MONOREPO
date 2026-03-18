@@ -2,6 +2,24 @@ const serviceUser = require("../../services/userService");
 const bcrypt = require("bcrypt");
 const { spedisciMailCambioPassword } = require("../../config/mailer");
 
+const isAdminUser = (user) => {
+  const level = user && user.level ? String(user.level) : "";
+  return level === "admin" || level === "super";
+};
+
+const assertSelfOrAdmin = (req, res, targetUuid) => {
+  const user = res.locals.user;
+  if (!user) {
+    res.status(401).json({ success: false, message: "Unauthorized" });
+    return false;
+  }
+  const me = user && user.dataValues ? String(user.dataValues.uuid) : "";
+  const target = targetUuid ? String(targetUuid) : "";
+  if (isAdminUser(user) || (me && target && me === target)) return true;
+  res.status(403).json({ success: false, message: "Forbidden" });
+  return false;
+};
+
 const getUsers = async (req, res) => {
   try {
     const users = await serviceUser.readUsers();
@@ -48,7 +66,9 @@ const changePassword = async (req, res) => {
 
 const getUser = async (req, res) => {
   try {
-    console.log(req.params.uuid);
+    const ok = assertSelfOrAdmin(req, res, req.params.uuid);
+    if (!ok) return;
+
     const user = await serviceUser.readUserByUuid(req.params.uuid);
     res.status(200).json(user);
   } catch (error) {
@@ -100,6 +120,9 @@ const updateActiveUser = async (req, res) => {
 
 const updateUserProfile = async (req, res) => {
   try {
+    const ok = assertSelfOrAdmin(req, res, req.params.uuid);
+    if (!ok) return;
+
     const { soprannome, image_url } = req.body || {};
 
     const updated = await serviceUser.updateUserProfile(req.params.uuid, {
@@ -138,9 +161,10 @@ const getUsersTournaments = async (req, res) => {
 };
 const getUserTournaments = async (req, res) => {
   try {
-    const user_tournaments = await serviceUser.getUserTournaments(
-      req.params.uuid
-    );
+    const ok = assertSelfOrAdmin(req, res, req.params.uuid);
+    if (!ok) return;
+
+    const user_tournaments = await serviceUser.getUserTournaments(req.params.uuid);
     res.status(200).json(user_tournaments);
   } catch (error) {
     console.error("Errore nel recupero dei tornei dell'utente:", error);
@@ -148,8 +172,10 @@ const getUserTournaments = async (req, res) => {
   }
 };
 const getUserTournament = async (req, res) => {
-  console.log(req.params.uuid, req.params.tournamentId);
   try {
+    const ok = assertSelfOrAdmin(req, res, req.params.uuid);
+    if (!ok) return;
+
     const user_tournament = await serviceUser.getUserTournament(
       req.params.uuid,
       req.params.tournamentId

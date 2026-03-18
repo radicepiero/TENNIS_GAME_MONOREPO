@@ -20,8 +20,7 @@ app.use(cookieParser());
 
 const db = require("./models");
 
-const { requireAuth, checkUser } = require("./middleware/authMiddleware");
-app.use(checkUser);
+const { requireAuthAndUser } = require("./middleware/authMiddleware");
 const apiRouter = require("./routes/api/apisRoutes");
 
 // Public auth endpoint (login) - must stay outside global /api requireAuth
@@ -50,7 +49,7 @@ app.post("/api/auth/login", async (req, res) => {
   }
 });
 
-app.use("/api", requireAuth, apiRouter);
+app.use("/api", requireAuthAndUser, apiRouter);
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 //parte per aggiungere colonne al db se non esistono

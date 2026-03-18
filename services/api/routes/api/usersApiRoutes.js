@@ -1,19 +1,19 @@
 const { Router } = require("express");
 const router = Router();
 const controller = require("../../controllers/api/userApiController");
-const { requireAdmin } = require("../../middleware/authMiddleware");
+const { requireAdmin, requireAuth } = require("../../middleware/authMiddleware");
 
 router.get("/", requireAdmin, controller.getUsers);
-router.get("/mail/:mail", controller.getUserByMail);
-router.post("/me/change-password", controller.changePassword);
-router.put("/:uuid/profile", controller.updateUserProfile);
-router.get("/:uuid", controller.getUser);
+router.get("/mail/:mail", requireAdmin, controller.getUserByMail);
+router.post("/me/change-password", requireAuth, controller.changePassword);
+router.put("/:uuid/profile", requireAuth, controller.updateUserProfile);
+router.get("/:uuid", requireAuth, controller.getUser);
 router.post("/", requireAdmin, controller.postUser);
 router.delete("/:uuid", requireAdmin, controller.deleteUser);
-router.put("/:uuid", controller.updateActiveUser);
-router.get("/tournaments/", controller.getUsersTournaments);
-router.get("/tournaments/:uuid", controller.getUserTournaments);
-router.get("/:uuid/tournaments/:tournamentId", controller.getUserTournament);
+router.put("/:uuid", requireAdmin, controller.updateActiveUser);
+router.get("/tournaments/", requireAdmin, controller.getUsersTournaments);
+router.get("/tournaments/:uuid", requireAuth, controller.getUserTournaments);
+router.get("/:uuid/tournaments/:tournamentId", requireAuth, controller.getUserTournament);
 
 module.exports = router;
 // The userRoutes.js file is similar to the authRoutes.js file,

@@ -349,12 +349,40 @@
       const id = p && p.id !== undefined ? String(p.id) : "";
       const name = p && p.name ? String(p.name) : "";
       const country = p && p.country ? String(p.country) : "";
-      const flag = country ? countryToFlag(country) : "";
       const row = document.createElement("div");
       row.style.padding = "10px";
       row.style.borderBottom = "1px solid #eee";
       row.style.cursor = "pointer";
-      row.textContent = `${name}${country ? ` (${flag ? `${flag} ` : ""}${country})` : ""}`;
+
+      const title = document.createElement("div");
+      title.style.fontWeight = "700";
+      title.textContent = name;
+
+      const meta = document.createElement("div");
+      meta.style.display = "flex";
+      meta.style.alignItems = "center";
+      meta.style.gap = "6px";
+      meta.style.opacity = "0.85";
+
+      if (country) {
+        const flagUrl = countryToFlagIconUrl(country, { format: "svg" });
+        if (flagUrl) {
+          const img = document.createElement("img");
+          img.src = flagUrl;
+          img.alt = country;
+          img.loading = "lazy";
+          img.style.width = "18px";
+          img.style.height = "12px";
+          img.style.objectFit = "cover";
+          meta.appendChild(img);
+        }
+        const c = document.createElement("span");
+        c.textContent = country;
+        meta.appendChild(c);
+      }
+
+      row.appendChild(title);
+      if (country) row.appendChild(meta);
       row.addEventListener("click", () => {
         if (!id) return;
         const qs = currentRoomId ? `?room_id=${encodeURIComponent(String(currentRoomId))}` : "";

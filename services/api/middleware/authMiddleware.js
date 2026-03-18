@@ -8,35 +8,35 @@ const User = db.User;
 
 const JWT_SECRET = process.env.JWT_SECRET || "un segreto generato a caso";
 
+const isApiRequest = (req) => {
+  // API service is mounted under /api, but keep this generic.
+  if (req.originalUrl && String(req.originalUrl).startsWith("/api")) return true;
+  const accept = String(req.headers.accept || "").toLowerCase();
+  return accept.includes("application/json");
+};
+
+const rejectUnauthorized = (req, res) => {
+  if (isApiRequest(req)) {
+    return res.status(401).json({ success: false, message: "Unauthorized" });
+  }
+  return res.redirect("/login");
+};
+
 const requireAuth = (req, res, next) => {
   const token = req.cookies.jwt;
-
-  const isApiRequest = () => {
-    // API service is mounted under /api, but keep this generic.
-    if (req.originalUrl && String(req.originalUrl).startsWith("/api")) return true;
-    const accept = String(req.headers.accept || "").toLowerCase();
-    return accept.includes("application/json");
-  };
-
-  const reject = () => {
-    if (isApiRequest()) {
-      return res.status(401).json({ success: false, message: "Unauthorized" });
-    }
-    return res.redirect("/login");
-  };
 
   // verifica dell'esistenza del cookie jwt e verifica della validità
   if (token) {
     jwt.verify(token, JWT_SECRET, (err, decodedToken) => {
       if (err) {
         console.log(err.message);
-        reject();
+        rejectUnauthorized(req, res);
       } else {
         next();
       }
     });
   } else {
-    reject();
+    rejectUnauthorized(req, res);
   }
 };
 
@@ -71,6 +71,32 @@ const checkUser = async (req, res, next) => {
   next();
 };
 
+const requireAuthAndUser = async (req, res, next) => {
+  const token = req.cookies.jwt;
+  if (!token) return rejectUnauthorized(req, res);
+
+  try {
+    const decodedToken = await new Promise((resolve, reject) => {
+      jwt.verify(token, JWT_SECRET, (err, decoded) => {
+        if (err) reject(err);
+        else resolve(decoded);
+      });
+    });
+
+    const user = await User.scope("withPassword").findByPk(decodedToken.uuid);
+    if (!user) {
+      res.locals.user = null;
+      return rejectUnauthorized(req, res);
+    }
+
+    res.locals.user = user;
+    return next();
+  } catch (error) {
+    res.locals.user = null;
+    return rejectUnauthorized(req, res);
+  }
+};
+
 const requireAdmin = (req, res, next) => {
   const user = res.locals.user;
   if (!user) return res.status(401).json({ error: "Unauthorized" });
@@ -78,4 +104,4 @@ const requireAdmin = (req, res, next) => {
   return res.status(403).json({ error: "Forbidden" });
 };
 
-module.exports = { requireAuth, checkUser, requireAdmin };
+module.exports = { requireAuth, checkUser, requireAuthAndUser, requireAdmin };
