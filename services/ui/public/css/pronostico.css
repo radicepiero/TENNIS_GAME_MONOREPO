@@ -31,6 +31,12 @@ h2 {
   margin-bottom: 5px;
 }
 
+.player.disattivati {
+  opacity: 0.35;
+  filter: grayscale(1);
+  pointer-events: none;
+}
+
 .semifinalists {
   margin-top: 20px;
 }

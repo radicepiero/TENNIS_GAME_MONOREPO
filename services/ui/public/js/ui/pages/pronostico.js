@@ -4,6 +4,7 @@ import { predictionApi } from "/js/api/predictionApi.js";
 import { fetchJson } from "/js/utils.js";
 import { setupPredictionAvatar } from "/js/ui/components/predictionAvatar.js";
 import { buildSelectablePlayerCard } from "/js/ui/components/playerCard.js";
+import { treeApi } from "/js/api/treeApi.js";
 import { roomApi } from "/js/api/roomApi.js";
 import {
   getEffectiveRoomId,
@@ -341,6 +342,55 @@ document.addEventListener("DOMContentLoaded", async () => {
   const prediction = (predictionObj && predictionObj.rows) || [];
   predictionEsiste = Array.isArray(prediction) && prediction.length > 0;
 
+  let disabledPlayerIds = new Set();
+  try {
+    const superTree = await treeApi.getSuperuserTreeByTournament(tournamentId, apiUrl, true).catch(() => null);
+    const treeId = superTree && (superTree.id || superTree.uuid);
+    const matches = Array.isArray(superTree && (superTree.matches || superTree.Matches))
+      ? (superTree.matches || superTree.Matches)
+      : (treeId ? await treeApi.getMatchesByTreeId(treeId, apiUrl).catch(() => []) : []);
+
+    if (Array.isArray(matches) && matches.length) {
+      const rounds = matches
+        .map((m) => (m && m.round !== undefined && m.round !== null ? Number(m.round) : null))
+        .filter((r) => Number.isFinite(r));
+      const firstRound = rounds.length ? Math.max(...rounds) : null;
+
+      const firstRoundPlayerIds = new Set(
+        (matches || [])
+          .filter((m) => firstRound !== null && Number(m && m.round) === Number(firstRound))
+          .flatMap((m) => [m && m.player1Id, m && m.player2Id])
+          .filter((id) => id !== undefined && id !== null)
+          .map((id) => Number(id))
+      );
+
+      const eliminatedPlayerIds = new Set(
+        (matches || [])
+          .map((m) => {
+            if (!m) return null;
+            const p1 = m.player1Id;
+            const p2 = m.player2Id;
+            const p1Wins = Boolean(m.p1Wins);
+            const p2Wins = Boolean(m.p2Wins);
+            if (p1Wins && p2 && p2 !== null && p2 !== undefined) return Number(p2);
+            if (p2Wins && p1 && p1 !== null && p1 !== undefined) return Number(p1);
+            return null;
+          })
+          .filter((x) => x !== null)
+      );
+
+      players.forEach((p) => {
+        if (!p || p.id === undefined || p.id === null) return;
+        const pid = Number(p.id);
+        if (!firstRoundPlayerIds.has(pid) || eliminatedPlayerIds.has(pid)) {
+          disabledPlayerIds.add(pid);
+        }
+      });
+    }
+  } catch (e) {
+    disabledPlayerIds = new Set();
+  }
+
   try {
     const hiddenUrl = document.getElementById("prediction_avatar_url");
     const existingAvatarUrl = predictionObj && predictionObj.avatar_url ? String(predictionObj.avatar_url) : "";
@@ -372,6 +422,11 @@ document.addEventListener("DOMContentLoaded", async () => {
         event.target.checked = false;
         return;
       }
+
+	  if (player && player.id !== undefined && player.id !== null && disabledPlayerIds.has(Number(player.id))) {
+	    event.target.checked = false;
+	    return;
+	  }
       if (event.target.checked) {
         if (semifinalists.length < 4) {
           player.prediction = "semifinalist";
@@ -395,6 +450,17 @@ document.addEventListener("DOMContentLoaded", async () => {
     const checkbox = playerElement.querySelector("input[type='checkbox']");
     if (checkbox) {
       checkbox.checked = giocatoreInPrediction;
+    }
+
+    if (player && player.id !== undefined && player.id !== null && disabledPlayerIds.has(Number(player.id))) {
+      playerElement.classList.add("disattivati");
+      if (checkbox) {
+        checkbox.checked = false;
+        checkbox.disabled = true;
+      }
+      if (giocatoreInPrediction) {
+        semifinalists = semifinalists.filter((p) => p && Number(p.id) !== Number(player.id));
+      }
     }
 
     playersList.appendChild(playerElement);
