@@ -63,6 +63,13 @@ const ensureTournamentExtras = async () => {
   }
   try {
     await db.sequelize.query(
+      "ALTER TABLE public.tournaments ADD COLUMN IF NOT EXISTS surface_jsonb JSONB;"
+    );
+  } catch (e) {
+    console.error("Errore aggiunta colonna tournaments.surface_jsonb:", e.message || e);
+  }
+  try {
+    await db.sequelize.query(
       "ALTER TABLE public.tournaments ADD COLUMN IF NOT EXISTS nickname TEXT;"
     );
   } catch (e) {
@@ -89,6 +96,39 @@ const ensureTournamentExtras = async () => {
     );
   } catch (e) {
     console.error("Errore backfill tournaments.nickname:", e.message || e);
+  }
+
+  try {
+    await db.sequelize.query(`
+      UPDATE public.tournaments
+      SET surface_jsonb = jsonb_build_object(
+        'material', 'hard',
+        'indoor', false,
+        'color', NULL
+      )
+      WHERE surface_jsonb IS NULL;
+    `);
+  } catch (e) {
+    console.error("Errore backfill tournaments.surface_jsonb:", e.message || e);
+  }
+
+  try {
+    await db.sequelize.query(
+      "ALTER TABLE public.tournaments ALTER COLUMN surface_jsonb SET NOT NULL;"
+    );
+  } catch (e) {
+    console.error("Errore alter tournaments.surface_jsonb SET NOT NULL:", e.message || e);
+  }
+
+  // Final step: drop legacy column (enable only after testing)
+  if (String(process.env.DROP_LEGACY_TOURNAMENT_SURFACE || "").trim() === "1") {
+    try {
+      await db.sequelize.query(
+        "ALTER TABLE public.tournaments DROP COLUMN IF EXISTS surface;"
+      );
+    } catch (e) {
+      console.error("Errore drop colonna tournaments.surface:", e.message || e);
+    }
   }
 };
 

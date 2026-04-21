@@ -1,5 +1,5 @@
   </head>
-  <body>
+  <body style="--bg-texture: url('<%= (bg && bg.textureUrl) ? bg.textureUrl : '/immagini/sfondi/texture-hard.webp' %>'); --bg-tint: <%= (bg && bg.tintEnabled && bg.tintHex) ? bg.tintHex : '#fafafa' %>;">
     <script>
       document.documentElement.dataset.apiUrl = "<%= typeof apiUrl !== 'undefined' ? apiUrl : '/api' %>";
     </script>

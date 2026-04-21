@@ -6,6 +6,7 @@ const app = express();
 const cookieParser = require("cookie-parser");
 require("dotenv/config");
 const { requireAuth, checkUser } = require("./middleware/authMiddleware");
+const tournamentBackgroundMiddleware = require("./middleware/tournamentBackgroundMiddleware");
 const authRouter = require("./routes/authRoutes");
 const viewsRouter = require("./routes/viewsRouter");
 
@@ -19,6 +20,8 @@ app.set("view engine", "ejs");
 app.locals.apiUrl = process.env.PUBLIC_API || "/api";
 
 app.use(checkUser);
+
+app.use(tournamentBackgroundMiddleware());
 
 app.get("/", (req, res) => res.render("home"));
 

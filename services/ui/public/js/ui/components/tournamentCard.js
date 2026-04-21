@@ -80,10 +80,14 @@ async function checkSuperuserTreeExists(apiUrl, tournamentId) {
 
 export function buildTournamentCard(tournament, { apiUrl, roomId } = {}) {
   const container = document.createElement("div");
+  const surfaceMaterial =
+    tournament && tournament.surface_jsonb && typeof tournament.surface_jsonb === "object"
+      ? tournament.surface_jsonb.material
+      : "hard";
   container.className = [
     "tournament-card",
     statusShadowClass(tournament.status),
-    surfaceBackgroundClass(tournament.surface),
+    surfaceBackgroundClass(surfaceMaterial),
   ]
     .filter(Boolean)
     .join(" ");

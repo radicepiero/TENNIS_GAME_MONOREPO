@@ -236,6 +236,18 @@ async function handleSubmit({ apiUrl, tournamentId }) {
     const data = Object.fromEntries(new FormData(form));
     data.admin_links = normalizeLinksField(data.admin_links);
 
+    const material = data.surface_material ? String(data.surface_material).toLowerCase() : "hard";
+    const indoor = Boolean(data.surface_indoor);
+    const color = data.surface_color ? String(data.surface_color).trim() : "";
+    data.surface_jsonb = {
+      material,
+      indoor,
+      color: color || null,
+    };
+    delete data.surface_material;
+    delete data.surface_indoor;
+    delete data.surface_color;
+
     const start = toYmd(data.datainizio);
     const end = toYmd(data.datafine);
     const open = toYmd(data.dataopen);

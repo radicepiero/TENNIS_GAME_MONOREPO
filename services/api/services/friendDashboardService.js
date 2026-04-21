@@ -418,7 +418,7 @@ async function getFriendDashboard(userUuid, roomId) {
       nickname: t.nickname,
       category: t.category,
       image: t.image,
-      surface: t.surface,
+      surface_jsonb: t.surface_jsonb,
       location: t.location,
       country: t.country,
       status: t.status,

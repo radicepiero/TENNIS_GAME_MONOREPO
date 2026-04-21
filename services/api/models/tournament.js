@@ -30,8 +30,8 @@ module.exports = function (sequelize) {
         type: DataTypes.STRING(255),
         allowNull: false,
       },
-      surface: {
-        type: DataTypes.STRING(255),
+      surface_jsonb: {
+        type: DataTypes.JSONB,
         allowNull: false,
       },
       prizemoney: {

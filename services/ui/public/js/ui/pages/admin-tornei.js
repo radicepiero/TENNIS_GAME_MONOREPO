@@ -324,6 +324,18 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const data = Object.fromEntries(new FormData(form));
 
+    const material = data.surface_material ? String(data.surface_material).toLowerCase() : "hard";
+    const indoor = Boolean(data.surface_indoor);
+    const color = data.surface_color ? String(data.surface_color).trim() : "";
+    data.surface_jsonb = {
+      material,
+      indoor,
+      color: color || null,
+    };
+    delete data.surface_material;
+    delete data.surface_indoor;
+    delete data.surface_color;
+
     // normalize numeric fields
     if (typeof data.prizemoney !== "undefined") data.prizemoney = Number(data.prizemoney);
     if (typeof data.rounds !== "undefined" && data.rounds !== "") data.rounds = Number(data.rounds);

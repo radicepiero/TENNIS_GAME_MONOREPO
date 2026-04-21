@@ -98,15 +98,15 @@ function surfaceFromCode(code) {
   // Codes observed in the TXT: H, CL, G, IH
   switch (code) {
     case "H":
-      return "Cemento";
+      return { material: "hard", indoor: false, color: null };
     case "CL":
-      return "Terra rossa";
+      return { material: "clay", indoor: false, color: null };
     case "G":
-      return "Erba";
+      return { material: "grass", indoor: false, color: null };
     case "IH":
-      return "Cemento indoor";
+      return { material: "hard", indoor: true, color: null };
     default:
-      return "Unknown";
+      return { material: "hard", indoor: false, color: null };
   }
 }
 
@@ -370,7 +370,7 @@ async function main() {
         category: t.category,
         location: t.location || "Unknown",
         country: "Unknown",
-        surface: t.surface || "Unknown",
+        surface_jsonb: t.surface || { material: "hard", indoor: false, color: null },
         prizemoney: 0,
         currency: "€",
         datainizio: t.datainizio,

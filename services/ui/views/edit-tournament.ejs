@@ -72,14 +72,34 @@
       </datalist>
     </label>
 
+    <% 
+      let _surfaceObj = null;
+      if (tournament && tournament.surface_jsonb && typeof tournament.surface_jsonb === 'object') {
+        _surfaceObj = tournament.surface_jsonb;
+      }
+      const _mat = (_surfaceObj && _surfaceObj.material) ? String(_surfaceObj.material).toLowerCase() : 'hard';
+      const _indoor = Boolean(_surfaceObj && _surfaceObj.indoor);
+      const _color = (_surfaceObj && _surfaceObj.color) ? String(_surfaceObj.color) : '#000000';
+    %>
+
     <label>
-      Superficie:
-      <select name="surface" required>
-        <option value="Hard" <%= tournament.surface === "Hard" ? "selected" : "" %>>Hard</option>
-        <option value="Clay" <%= tournament.surface === "Clay" ? "selected" : "" %>>Clay</option>
-        <option value="Grass" <%= tournament.surface === "Grass" ? "selected" : "" %>>Grass</option>
-        <option value="Carpet" <%= tournament.surface === "Carpet" ? "selected" : "" %>>Carpet</option>
+      Superficie (material):
+      <select name="surface_material" required>
+        <option value="hard" <%= _mat.includes('hard') ? "selected" : "" %>>Hard</option>
+        <option value="clay" <%= _mat.includes('clay') ? "selected" : "" %>>Clay</option>
+        <option value="grass" <%= _mat.includes('grass') ? "selected" : "" %>>Grass</option>
+        <option value="carpet" <%= _mat.includes('carpet') ? "selected" : "" %>>Carpet</option>
       </select>
+    </label>
+
+    <label>
+      Superficie (indoor):
+      <input type="checkbox" name="surface_indoor" value="1" <%= _indoor ? "checked" : "" %>>
+    </label>
+
+    <label>
+      Superficie (color):
+      <input type="color" name="surface_color" value="<%= _color %>">
     </label>
 
     <label>
