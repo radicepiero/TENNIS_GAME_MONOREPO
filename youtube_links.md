@@ -4,3 +4,5 @@ DOCKER
 https://www.youtube.com/watch?v=_fbHrFimgA8
 NGINX
 https://www.youtube.com/watch?v=iInUBOVeBCc
+DIGITAL OCEAN
+
