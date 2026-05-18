@@ -34,6 +34,7 @@
 
         <form id="create-tournament" class="admin-modal__form">
           <label>Nome<input name="name" type="text" required /></label>
+          <label>Nickname<input name="nickname" type="text" /></label>
           <label>Href<input name="href" type="text" required /></label>
           <label>Categoria<input name="category" type="text" /></label>
           <label>Luogo<input name="location" type="text" required /></label>
@@ -55,6 +56,12 @@
           <label>Superficie (color)
             <input name="surface_color" id="surface-color" type="color" value="#000000" />
           </label>
+          <label>Note (admin)
+            <textarea name="admin_notes" rows="3" style="width: 100%;"></textarea>
+          </label>
+          <label>Link (uno per riga)
+            <textarea name="admin_links" rows="3" style="width: 100%;"></textarea>
+          </label>
           <label>Montepremi<input name="prizemoney" type="number" required value="0" /></label>
           <label>Valuta
             <select name="currency" required>
@@ -64,6 +71,7 @@
           </label>
           <label>Data inizio<input name="datainizio" type="date" required /></label>
           <label>Data fine<input name="datafine" type="date" required /></label>
+          <label>Data Open<input name="dataopen" type="date" /></label>
           <label>Stato
             <select name="status" required>
               <option value="excluded">Escluso</option>
@@ -83,6 +91,11 @@
           </label>
           <label>Rounds
             <select name="rounds" id="rounds">
+              <option value="">(vuoto)</option>
+            </select>
+          </label>
+          <label>Round Open
+            <select name="roundopen" id="roundopen">
               <option value="">(vuoto)</option>
             </select>
           </label>

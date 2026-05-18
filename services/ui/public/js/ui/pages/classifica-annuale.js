@@ -50,7 +50,7 @@ function render(data, { headerRow, bodyEl, totalsRow }) {
 
     const th = document.createElement("th");
     th.className = "tournament-col";
-    th.textContent = (t && t.name) || "";
+    th.textContent = (t && t.nickname) || "";
     tr.appendChild(th);
 
     const max = Number(rowMax[String(t.id)]) || 0;

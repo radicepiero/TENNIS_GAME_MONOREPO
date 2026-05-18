@@ -1,4 +1,4 @@
-import { fetchJson } from "/js/utils.js";
+import { fetchJson, normalizeLinksField } from "/js/utils.js";
 import { roomApi } from "/js/api/roomApi.js";
 import { getEffectiveRoomId, setSelectedRoomId } from "/js/ui/utils/roomSelection.js";
 
@@ -21,30 +21,6 @@ function fmtTs(v) {
   const d = new Date(v);
   if (Number.isNaN(d.getTime())) return String(v);
   return `${pad2(d.getDate())}/${pad2(d.getMonth() + 1)}/${d.getFullYear()} ${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`;
-}
-
-function normalizeLinksField(raw) {
-  if (typeof raw !== "string") return raw;
-  const trimmed = raw.trim();
-  if (!trimmed) return [];
-
-  if (trimmed.startsWith("[") || trimmed.startsWith("{")) {
-    try {
-      return JSON.parse(trimmed);
-    } catch (e) {
-      return trimmed
-        .split(/\r?\n/)
-        .map((s) => s.trim())
-        .filter(Boolean)
-        .map((url) => ({ url }));
-    }
-  }
-
-  return trimmed
-    .split(/\r?\n/)
-    .map((s) => s.trim())
-    .filter(Boolean)
-    .map((url) => ({ url }));
 }
 
 function toYmd(v) {

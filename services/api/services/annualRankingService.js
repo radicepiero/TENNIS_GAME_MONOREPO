@@ -176,6 +176,7 @@ const getAnnualRanking = async (year, room_id) => {
   const tournamentRows = tournamentsInYear.map((t) => ({
     id: String(t.id),
     name: t.name,
+    nickname: (t.nickname && String(t.nickname).trim()) ? t.nickname : t.name,
     datafine: t.datafine,
     status: t.status,
   }));

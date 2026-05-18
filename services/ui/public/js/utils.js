@@ -158,6 +158,30 @@ export function localDateTimeToIso(value) {
   return d.toISOString();
 }
 
+export function normalizeLinksField(raw) {
+  if (typeof raw !== "string") return raw;
+  const trimmed = raw.trim();
+  if (!trimmed) return [];
+
+  if (trimmed.startsWith("[") || trimmed.startsWith("{")) {
+    try {
+      return JSON.parse(trimmed);
+    } catch (e) {
+      return trimmed
+        .split(/\r?\n/)
+        .map((s) => s.trim())
+        .filter(Boolean)
+        .map((url) => ({ url }));
+    }
+  }
+
+  return trimmed
+    .split(/\r?\n/)
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .map((url) => ({ url }));
+}
+
 /**
  * Estrae l'anno (YYYY) da una stringa data.
  * @param {string|null|undefined} dateStr

@@ -4,6 +4,7 @@ import {
   localDateTimeToIso,
   toYear,
   parseHttpStatusFromError,
+  normalizeLinksField,
   setText,
 } from "/js/utils.js";
 
@@ -149,6 +150,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const createStatus = document.getElementById("create-status");
   const rankingDateSelect = document.getElementById("ranking-date");
   const roundsSelect = document.getElementById("rounds");
+  const roundOpenSelect = document.getElementById("roundopen");
 
   const createModal = setupCreateModal();
 
@@ -163,6 +165,7 @@ document.addEventListener("DOMContentLoaded", () => {
   let rankingDates = [];
 
   fillRoundsSelect(roundsSelect);
+  fillRoundsSelect(roundOpenSelect);
 
   async function runRankingImport() {
     if (!rankingImportRun || !rankingImportFile || !rankingImportDate) return;
@@ -324,6 +327,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const data = Object.fromEntries(new FormData(form));
 
+    if (typeof data.admin_links !== "undefined") {
+      data.admin_links = normalizeLinksField(data.admin_links);
+    }
+
     const material = data.surface_material ? String(data.surface_material).toLowerCase() : "hard";
     const indoor = Boolean(data.surface_indoor);
     const color = data.surface_color ? String(data.surface_color).trim() : "";
@@ -336,13 +343,42 @@ document.addEventListener("DOMContentLoaded", () => {
     delete data.surface_indoor;
     delete data.surface_color;
 
+    const start = normalizeYmd(data.datainizio);
+    const end = normalizeYmd(data.datafine);
+    const open = normalizeYmd(data.dataopen);
+    if (open) {
+      if (start && open < start) {
+        alert("Data Open deve essere compresa tra Data Inizio e Data Fine");
+        return;
+      }
+      if (end && open > end) {
+        alert("Data Open deve essere compresa tra Data Inizio e Data Fine");
+        return;
+      }
+    }
+
     // normalize numeric fields
     if (typeof data.prizemoney !== "undefined") data.prizemoney = Number(data.prizemoney);
     if (typeof data.rounds !== "undefined" && data.rounds !== "") data.rounds = Number(data.rounds);
     if (data.rounds === "") delete data.rounds;
+    if (typeof data.roundopen !== "undefined" && data.roundopen !== "") data.roundopen = Number(data.roundopen);
+    if (data.roundopen === "") delete data.roundopen;
     if (typeof data.costopartecipazione !== "undefined") data.costopartecipazione = Number(data.costopartecipazione);
     if (data.ranking_date === "") delete data.ranking_date;
     if (typeof data.ranking_date === "string") data.ranking_date = normalizeYmd(data.ranking_date);
+
+    if (data.dataopen === "") delete data.dataopen;
+
+    if (
+      typeof data.roundopen !== "undefined" &&
+      typeof data.rounds !== "undefined" &&
+      Number.isFinite(data.roundopen) &&
+      Number.isFinite(data.rounds) &&
+      data.roundopen > data.rounds
+    ) {
+      alert("Round Open deve essere minore o uguale a Round Totali");
+      return;
+    }
 
     if (data.chiusuraPronostici === "") {
       delete data.chiusuraPronostici;
