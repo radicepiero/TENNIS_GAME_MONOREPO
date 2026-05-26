@@ -139,6 +139,7 @@ export async function saveAlbero() {
     return result; // puoi gestire qui il risultato
   } catch (error) {
     console.error("Errore durante il salvataggio dell'albero:", error.message);
+    throw error;
   }
 }
 

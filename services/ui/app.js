@@ -23,7 +23,10 @@ app.use(checkUser);
 
 app.use(tournamentBackgroundMiddleware());
 
-app.get("/", (req, res) => res.render("home"));
+app.get("/", (req, res) => {
+  if (res.locals.user) return res.redirect("/friend/home");
+  return res.render("home");
+});
 
 app.use(authRouter);
 app.use("/", requireAuth, viewsRouter);

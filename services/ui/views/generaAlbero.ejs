@@ -7,7 +7,7 @@
 
 <h1 id="nome-torneo"><%= tournamentId %></h1>
 
-<div id="elenco alberi"><button id="newButton">NUOVO</button></div>
+<div id="elenco alberi" class="hidden"></div>
 <div id="excludedWarning" class="hidden" style="margin: 10px 0; padding: 10px; border: 1px solid #f5c2c7; background: #f8d7da; color: #842029;">
   Torneo escluso: non è possibile generare un nuovo albero.
 </div>
@@ -23,6 +23,7 @@
   </label>
   <button id="saveButton">SALVA</button>
   <button id="deleteButton">SCANCELLA</button>
+  <span id="saveFeedback" class="hidden" style="margin-left: 10px; padding: 6px 10px; border-radius: 8px; background: rgba(0,0,0,0.08);"></span>
 </div>
 
 <div id="scroll-container">
@@ -74,22 +75,30 @@
 
   populateRoundSelects(tournament, roundLabels.slice(1));
 
-  setup(tournament, user, apiUrl);
+  await setup(tournament, user, apiUrl);
 
   const filterBar = document.getElementById("filter-bar");
   const saveBtn = document.getElementById("saveButton");
   const deleteBtn = document.getElementById("deleteButton");
-  const newBtn = document.getElementById("newButton");
+  const saveFeedbackEl = document.getElementById("saveFeedback");
   const excludedWarning = document.getElementById("excludedWarning");
   const fromRoundSelect = document.getElementById("fromRound");
   const toRoundSelect = document.getElementById("toRound");
 
+  let saveFeedbackTimer = null;
+  function showSaveFeedback(message) {
+    if (!saveFeedbackEl) return;
+    saveFeedbackEl.textContent = message || "";
+    saveFeedbackEl.classList.remove("hidden");
+    if (saveFeedbackTimer) clearTimeout(saveFeedbackTimer);
+    saveFeedbackTimer = setTimeout(() => {
+      saveFeedbackEl.classList.add("hidden");
+      saveFeedbackEl.textContent = "";
+    }, 2500);
+  }
+
   const isExcludedTournament =
     tournament && String(tournament.status).toLowerCase() === "excluded";
-  if (isExcludedTournament) {
-    if (newBtn) newBtn.classList.add("hidden");
-    if (excludedWarning) excludedWarning.classList.remove("hidden");
-  }
 
   let mode = "none"; // none | new | existing
   let canEdit = false;
@@ -129,6 +138,12 @@
   }
 
   const containerElencolberi = document.getElementById("elenco alberi");
+  if (containerElencolberi) containerElencolberi.classList.add("hidden");
+
+  // stato iniziale
+  setEditable(false);
+  setWinnersEditable(false);
+  setUiState({ visible: false, _mode: "none", _canEdit: false });
 
   const alberi = await getAlberi(tournament);
   const dedupById = new Map();
@@ -146,39 +161,14 @@
   const alberiDaMostrare = alberoPreferito ? [alberoPreferito] : [];
 
   if (alberiDaMostrare.length > 0) {
-    // un albero solo per torneo: se esiste, non permettiamo NUOVO
-    newBtn.classList.add("hidden");
-  }
-
-  for (const treeRow of alberiDaMostrare) {
-    const divRiga = document.createElement("div");
-    const albero = document.createElement("div");
-    const nomeAlberoSpan = document.createElement("span");
-    nomeAlberoSpan.textContent = treeRow.name;
-    const nomeUserAlberoSpan = document.createElement("span");
-    const bottoneAlbero = document.createElement("button");
-    if (user.uuid === treeRow.ownerId) {
-      
-        nomeUserAlberoSpan.textContent = user.soprannome
-      } else{
-      nomeUserAlberoSpan.textContent = "PoPoSTaPo";
-    }
-    albero.append(nomeAlberoSpan, nomeUserAlberoSpan);
-    albero.id = treeRow.id;
-    albero.addEventListener("click", async (e) => {
-      const treeId = e.currentTarget.id;
-      await selectTree(treeId);
-    });
-    bottoneAlbero.textContent = APP_ICONS.EDIT;
-    bottoneAlbero.type = "button";
-    bottoneAlbero.addEventListener("click", async (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      await selectTree(treeRow.id);
-    });
-
-    divRiga.append(bottoneAlbero, albero);
-    containerElencolberi.appendChild(divRiga);
+    await selectTree(alberiDaMostrare[0].id);
+  } else if (isExcludedTournament) {
+    if (excludedWarning) excludedWarning.classList.remove("hidden");
+  } else {
+    genera();
+    setEditable(true);
+    setWinnersEditable(true);
+    setUiState({ visible: true, _mode: "new", _canEdit: true });
   }
 
   fromRoundSelect.addEventListener("change", renderFromDropdowns);
@@ -191,27 +181,19 @@
       location.reload();
       return;
     }
-    await saveAlbero(apiUrl);
-  });
-
-  newBtn.addEventListener("click", () => {
-    if (isExcludedTournament) return;
-    genera();
-    setEditable(true);
-    setWinnersEditable(true);
-    setUiState({ visible: true, _mode: "new", _canEdit: true });
+    try {
+      await saveAlbero(apiUrl);
+      showSaveFeedback("Salvato");
+    } catch (e) {
+      showSaveFeedback("Errore salvataggio");
+    }
   });
 
   deleteBtn.addEventListener("click", async () => {
     if (!canEdit || mode !== "existing") return;
     await deleteAlbero();
-    location.reload();
+    location.href = "/admin/tornei";
   });
-
-  // stato iniziale
-  setEditable(false);
-  setWinnersEditable(false);
-  setUiState({ visible: false, _mode: "none", _canEdit: false });
 </script>
 
 <%- include('partials/footer'); -%>

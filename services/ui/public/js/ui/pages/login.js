@@ -27,7 +27,7 @@ function init() {
         if (passwordError) passwordError.textContent = data.errors.password;
       }
       if (data && data.user) {
-        location.assign("/");
+        location.assign("/friend/home");
       }
     } catch (err) {
       console.log(err);

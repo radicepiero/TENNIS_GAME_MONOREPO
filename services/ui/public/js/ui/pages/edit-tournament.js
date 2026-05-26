@@ -1,5 +1,6 @@
 import { fetchJson, normalizeLinksField } from "/js/utils.js";
 import { roomApi } from "/js/api/roomApi.js";
+import { treeApi } from "/js/api/treeApi.js";
 import { getEffectiveRoomId, setSelectedRoomId } from "/js/ui/utils/roomSelection.js";
 
 function readBootstrap() {
@@ -290,6 +291,18 @@ async function handleSubmit({ apiUrl, tournamentId }) {
   });
 }
 
+async function updateTreeAction({ apiUrl, tournamentId }) {
+  const link = document.getElementById("tree-action");
+  if (!link) return;
+
+  try {
+    const tree = await treeApi.getSuperuserTreeByTournament(tournamentId, apiUrl, false);
+    link.textContent = tree && tree.id ? "Apri albero" : "Genera albero";
+  } catch (e) {
+    link.textContent = "Genera albero";
+  }
+}
+
 document.addEventListener("DOMContentLoaded", async () => {
   const { apiUrl, tournamentId, predictionsTable } = readBootstrap();
 
@@ -301,6 +314,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     fillScripts({ apiUrl, tournamentId }),
     initPredictionsRoomSelect({ apiUrl }),
   ]);
+
+  await updateTreeAction({ apiUrl, tournamentId });
 
   await handleSubmit({ apiUrl, tournamentId });
 });

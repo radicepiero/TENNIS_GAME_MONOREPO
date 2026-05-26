@@ -4,6 +4,9 @@
 <link rel="stylesheet" href="/css/edit-tournament.css" />
 <%- include('partials/header'); -%> <%- include('partials/hamburger'); -%>
   <h1 style="text-align: center;">Modifica Torneo <%= tournament.name %></h1>
+  <div style="width: min(1200px, 96vw); margin: 0 auto 10px; display: flex; justify-content: center;">
+    <a id="tree-action" class="btn" href="/tornei/<%= tournament.id %>/genera-albero">Genera albero</a>
+  </div>
   <% const roundLabels = ["128-esimi","64-esimi","32-esimi","16-esimi","Ottavi","Quarti","Semifinali","Finali"]; %>
   <% const roundLabel = (n) => (roundLabels[roundLabels.length - Number(n)] || `Round ${n}`); %>
 
