@@ -467,7 +467,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
 
   // Gestione invio pronostico
-  submitButton.addEventListener("click", async () => {
+  submitButton.addEventListener("click", async (e) => {
+    if (e && typeof e.preventDefault === "function") e.preventDefault();
+    if (e && typeof e.stopPropagation === "function") e.stopPropagation();
     if (isLockedTournament) {
       alert("Pronostici bloccati per questo torneo");
       return;
@@ -498,11 +500,15 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   });
 
-  deleteButton.addEventListener("click", async () => {
+  deleteButton.addEventListener("click", async (e) => {
+    if (e && typeof e.preventDefault === "function") e.preventDefault();
+    if (e && typeof e.stopPropagation === "function") e.stopPropagation();
     if (isLockedTournament) {
       alert("Pronostici bloccati per questo torneo");
       return;
     }
+
+    if (!confirm("Vuoi eliminare il pronostico?")) return;
 
     try {
       const avatarToDelete = hiddenUrl && hiddenUrl.value ? String(hiddenUrl.value) : "";
@@ -517,24 +523,13 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     const pronostico = {
       tournament_id: tournamentId,
-      rows: semifinalists.map((player) => ({
-        player_id: player.id,
-        prediction: player.prediction,
-      })),
+      room_id: currentRoomId || null,
     };
-
-    if (
-      pronostico.rows.length !== 4 ||
-      pronostico.rows.every((p) => p.prediction !== "winner")
-    ) {
-      alert("Devi selezionare 4 semifinalisti e un vincitore!");
-      return;
-    }
 
     try {
       await predictionApi.deletePrediction(pronostico, apiUrl, { roomId: currentRoomId });
-      location.reload();
       alert("Pronostico eliminato!");
+      location.reload();
     } catch (error) {
       console.error("Errore nell'invio dei dati per la cancellazione:", error);
     }

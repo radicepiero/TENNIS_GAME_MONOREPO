@@ -31,7 +31,17 @@ function render(data, { headerRow, bodyEl, totalsRow }) {
   const totals = (data && data.totals) || {};
   const rowMax = (data && data.rowMax) || {};
 
-  users.forEach((u) => {
+  const orderedUsers = [...users].sort((a, b) => {
+    const ta = Number(totals && a && a.uuid ? totals[a.uuid] : 0) || 0;
+    const tb = Number(totals && b && b.uuid ? totals[b.uuid] : 0) || 0;
+    const diff = tb - ta;
+    if (diff) return diff;
+    const na = String((a && a.soprannome) || "");
+    const nb = String((b && b.soprannome) || "");
+    return na.localeCompare(nb, "it", { sensitivity: "base" });
+  });
+
+  orderedUsers.forEach((u) => {
     const th = document.createElement("th");
     th.className = "user-col";
     th.textContent = (u && u.soprannome) || "";
@@ -56,7 +66,7 @@ function render(data, { headerRow, bodyEl, totalsRow }) {
     const max = Number(rowMax[String(t.id)]) || 0;
     const rowPoints = points[String(t.id)] || {};
 
-    users.forEach((u) => {
+    orderedUsers.forEach((u) => {
       const td = document.createElement("td");
       const v = Number(rowPoints[u.uuid]) || 0;
       td.textContent = cellText(v);

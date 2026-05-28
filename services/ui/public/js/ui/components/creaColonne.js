@@ -229,7 +229,7 @@ export async function creaColonne(tournamentID, faseMenu, apiUrl, loggedUserUuid
   if (!pointsWinnerFn) pointsWinnerFn = () => 0;
   if (!pointsSemiFn) pointsSemiFn = () => 0;
 
-  predictions.forEach((prediction) => {
+  (predictions || []).forEach((prediction) => {
     //creazione header con dati dello scommettitore
     punteggi[prediction.user_uuid] = 0;
 
@@ -403,4 +403,22 @@ export async function creaColonne(tournamentID, faseMenu, apiUrl, loggedUserUuid
     column.appendChild(content);
     columnContainer.appendChild(column);
   });
+
+  // ORDINA LE COLONNE: punteggio decrescente, a parità per username (header-cell)
+  try {
+    const columns = Array.from(columnContainer.querySelectorAll(":scope > .column"));
+    columns.sort((a, b) => {
+      const scoreA = Number((a.querySelector(".punteggio")?.textContent || "").trim()) || 0;
+      const scoreB = Number((b.querySelector(".punteggio")?.textContent || "").trim()) || 0;
+      const diff = scoreB - scoreA;
+      if (diff) return diff;
+
+      const nameA = String(a.querySelector(".header-cell")?.textContent || "").replace(/\s+/g, " ").trim();
+      const nameB = String(b.querySelector(".header-cell")?.textContent || "").replace(/\s+/g, " ").trim();
+      return nameA.localeCompare(nameB, "it", { sensitivity: "base" });
+    });
+    columns.forEach((c) => columnContainer.appendChild(c));
+  } catch (e) {
+    console.error("Errore ordinamento colonne pronostici:", e);
+  }
 }
