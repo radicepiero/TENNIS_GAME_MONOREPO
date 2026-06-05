@@ -18,6 +18,8 @@ export const APP_ICONS = {
   EXPAND: "➕",
   COLLAPSE: "➖",
   DEFAULT_PLAYER: "👤",
+  DRAW: '<img src="/immagini/tabellone.png" alt="" style="height:1em;width:1em;vertical-align:-0.15em;" />',
+  SVILUPPO: '<img src="/immagini/pronostici.png" alt="" style="height:2em;width:2em;vertical-align:-0.15em;" />',
 };
 export const APP_BUTTONS = {
   EDIT: APP_ICONS.EDIT+" Modifica",
@@ -29,6 +31,8 @@ export const APP_BUTTONS = {
   CRYSTAL_BALL: APP_ICONS.CRYSTAL_BALL+" Pronostici",
   RESULTS: APP_ICONS.RESULTS+" Risultati",
   PLAYER_TBD: APP_ICONS.PLAYER_TBD + " giocatore da stabilire",
+  DRAW: APP_ICONS.DRAW + " tabellone",
+  SVILUPPO: APP_ICONS.SVILUPPO + " sviluppo",
 };
 
 export const DEFAULT_PLAYER_IMG = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";

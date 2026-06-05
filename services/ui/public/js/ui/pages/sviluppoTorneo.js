@@ -34,6 +34,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   const titleEl = document.getElementById("titolo");
   const titleTextEl = document.getElementById("titolo-text");
+  const titleDrawBtn = document.getElementById("titolo-draw");
+  const titleEditBtn = document.getElementById("titolo-edit");
   const modalEl = document.getElementById("fase-modal");
   const modalOptionsEl = document.getElementById("fase-modal-options");
 
@@ -45,9 +47,16 @@ document.addEventListener("DOMContentLoaded", async () => {
     const label = (Array.isArray(phaseLabels) ? phaseLabels[p] : "") || "";
     const name = tournamentName ? String(tournamentName) : "";
     if (titleTextEl) {
-      titleTextEl.textContent = `${label.toUpperCase()} ${name} ${APP_ICONS && APP_ICONS.EDIT ? APP_ICONS.EDIT : ""}`.trim();
+      titleTextEl.textContent = `${label.toUpperCase()} ${name}`.trim();
     }
   };
+
+  if (titleDrawBtn) {
+    titleDrawBtn.innerHTML = (APP_ICONS && APP_ICONS.DRAW) || "";
+  }
+  if (titleEditBtn) {
+    titleEditBtn.textContent = (APP_ICONS && APP_ICONS.EDIT) || "";
+  }
 
   const openModal = () => {
     if (!modalEl) return;
@@ -59,6 +68,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (!modalEl) return;
     modalEl.classList.remove("open");
     modalEl.setAttribute("aria-hidden", "true");
+  };
+
+  const activateTitleMenu = () => {
+    renderModalOptions();
+    openModal();
   };
 
   const faseToRound = (faseMenu) => {
@@ -184,18 +198,22 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   };
 
-  if (titleEl) {
-    titleEl.addEventListener("click", (e) => {
-      const target = e && e.target ? e.target : null;
-      if (target && target.closest && target.closest("button")) return;
-      renderModalOptions();
-      openModal();
+  if (titleDrawBtn) {
+    titleDrawBtn.addEventListener("click", () => {
+      const id = String(tournamentId || "");
+      if (!id) return;
+      window.location.href = `/tornei/${encodeURIComponent(id)}/albero-superuser`;
     });
-    titleEl.addEventListener("keydown", (e) => {
+  }
+
+  if (titleEditBtn) {
+    titleEditBtn.addEventListener("click", () => {
+      activateTitleMenu();
+    });
+    titleEditBtn.addEventListener("keydown", (e) => {
       if (e && (e.key === "Enter" || e.key === " ")) {
         e.preventDefault();
-        renderModalOptions();
-        openModal();
+        activateTitleMenu();
       }
     });
   }

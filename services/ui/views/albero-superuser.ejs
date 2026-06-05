@@ -5,7 +5,10 @@
 <%- include('partials/header'); -%>
 <%- include('partials/hamburger'); -%>
 
-<h1 id="nome-torneo"><%= tournamentId %></h1>
+<div style="display:flex; gap:10px; justify-content:center; align-items:center; flex-wrap:wrap;">
+  <h1 id="nome-torneo" style="margin:0;"><%= tournamentId %></h1>
+  <button type="button" id="go-sviluppo" aria-label="Sviluppo"></button>
+</div>
 
 <% if (user && (user.level === 'admin' || user.level === 'super')) { %>
 <div id="floating-toolbar" class="floating-toolbar">

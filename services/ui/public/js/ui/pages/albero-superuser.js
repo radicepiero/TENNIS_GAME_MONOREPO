@@ -1,6 +1,6 @@
 import { $ } from "/js/utils.js";
 import { Tournament } from "/js/domain/Tournament.js";
-import { roundLabels } from "/js/icons.js";
+import { APP_ICONS, roundLabels } from "/js/icons.js";
 import { enableFloatingToolbar } from "/js/ui/components/floatingToolbar.js";
 import { treeApi } from "/js/api/treeApi.js";
 import {
@@ -36,6 +36,16 @@ async function init() {
   const bootstrap = document.getElementById("page-bootstrap");
   const apiUrl = bootstrap?.dataset?.apiUrl || "";
   const tournamentId = bootstrap?.dataset?.tournamentId || "";
+
+  const goSviluppoBtn = document.getElementById("go-sviluppo");
+  if (goSviluppoBtn) {
+    goSviluppoBtn.innerHTML = (APP_ICONS && APP_ICONS.SVILUPPO) || "";
+    goSviluppoBtn.addEventListener("click", () => {
+      const id = String(tournamentId || "");
+      if (!id) return;
+      window.location.href = `/tornei/${encodeURIComponent(id)}/sviluppo`;
+    });
+  }
 
   if (document.getElementById("floating-toolbar")) {
     enableFloatingToolbar({

@@ -5,7 +5,9 @@
 <%- include('partials/hamburger'); -%>
 
 <h1 id="titolo" class="fase-title" role="button" tabindex="0">
+  <button type="button" id="titolo-draw" aria-label="Tabellone"></button>
   <span id="titolo-text"><%= tournamentId %></span>
+  <button type="button" id="titolo-edit" aria-label="Modifica"></button>
 </h1>
 
 <div id="fase-modal" class="fase-modal" aria-hidden="true">
