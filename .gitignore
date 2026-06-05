@@ -4,6 +4,9 @@ services/api/zzTOOLS/password.txt
 services/api/zzTOOLS/rankingManagement/
 services/ui/public/uploads/
 services/ui/public/immagini/
+!services/ui/public/immagini/
+!services/ui/public/immagini/pronostici.png
+!services/ui/public/immagini/tabellone.png
 
 # Dependency directories
 node_modules/
