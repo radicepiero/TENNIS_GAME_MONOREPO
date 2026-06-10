@@ -40,14 +40,23 @@
 <script src="https://fperucic.github.io/treant-js/vendor/raphael.js"></script>
 <script src="https://fperucic.github.io/treant-js/Treant.js"></script>
 
+<div id="page-bootstrap" data-api-url="<%= apiUrl %>" data-tournament-id="<%= tournamentId %>" data-user='<%- JSON.stringify(user || null) %>'></div>
+
 <script type="module">
   import { Tournament } from "/js/domain/Tournament.js";
   import { APP_ICONS } from "/js/icons.js";
   import { roundLabels } from "/js/icons.js";
 
-  const user = <%- JSON.stringify(user || null) %>;
-  const apiUrl = "<%= apiUrl %>";
-  const tournamentId = "<%= tournamentId %>";
+  const bootstrap = document.getElementById("page-bootstrap");
+  const apiUrl = (bootstrap && bootstrap.dataset && bootstrap.dataset.apiUrl) ? bootstrap.dataset.apiUrl : "";
+  const tournamentId = (bootstrap && bootstrap.dataset && bootstrap.dataset.tournamentId) ? bootstrap.dataset.tournamentId : "";
+  let user = null;
+  try {
+    const raw = (bootstrap && bootstrap.dataset && typeof bootstrap.dataset.user === "string") ? bootstrap.dataset.user : "null";
+    user = JSON.parse(raw || "null");
+  } catch (e) {
+    user = null;
+  }
   const tournament = (await Tournament.fetchTournament(tournamentId, apiUrl))
     .data[0];
 
