@@ -2,6 +2,7 @@ services:
   postgres:
     image: postgres:16-alpine
     container_name: tennis-postgres
+    restart: unless-stopped
     environment:
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
@@ -23,6 +24,7 @@ services:
     build:
       context: ./services/api
     container_name: tennis-api
+    restart: unless-stopped
     env_file:
       - ./.env.prod
     environment:
@@ -40,6 +42,7 @@ services:
     build:
       context: ./services/ui
     container_name: tennis-ui
+    restart: unless-stopped
     env_file:
       - ./.env.prod
     environment:
@@ -57,6 +60,7 @@ services:
   nginx:
     image: nginx:1.27-alpine
     container_name: tennis-proxy
+    restart: unless-stopped
     depends_on:
       - ui
       - api
@@ -73,6 +77,7 @@ services:
   certbot:
     image: certbot/certbot:latest
     container_name: tennis-certbot
+    restart: unless-stopped
     volumes:
       - letsencrypt:/etc/letsencrypt
       - certbot_www:/var/www/certbot
