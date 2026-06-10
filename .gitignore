@@ -1,83 +1,160 @@
 utenticoi_1.dump
+
 cookies.txt
+
 services/api/zzTOOLS/password.txt
+
 services/api/zzTOOLS/rankingManagement/
+
 services/ui/public/uploads/
+
 services/ui/public/immagini/
-!services/ui/public/immagini/
-!services/ui/public/immagini/pronostici.png
-!services/ui/public/immagini/tabellone.png
+
+
 
 # Dependency directories
+
 node_modules/
 
+
+
 # Optional npm cache directory
+
 .npm
 
+
+
 # dotenv environment variable files
+
 .env
 
 
+
+
+
 # dotenv variants
+
 .env.*
+
 !.env.example
 
 
+
+
+
 # Logs
+
 logs/
+
 *.log
+
 npm-debug.log*
+
 yarn-debug.log*
+
 yarn-error.log*
+
 pnpm-debug.log*
 
 
+
+
+
 # Runtime data
+
 pids/
+
 *.pid
+
 *.seed
+
 *.pid.lock
 
 
+
+
+
 # Coverage
+
 coverage/
+
 *.lcov
+
 .nyc_output/
 
 
+
+
+
 # Build output
+
 dist/
+
 build/
+
 out/
 
 
+
+
+
 # Framework caches (common)
+
 .cache/
+
 .parcel-cache/
+
 .turbo/
+
 .eslintcache
 
 
+
+
+
 # Next/Nuxt/SvelteKit (in case UI switches)
+
 .next/
+
 .nuxt/
+
 .svelte-kit/
 
 
+
+
+
 # IDE
+
 .vscode/
+
 .idea/
+
 *.iml
 
 
+
+
+
 # OS
+
 .DS_Store
+
 Thumbs.db
+
 Desktop.ini
 
 
+
+
+
 # Certificates / keys
+
 *.pem
+
 *.key
+
 *.pfx
+
 *.p12
+

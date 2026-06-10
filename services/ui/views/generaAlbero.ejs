@@ -5,7 +5,10 @@
 <link rel="stylesheet" href="/css/hamburger.css" />
 <%- include('partials/header'); -%> <%- include('partials/hamburger'); -%>
 
-<h1 id="nome-torneo"><%= tournamentId %></h1>
+<div style="display:flex; gap:10px; justify-content:center; align-items:center; flex-wrap:wrap;">
+  <h1 id="nome-torneo" style="margin:0;"><%= tournamentId %></h1>
+  <button type="button" id="go-edit" aria-label="Modifica"></button>
+</div>
 
 <div id="elenco alberi" class="hidden"></div>
 <div id="excludedWarning" class="hidden" style="margin: 10px 0; padding: 10px; border: 1px solid #f5c2c7; background: #f8d7da; color: #842029;">
@@ -71,7 +74,18 @@
   } from "/js/ui/components/alberoTorneo.js?v=<%= Date.now() %>";
 
   document.title = `programma ${tournament.name}`;
-  document.getElementById("nome-torneo").textContent = tournament.name;
+  const nomeTorneoEl = document.getElementById("nome-torneo");
+  if (nomeTorneoEl) nomeTorneoEl.textContent = tournament.name;
+
+  const goEditBtn = document.getElementById("go-edit");
+  if (goEditBtn) {
+    goEditBtn.textContent = (APP_ICONS && APP_ICONS.EDIT) || "";
+    goEditBtn.addEventListener("click", () => {
+      const id = String(tournamentId || "");
+      if (!id) return;
+      window.location.href = `/tornei/${encodeURIComponent(id)}/edit`;
+    });
+  }
 
   populateRoundSelects(tournament, roundLabels.slice(1));
 

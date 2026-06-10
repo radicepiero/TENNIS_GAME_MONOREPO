@@ -2,6 +2,7 @@ import { fetchJson, normalizeLinksField } from "/js/utils.js";
 import { roomApi } from "/js/api/roomApi.js";
 import { treeApi } from "/js/api/treeApi.js";
 import { getEffectiveRoomId, setSelectedRoomId } from "/js/ui/utils/roomSelection.js";
+import { APP_ICONS } from "/js/icons.js";
 
 function readBootstrap() {
   const el = document.getElementById("bootstrap");
@@ -297,9 +298,16 @@ async function updateTreeAction({ apiUrl, tournamentId }) {
 
   try {
     const tree = await treeApi.getSuperuserTreeByTournament(tournamentId, apiUrl, false);
-    link.textContent = tree && tree.id ? "Apri albero" : "Genera albero";
+    if (tree && tree.id) {
+      link.innerHTML = (APP_ICONS && APP_ICONS.DRAW) || "";
+      link.setAttribute("aria-label", "Apri albero");
+    } else {
+      link.textContent = "Genera albero";
+      link.setAttribute("aria-label", "Genera albero");
+    }
   } catch (e) {
     link.textContent = "Genera albero";
+    link.setAttribute("aria-label", "Genera albero");
   }
 }
 
