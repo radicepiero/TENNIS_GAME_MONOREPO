@@ -15,4 +15,5 @@ router.use("/trees", require("./treesApiRoutes"));
 //router.use("/trees", require("./treesApiRoutes"));
 router.use("/matches", require("./matchesApiRoutes"));
 router.use("/friend", require("./friendDashboardApiRoutes"));
+router.use("/mobile", require("./mobileApiRoutes"));
 module.exports = router;

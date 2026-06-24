@@ -49,7 +49,8 @@ services:
       - PORT=3000
       - API=http://tennis-api:9000/api
     depends_on:
-      - api
+      api:
+        condition: service_started
     volumes:
       - ui_uploads:/app/public/uploads
     expose:
@@ -62,8 +63,10 @@ services:
     container_name: tennis-proxy
     restart: unless-stopped
     depends_on:
-      - ui
-      - api
+      ui:
+        condition: service_started
+      api:
+        condition: service_started
     ports:
       - "80:80"
       - "443:443"

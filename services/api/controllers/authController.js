@@ -7,6 +7,7 @@ const { spedisciMailConferma } = require("../config/mailer");
 const { handleErrors } = require("./authErrorsManagement");
 
 const maxAge = 3 * 24 * 60 * 60;
+const JWT_SECRET = process.env.JWT_SECRET || "un segreto generato a caso";
 
 const getSignup = (req, res) => {
   res.render("signup");
@@ -100,7 +101,7 @@ const postLogin = async (req, res) => {
 };
 // creazione del token che verrà spedito al client per riconoscerlo nelle richieste successive
 const createToken = function (uuid) {
-  return jwt.sign({ uuid }, "un segreto generato a caso", {
+  return jwt.sign({ uuid }, JWT_SECRET, {
     expiresIn: maxAge,
   });
 };

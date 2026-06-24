@@ -8,6 +8,16 @@ const User = db.User;
 
 const JWT_SECRET = process.env.JWT_SECRET || "un segreto generato a caso";
 
+const extractJwtFromRequest = (req) => {
+  const cookieToken = req?.cookies?.jwt;
+  if (cookieToken) return cookieToken;
+
+  const auth = String(req.headers.authorization || "");
+  const m = auth.match(/^Bearer\s+(.+)$/i);
+  if (m && m[1]) return m[1].trim();
+  return null;
+};
+
 const isApiRequest = (req) => {
   // API service is mounted under /api, but keep this generic.
   if (req.originalUrl && String(req.originalUrl).startsWith("/api")) return true;
@@ -23,7 +33,7 @@ const rejectUnauthorized = (req, res) => {
 };
 
 const requireAuth = (req, res, next) => {
-  const token = req.cookies.jwt;
+  const token = extractJwtFromRequest(req);
 
   // verifica dell'esistenza del cookie jwt e verifica della validità
   if (token) {
@@ -32,6 +42,7 @@ const requireAuth = (req, res, next) => {
         console.log(err.message);
         rejectUnauthorized(req, res);
       } else {
+        req.jwt = decodedToken;
         next();
       }
     });
@@ -43,7 +54,7 @@ const requireAuth = (req, res, next) => {
 // controllo dell'utente
 
 const checkUser = async (req, res, next) => {
-  const token = req.cookies.jwt;
+  const token = extractJwtFromRequest(req);
 
   if (!token) {
     res.locals.user = null;
@@ -65,6 +76,7 @@ const checkUser = async (req, res, next) => {
       return next();
     }
     res.locals.user = user;
+    req.jwt = decodedToken;
   } catch (error) {
     res.locals.user = null;
   }
@@ -72,7 +84,7 @@ const checkUser = async (req, res, next) => {
 };
 
 const requireAuthAndUser = async (req, res, next) => {
-  const token = req.cookies.jwt;
+  const token = extractJwtFromRequest(req);
   if (!token) return rejectUnauthorized(req, res);
 
   try {
@@ -90,6 +102,7 @@ const requireAuthAndUser = async (req, res, next) => {
     }
 
     res.locals.user = user;
+    req.jwt = decodedToken;
     return next();
   } catch (error) {
     res.locals.user = null;

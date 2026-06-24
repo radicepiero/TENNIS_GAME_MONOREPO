@@ -1,6 +1,6 @@
 //const Sequelize = require("sequelize");
 module.exports = function (sequelize, DataTypes) {
-  return sequelize.define(
+  const PlayerTournament = sequelize.define(
     "PlayerTournament",
     {
       player_id: {
@@ -40,4 +40,13 @@ module.exports = function (sequelize, DataTypes) {
       ],
     }
   );
+
+  PlayerTournament.associate = (models) => {
+    PlayerTournament.belongsTo(models.Player, {
+      foreignKey: "player_id",
+      targetKey: "id",
+    });
+  };
+
+  return PlayerTournament;
 };

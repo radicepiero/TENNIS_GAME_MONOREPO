@@ -181,6 +181,8 @@ const putTournament = async (id, tournament) => {
 
 const Users = db.User;
 const UsersTournaments = db.UserTournament;
+const Players = db.Player;
+const players_tournaments = db.PlayerTournament;
 const getTournamentsUsers = async () => {
   try {
     const users_tournaments = await UsersTournaments.findAll({
@@ -227,11 +229,11 @@ const getTournamentUser = async (user_id, tournament_id) => {
 const getTournamentPlayers = async (id) => {
   try {
     const tournamentPlayers = await players_tournaments.findAll({
-      where: { id },
+      where: { tournament_id: id },
       include: [
         {
           model: Players,
-          through: { attributes: ["rating", "turno", "posizione"] }, // Inclusione degli attributi aggiuntivi
+          attributes: ["id", "name", "country", "image_src", "image_alt"],
         },
       ],
     });

@@ -1,6 +1,6 @@
 const db = require("../models");
 
-const DEFAULT_ROOM_NAME = "Arena";
+const { DEFAULT_ROOM_NAME } = require("../config/constants");
 
 const resolveRoomIdOrDefault = async (roomId) => {
   if (roomId) return Number(roomId);

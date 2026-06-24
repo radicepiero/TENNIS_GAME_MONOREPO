@@ -6,7 +6,7 @@ const User = db.User;
 const Tournament = db.Tournament;
 const { fn, col } = require("sequelize");
 
-const DEFAULT_ROOM_NAME = "Arena";
+const { DEFAULT_ROOM_NAME } = require("../config/constants");
 
 const resolveRoomIdOrDefault = async (roomId) => {
   if (roomId) return Number(roomId);

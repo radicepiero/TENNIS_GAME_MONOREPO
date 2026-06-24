@@ -82,6 +82,108 @@ const computePlayerPointsById = async (tournament) => {
   return playerPointsById;
 };
 
+const computeUserTotalsForTournament = async (tournament, predictions, room_id) => {
+  const superuserId = await getSuperuserId();
+
+  const tree = superuserId
+    ? await db.Tree.findOne({
+        where: { tournament: String(tournament.id), ownerId: superuserId },
+      })
+    : null;
+
+  const matches = tree ? await db.Match.findAll({ where: { treeId: tree.id } }) : [];
+
+  const championId = computeChampionId(matches);
+  const playerPointsById = await computePlayerPointsById(tournament);
+
+  const usersByUuid = new Map();
+  const totalsByUser = new Map();
+
+  (predictions || []).forEach((p) => {
+    const userUuid = p && p.user_uuid ? String(p.user_uuid) : "";
+    if (!userUuid) return;
+
+    if (!usersByUuid.has(userUuid)) {
+      usersByUuid.set(userUuid, {
+        uuid: userUuid,
+        soprannome: p.user_soprannome || userUuid,
+        email: p.user_email || "",
+      });
+    }
+
+    const rows = (p && p.rows) || [];
+    const winnerRow = rows.find((r) => r && r.prediction === "winner");
+    const semiRows = rows.filter((r) => r && r.prediction === "semifinalist");
+
+    let total = 0;
+
+    if (winnerRow && typeof winnerRow.player_id !== "undefined") {
+      const playerId = String(winnerRow.player_id);
+      const reachedSemifinal = didPlayRound(playerId, 2, matches);
+      const isChampion = championId !== null && Number(championId) === Number(playerId);
+      const pointsCfg = playerPointsById.get(playerId) || { puntiWinner: 0, puntiSemifinalist: 0 };
+
+      if (isChampion) {
+        total += Number(pointsCfg.puntiWinner) || 0;
+      } else if (reachedSemifinal && championId !== null) {
+        total += Number(pointsCfg.puntiSemifinalist) || 0;
+      }
+    }
+
+    semiRows.forEach((r) => {
+      if (!r || typeof r.player_id === "undefined") return;
+      const playerId = String(r.player_id);
+      const reachedSemifinal = didPlayRound(playerId, 2, matches);
+      if (!reachedSemifinal) return;
+      const pointsCfg = playerPointsById.get(playerId) || { puntiSemifinalist: 0 };
+      total += Number(pointsCfg.puntiSemifinalist) || 0;
+    });
+
+    totalsByUser.set(userUuid, total);
+  });
+
+  const out = Array.from(usersByUuid.values())
+    .map((u) => ({
+      user_uuid: u.uuid,
+      user_soprannome: u.soprannome,
+      user_email: u.email,
+      points: Number(totalsByUser.get(u.uuid)) || 0,
+    }))
+    .sort((a, b) => {
+      const pa = Number(a.points) || 0;
+      const pb = Number(b.points) || 0;
+      if (pb !== pa) return pb - pa;
+      return String(a.user_soprannome || "").localeCompare(String(b.user_soprannome || ""), "it");
+    });
+
+  return out;
+};
+
+const getTournamentRanking = async (tournamentId, room_id) => {
+  const tid = Number(tournamentId);
+  if (!Number.isFinite(tid)) throw new Error("tournamentId non valido");
+
+  const tournament = await db.Tournament.findByPk(tid, { order: [["datafine", "ASC"]] });
+  if (!tournament) {
+    const err = new Error("Torneo non trovato");
+    err.statusCode = 404;
+    throw err;
+  }
+
+  const predictions = await predictionService.readPredictionsTournament(tournament.id, room_id);
+  const rows = await computeUserTotalsForTournament(tournament, predictions, room_id);
+
+  const maxPoints = rows && rows.length ? Number(rows[0].points) || 0 : 0;
+  const winners = rows && rows.length ? rows.filter((r) => (Number(r.points) || 0) === maxPoints) : [];
+
+  return {
+    tournament_id: String(tournament.id),
+    rows,
+    winner: rows && rows.length ? rows[0] : null,
+    winners,
+  };
+};
+
 const getAnnualRanking = async (year, room_id) => {
   const y = Number(year);
   if (!Number.isFinite(y)) {
@@ -218,4 +320,5 @@ const getAnnualRanking = async (year, room_id) => {
 
 module.exports = {
   getAnnualRanking,
+  getTournamentRanking,
 };
