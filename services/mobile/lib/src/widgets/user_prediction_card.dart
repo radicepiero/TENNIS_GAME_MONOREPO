@@ -17,6 +17,7 @@ class UserPredictionCard extends StatelessWidget {
   final Map<String, PlayerDto> playerById;
   final int? computedScore;
   final List<PredictionPick> picks;
+  final Decoration? decoration;
 
   const UserPredictionCard({
     super.key,
@@ -24,6 +25,7 @@ class UserPredictionCard extends StatelessWidget {
     required this.playerById,
     required this.computedScore,
     required this.picks,
+    this.decoration,
   });
 
   PlayerDto? _playerFor(String? id) {
@@ -52,58 +54,69 @@ class UserPredictionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final score = computedScore;
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Mio pronostico', style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 8),
-            Table(
-              columnWidths: const {
-                0: FlexColumnWidth(),
-                1: IntrinsicColumnWidth(),
-              },
-              children: [
+
+    final content = Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Mio pronostico', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 8),
+          Table(
+            columnWidths: const {
+              0: FlexColumnWidth(),
+              1: IntrinsicColumnWidth(),
+            },
+            children: [
+              TableRow(
+                children: [
+                  const Padding(
+                    padding: EdgeInsets.only(bottom: 8),
+                    child: Text('Punteggio pronostico'),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Text(
+                      _formatIntIt(score),
+                      textAlign: TextAlign.right,
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
+              ),
+              for (final pick in picks)
                 TableRow(
                   children: [
-                    const Padding(
-                      padding: EdgeInsets.only(bottom: 8),
-                      child: Text('Punteggio pronostico'),
+                    _PickLeft(
+                      player: _playerFor(pick.playerId),
+                      fallbackText: _nameFor(pick.playerId),
+                      role: pick.role,
                     ),
                     Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
+                      padding: const EdgeInsets.only(top: 6),
                       child: Text(
-                        _formatIntIt(score),
+                        _formatIntIt(pick.points),
                         textAlign: TextAlign.right,
                         style: const TextStyle(fontWeight: FontWeight.w600),
                       ),
                     ),
                   ],
                 ),
-                for (final pick in picks)
-                  TableRow(
-                    children: [
-                      _PickLeft(
-                        player: _playerFor(pick.playerId),
-                        fallbackText: _nameFor(pick.playerId),
-                        role: pick.role,
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.only(top: 6),
-                        child: Text(
-                          _formatIntIt(pick.points),
-                          textAlign: TextAlign.right,
-                          style: const TextStyle(fontWeight: FontWeight.w600),
-                        ),
-                      ),
-                    ],
-                  ),
-              ],
-            ),
-          ],
-        ),
+            ],
+          ),
+        ],
+      ),
+    );
+
+    if (decoration == null) {
+      return Card(child: content);
+    }
+
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: Ink(
+        decoration: decoration,
+        child: content,
       ),
     );
   }

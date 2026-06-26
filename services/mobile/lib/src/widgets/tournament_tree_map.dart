@@ -354,7 +354,7 @@ class _TappableTreeMapState extends State<_TappableTreeMap> {
               (m) => m.uuid == entry.key,
               orElse: () => widget.matches.first,
             );
-            if (match.round > 2) widget.onTapMatch(match);
+            widget.onTapMatch(match);
             break;
           }
         }

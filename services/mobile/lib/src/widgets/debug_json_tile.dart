@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 class DebugJsonTile extends StatelessWidget {
@@ -9,6 +10,7 @@ class DebugJsonTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (!kDebugMode) return const SizedBox.shrink();
     return ExpansionTile(
       title: const Text('Debug: JSON'),
       childrenPadding: const EdgeInsets.all(16),

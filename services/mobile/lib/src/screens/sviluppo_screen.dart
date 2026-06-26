@@ -735,21 +735,30 @@ class _SviluppoScreenState extends State<SviluppoScreen> {
                       ),
                     ),
                     Expanded(
-                      child: ListView.builder(
-                        itemCount: views.length,
-                        itemBuilder: (context, index) {
-                          final v = views[index];
-                          return Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              buildFriendCell(v),
-                              buildPickCell(v.winner),
-                              buildPickCell(v.semis[0]),
-                              buildPickCell(v.semis[1]),
-                              buildPickCell(v.semis[2]),
-                            ],
-                          );
+                      child: RefreshIndicator(
+                        onRefresh: () async {
+                          setState(() {
+                            _loadFuture = null;
+                            _loadKey = null;
+                          });
                         },
+                        child: ListView.builder(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          itemCount: views.length,
+                          itemBuilder: (context, index) {
+                            final v = views[index];
+                            return Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                buildFriendCell(v),
+                                buildPickCell(v.winner),
+                                buildPickCell(v.semis[0]),
+                                buildPickCell(v.semis[1]),
+                                buildPickCell(v.semis[2]),
+                              ],
+                            );
+                          },
+                        ),
                       ),
                     ),
                   ],

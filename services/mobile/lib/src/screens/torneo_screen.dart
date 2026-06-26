@@ -9,6 +9,7 @@ import '../config.dart';
 import '../models/player.dart';
 import '../models/prediction.dart';
 import '../models/sviluppo.dart';
+import '../models/tournament.dart';
 import '../models/tournament_players.dart';
 import '../scoring/prediction_scoring.dart';
 import '../widgets/debug_json_tile.dart';
@@ -42,6 +43,49 @@ class _TorneoScreenState extends State<TorneoScreen> {
   double _dragDx = 0;
 
   Future<TournamentIndexSnapshot>? _indexFuture;
+
+  Color _parseHexColor(String hex, {Color fallback = const Color(0xFF1565C0)}) {
+    final s = hex.trim();
+    if (!RegExp(r'^#[0-9a-fA-F]{6}$').hasMatch(s)) return fallback;
+    final v = int.tryParse(s.substring(1), radix: 16);
+    if (v == null) return fallback;
+    return Color(0xFF000000 | v);
+  }
+
+  String _normalizeMaterial(String? m) {
+    final v = (m ?? '').trim().toLowerCase();
+    if (v == 'hard' || v == 'clay' || v == 'grass' || v == 'carpet') return v;
+    return 'hard';
+  }
+
+  ({Color base, Color accent}) _surfaceColors(TournamentDto t) {
+    final material = _normalizeMaterial(t.surface?.material);
+
+    if (material == 'clay') {
+      return (base: const Color(0xFFB85A2A), accent: const Color(0xFFF3D6B8));
+    }
+    if (material == 'grass') {
+      return (base: const Color(0xFF1B7F3A), accent: const Color(0xFFCFEAD6));
+    }
+    if (material == 'carpet') {
+      return (base: const Color(0xFF5E35B1), accent: const Color(0xFFD9D2F1));
+    }
+
+    final tint = t.surface?.color ?? '';
+    final tintColor = _parseHexColor(tint, fallback: const Color(0xFF1565C0));
+    return (base: tintColor, accent: const Color(0xFFD9E7FF));
+  }
+
+  Decoration _tournamentDecoration(TournamentDto t) {
+    final colors = _surfaceColors(t);
+    return BoxDecoration(
+      gradient: LinearGradient(
+        colors: [colors.base.withOpacity(0.22), colors.accent.withOpacity(0.18)],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      ),
+    );
+  }
 
   String _normalizeStatus(String? s) => (s ?? '').trim().toLowerCase();
 
@@ -90,6 +134,23 @@ class _TorneoScreenState extends State<TorneoScreen> {
 
     final qs2 = (_roomId != null && _roomId!.isNotEmpty) ? '?room_id=${Uri.encodeQueryComponent(_roomId!)}' : '';
     context.push('/tornei/$tournamentId/pronostico$qs2');
+  }
+
+  Future<void> _refresh(ApiClient api, String tournamentId) async {
+    final key = '$tournamentId|${_roomId ?? ''}';
+    _tournamentFutureCache.remove(key);
+    setState(() {
+      _loadFuture = null;
+      _loadKey = null;
+      _indexFuture = _tournamentIndexStore.ensureFresh(api);
+    });
+
+    try {
+      await _indexFuture;
+    } catch (_) {}
+    try {
+      await _getOrCreateTournamentFuture(api, tournamentId);
+    } catch (_) {}
   }
 
   Future<void> _openTournamentPicker(BuildContext context, ApiClient api, String currentId) async {
@@ -433,37 +494,37 @@ class _TorneoScreenState extends State<TorneoScreen> {
             ),
             actions: [
               IconButton(
-                onPressed: () async {
-                  TournamentIndexSnapshot? snap;
-                  try {
-                    snap = await _indexFuture;
-                  } catch (_) {
-                    snap = null;
-                  }
-                  if (snap == null) return;
-                  if (!context.mounted) return;
-                  final prevId = _prevTournamentId(snap, tid);
-                  if (prevId == null) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Sei già al primo torneo')),
-                    );
-                    return;
-                  }
-                  _navigateToTournament(context, prevId);
-                },
-                icon: const Icon(Icons.chevron_left),
-                tooltip: 'Torneo precedente',
+                onPressed: () => _onMyPredictionPressed(context, tid),
+                icon: const Icon(Icons.person),
+                tooltip: 'Mio pronostico',
               ),
-              IconButton(
-                onPressed: () async {
-                  TournamentIndexSnapshot? snap;
-                  try {
-                    snap = await _indexFuture;
-                  } catch (_) {
-                    snap = null;
-                  }
-                  if (snap == null) return;
-                  if (!context.mounted) return;
+            ],
+          ),
+          body: RefreshIndicator(
+            onRefresh: () => _refresh(api, tid),
+            child: GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              onHorizontalDragStart: (_) {
+                _dragDx = 0;
+              },
+              onHorizontalDragUpdate: (details) {
+                _dragDx += details.delta.dx;
+              },
+              onHorizontalDragEnd: (details) async {
+                final dx = _dragDx;
+                _dragDx = 0;
+                if (dx.abs() < 60) return;
+                TournamentIndexSnapshot? snap;
+                try {
+                  snap = await _indexFuture;
+                } catch (_) {
+                  snap = null;
+                }
+                if (snap == null) return;
+                if (!context.mounted) return;
+
+                // dx < 0 means user dragged left (go next)
+                if (dx < 0) {
                   final nextId = _nextTournamentId(snap, tid);
                   if (nextId == null) {
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -472,207 +533,179 @@ class _TorneoScreenState extends State<TorneoScreen> {
                     return;
                   }
                   _navigateToTournament(context, nextId);
-                },
-                icon: const Icon(Icons.chevron_right),
-                tooltip: 'Torneo successivo',
-              ),
-              IconButton(
-                onPressed: () => _onMyPredictionPressed(context, tid),
-                icon: const Icon(Icons.person),
-                tooltip: 'Mio pronostico',
-              ),
-            ],
-          ),
-          body: GestureDetector(
-            behavior: HitTestBehavior.translucent,
-            onHorizontalDragStart: (_) {
-              _dragDx = 0;
-            },
-            onHorizontalDragUpdate: (details) {
-              _dragDx += details.delta.dx;
-            },
-            onHorizontalDragEnd: (details) async {
-              final dx = _dragDx;
-              _dragDx = 0;
-              if (dx.abs() < 60) return;
-              TournamentIndexSnapshot? snap;
-              try {
-                snap = await _indexFuture;
-              } catch (_) {
-                snap = null;
-              }
-              if (snap == null) return;
-              if (!context.mounted) return;
+                  return;
+                }
 
-              // dx < 0 means user dragged left (go next)
-              if (dx < 0) {
-                final nextId = _nextTournamentId(snap, tid);
-                if (nextId == null) {
+                final prevId = _prevTournamentId(snap, tid);
+                if (prevId == null) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Sei già all\'ultimo torneo')),
+                    const SnackBar(content: Text('Sei già al primo torneo')),
                   );
                   return;
                 }
-                _navigateToTournament(context, nextId);
-                return;
-              }
-
-              final prevId = _prevTournamentId(snap, tid);
-              if (prevId == null) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Sei già al primo torneo')),
-                );
-                return;
-              }
-              _navigateToTournament(context, prevId);
-            },
-            child: ListView(
-              controller: _scrollController,
-              padding: const EdgeInsets.all(16),
-              children: [
-                TournamentDetailsCard(
-                  tournament: t,
-                  actions: TournamentActionButtons(
-                    status: status,
-                    hasSuperuserTree: dto.hasSuperuserTree,
-                    onOpenSviluppo: (status == 'in-progress' || status == 'completed')
-                        ? () {
-                            context.push('/tornei/${t.id}/sviluppo$qs');
-                          }
-                        : null,
-                    onOpenPronostico: (status == 'open')
-                        ? () {
-                            context.push('/tornei/${t.id}/pronostico$qs');
-                          }
-                        : null,
-                    onOpenSuperuserTree: dto.hasSuperuserTree
-                        ? () {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) => AlberoSuperuserScreen(tournamentId: t.id),
-                              ),
-                            );
-                          }
-                        : null,
-                    onOpenVincereFacile: (status == 'open' && dto.hasSuperuserTree)
-                        ? () {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) => AlberoPronosticoScreen(
-                                  tournamentId: t.id,
-                                  roomId: qs.isNotEmpty ? qs.replaceFirst('?room_id=', '') : null,
+                _navigateToTournament(context, prevId);
+              },
+              child: ListView(
+                controller: _scrollController,
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(16),
+                children: [
+                  TournamentDetailsCard(
+                    tournament: t,
+                    actions: TournamentActionButtons(
+                      status: status,
+                      hasSuperuserTree: dto.hasSuperuserTree,
+                      onOpenSviluppo: (status == 'in-progress' || status == 'completed')
+                          ? () {
+                              context.push('/tornei/${t.id}/sviluppo$qs');
+                            }
+                          : null,
+                      onOpenPronostico: (status == 'open')
+                          ? () {
+                              context.push('/tornei/${t.id}/pronostico$qs');
+                            }
+                          : null,
+                      onOpenSuperuserTree: dto.hasSuperuserTree
+                          ? () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => AlberoSuperuserScreen(tournamentId: t.id),
                                 ),
-                              ),
-                            );
-                          }
-                        : null,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                if (!missingPrediction) ...[
-                  KeyedSubtree(
-                    key: _myPredictionKey,
-                    child: UserPredictionCard(
-                      prediction: prediction,
-                      playerById: playerById,
-                      computedScore: computedScore,
-                      picks: picks,
+                              );
+                            }
+                          : null,
+                      onOpenVincereFacile: (status == 'open' && dto.hasSuperuserTree)
+                          ? () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => AlberoPronosticoScreen(
+                                    tournamentId: t.id,
+                                    roomId: qs.isNotEmpty ? qs.replaceFirst('?room_id=', '') : null,
+                                  ),
+                                ),
+                              );
+                            }
+                          : null,
                     ),
                   ),
                   const SizedBox(height: 12),
-                ],
-                if (status == 'completed' && ranking != null) ...[
+                  if (!missingPrediction) ...[
+                    KeyedSubtree(
+                      key: _myPredictionKey,
+                      child: UserPredictionCard(
+                        prediction: prediction,
+                        playerById: playerById,
+                        computedScore: computedScore,
+                        picks: picks,
+                        decoration: _tournamentDecoration(t),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+                  if (status == 'completed' && ranking != null) ...[
+                    Card(
+                      clipBehavior: Clip.antiAlias,
+                      child: Ink(
+                        decoration: _tournamentDecoration(t),
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(12),
+                          onTap: () {
+                            setState(() => _rankingExpanded = !_rankingExpanded);
+                          },
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        'Classifica torneo',
+                                        style: Theme.of(context).textTheme.titleMedium,
+                                      ),
+                                    ),
+                                    Icon(_rankingExpanded ? Icons.expand_less : Icons.expand_more),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                if (ranking.winners.isNotEmpty)
+                                  _InfoRow(
+                                    label: 'Vincitori',
+                                    value: ranking.winners
+                                        .map((w) => w.userSoprannome.isNotEmpty ? w.userSoprannome : w.userUuid)
+                                        .join(', '),
+                                  )
+                                else if (ranking.winner != null)
+                                  _InfoRow(label: 'Vincitore', value: ranking.winner!.userSoprannome),
+                                AnimatedCrossFade(
+                                  firstChild: const SizedBox.shrink(),
+                                  secondChild: Padding(
+                                    padding: const EdgeInsets.only(top: 8),
+                                    child: ranking.rows.isEmpty
+                                        ? const Text('Nessun partecipante')
+                                        : Card(
+                                            child: Column(
+                                              children: [
+                                                for (final r in ranking.rows)
+                                                  ListTile(
+                                                    dense: true,
+                                                    visualDensity: const VisualDensity(vertical: -3),
+                                                    contentPadding:
+                                                        const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+                                                    title: Text(
+                                                      r.userSoprannome.isNotEmpty ? r.userSoprannome : r.userUuid,
+                                                    ),
+                                                    trailing: Text(
+                                                      _formatIntIt(r.points),
+                                                      style: const TextStyle(fontWeight: FontWeight.w600),
+                                                    ),
+                                                  )
+                                              ],
+                                            ),
+                                          ),
+                                  ),
+                                  crossFadeState: _rankingExpanded
+                                      ? CrossFadeState.showSecond
+                                      : CrossFadeState.showFirst,
+                                  duration: const Duration(milliseconds: 200),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
                   Card(
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(12),
-                      onTap: () {
-                        setState(() => _rankingExpanded = !_rankingExpanded);
-                      },
+                    clipBehavior: Clip.antiAlias,
+                    child: Ink(
+                      decoration: _tournamentDecoration(t),
                       child: Padding(
                         padding: const EdgeInsets.all(16),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Row(
-                              children: [
-                                Expanded(
-                                  child:
-                                      Text('Classifica torneo', style: Theme.of(context).textTheme.titleMedium),
-                                ),
-                                Icon(_rankingExpanded ? Icons.expand_less : Icons.expand_more),
-                              ],
-                            ),
+                            Text('Riepilogo', style: Theme.of(context).textTheme.titleMedium),
                             const SizedBox(height: 8),
-                            if (ranking.winners.isNotEmpty)
-                              _InfoRow(
-                                label: 'Vincitori',
-                                value: ranking.winners
-                                    .map((w) => w.userSoprannome.isNotEmpty ? w.userSoprannome : w.userUuid)
-                                    .join(', '),
-                              )
-                            else if (ranking.winner != null)
-                              _InfoRow(label: 'Vincitore', value: ranking.winner!.userSoprannome),
-                            AnimatedCrossFade(
-                              firstChild: const SizedBox.shrink(),
-                              secondChild: Padding(
-                                padding: const EdgeInsets.only(top: 8),
-                                child: ranking.rows.isEmpty
-                                    ? const Text('Nessun partecipante')
-                                    : Card(
-                                        child: Column(
-                                          children: [
-                                            for (final r in ranking.rows)
-                                              ListTile(
-                                                dense: true,
-                                                visualDensity: const VisualDensity(vertical: -3),
-                                                contentPadding:
-                                                    const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
-                                                title: Text(
-                                                  r.userSoprannome.isNotEmpty ? r.userSoprannome : r.userUuid,
-                                                ),
-                                                trailing: Text(
-                                                  _formatIntIt(r.points),
-                                                  style: const TextStyle(fontWeight: FontWeight.w600),
-                                                ),
-                                              ),
-                                          ],
-                                        ),
-                                      ),
-                              ),
-                              crossFadeState:
-                                  _rankingExpanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
-                              duration: const Duration(milliseconds: 200),
-                            ),
+                            _InfoRow(label: 'Pronostici stanza', value: dto.predictionsCount.toString()),
+                            _InfoRow(label: 'Superuser tree', value: dto.hasSuperuserTree ? 'OK' : 'N/A'),
+                            if (dto.hasSuperuserTree)
+                              _InfoRow(label: 'Match nel tree', value: dto.superuserMatchesCount.toString()),
                           ],
                         ),
                       ),
                     ),
                   ),
                   const SizedBox(height: 12),
+                  DebugJsonTile(json: {
+                    'prediction': predictionJson,
+                    'players': playersJson,
+                    'sviluppo': sviluppoJson,
+                  }),
                 ],
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Riepilogo', style: Theme.of(context).textTheme.titleMedium),
-                        const SizedBox(height: 8),
-                        _InfoRow(label: 'Pronostici stanza', value: dto.predictionsCount.toString()),
-                        _InfoRow(label: 'Superuser tree', value: dto.hasSuperuserTree ? 'OK' : 'N/A'),
-                        if (dto.hasSuperuserTree)
-                          _InfoRow(label: 'Match nel tree', value: dto.superuserMatchesCount.toString()),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                DebugJsonTile(json: {
-                  'prediction': predictionJson,
-                  'players': playersJson,
-                  'sviluppo': sviluppoJson,
-                }),
-              ],
+              ),
             ),
           ),
         );
