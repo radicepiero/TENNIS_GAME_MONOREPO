@@ -15,6 +15,25 @@ class ApiClient {
     http.Client? httpClient,
   }) : _http = httpClient ?? http.Client();
 
+  Future<String?> getCurrentUserUuid() async {
+    final accessToken = await tokenStore.readAccessToken();
+    if (accessToken == null || accessToken.trim().isEmpty) return null;
+
+    try {
+      final parts = accessToken.split('.');
+      if (parts.length < 2) return null;
+      final payload = parts[1];
+      final normalized = base64Url.normalize(payload);
+      final decoded = utf8.decode(base64Url.decode(normalized));
+      final j = jsonDecode(decoded);
+      if (j is! Map) return null;
+      final uuid = j['uuid']?.toString();
+      return (uuid == null || uuid.trim().isEmpty) ? null : uuid;
+    } catch (_) {
+      return null;
+    }
+  }
+
   Uri _uri(String path, [Map<String, String>? query]) {
     final base = apiBase.endsWith('/') ? apiBase.substring(0, apiBase.length - 1) : apiBase;
     final p = path.startsWith('/') ? path : '/$path';

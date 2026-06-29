@@ -31,6 +31,13 @@ async function getById(req, res) {
 // READ (All)
 async function getAll(req, res) {
   try {
+    const userUuid = res.locals.user?.dataValues?.uuid;
+    console.log(
+      "[trees.getAll] userUuid=",
+      userUuid,
+      "query=",
+      JSON.stringify(req.query || {})
+    );
     req.query.ownerId = res.locals.user.dataValues.uuid;
     const user_trees = await TreeService.getTree(req.query);
 

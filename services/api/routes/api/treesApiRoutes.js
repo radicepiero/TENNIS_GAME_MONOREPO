@@ -11,8 +11,8 @@ router.post(
   treeApiController.cloneSuperuserTree
 );
 router.post("/", requireAdmin, treeApiController.create);
-router.put("/", treeApiController.update);
+router.put("/", requireAuth, treeApiController.update);
 router.get("/id", treeApiController.getById);
-router.delete("/", treeApiController.deleteOne);
+router.delete("/", requireAuth, treeApiController.deleteOne);
 
 module.exports = router;

@@ -130,6 +130,7 @@ export class Tree {
         player1: match.player1Id,
         player2: match.player2Id,
         fatherId: match.fatherId,
+        childIndex: match.childIndex,
         p1Wins: toBool(match.p1Wins),
         p2Wins: toBool(match.p2Wins),
         date: match.date,

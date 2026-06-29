@@ -11,6 +11,7 @@ export class Match {
     p2Wins = false,
     date = null,
     fatherId = null,
+    childIndex = null,
     children = [],
     autoGenerateChildren = true, // nuovo parametro
   }) {
@@ -23,6 +24,7 @@ export class Match {
     this.p2Wins = p2Wins;
     this.date = date;
     this.fatherId = fatherId;
+    this.childIndex = childIndex;
     this.children = children;
 
     this.ensureOnlyOneWinner();
@@ -43,11 +45,13 @@ export class Match {
     const child1 = new Match({
       round: this.round + 1,
       fatherId: this.uuid,
+      childIndex: 0,
       tree: this.tree,
     });
     const child2 = new Match({
       round: this.round + 1,
       fatherId: this.uuid,
+      childIndex: 1,
       tree: this.tree,
     });
 
@@ -96,6 +100,7 @@ export class Match {
       p2Wins: this.p2Wins,
       date: this.date,
       fatherId: this.fatherId,
+      childIndex: this.childIndex,
     };
   }
 

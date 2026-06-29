@@ -77,6 +77,81 @@ class _TreeMapPainter extends CustomPainter {
   List<MatchDto> _matchesByRound(int r) =>
       matches.where((m) => m.round == r).toList();
 
+  List<MatchDto> _childrenOf(String fatherUuid) {
+    final children = matches.where((m) => m.fatherId == fatherUuid).toList();
+    children.sort((a, b) {
+      final aC = a.childIndex;
+      final bC = b.childIndex;
+      if (aC != null && bC != null) {
+        final by = aC.compareTo(bC);
+        if (by != 0) return by;
+      }
+      return a.uuid.compareTo(b.uuid);
+    });
+    return children;
+  }
+
+  List<MatchDto> _leafOrder() {
+    final root = matches.where((m) => m.fatherId == null).fold<MatchDto?>(null, (best, m) {
+      if (best == null) return m;
+      if (m.round < best.round) return m;
+      return best;
+    });
+    if (root == null) return _matchesByRound(roundMax);
+
+    final leaves = <MatchDto>[];
+    void walk(MatchDto node) {
+      if (node.round == roundMax) {
+        leaves.add(node);
+        return;
+      }
+      final children = _childrenOf(node.uuid);
+      if (children.isEmpty) {
+        leaves.add(node);
+        return;
+      }
+      for (final c in children) {
+        walk(c);
+      }
+    }
+
+    walk(root);
+
+    final onlyLeaves = leaves.where((m) => m.round == roundMax).toList();
+    if (onlyLeaves.isNotEmpty) return onlyLeaves;
+    return _matchesByRound(roundMax);
+  }
+
+  Map<String, Offset> _buildNodePositions() {
+    final positions = <String, Offset>{};
+    final cellH = nodeSize + nodeSpacing;
+
+    final leafMatches = _leafOrder();
+    for (var i = 0; i < leafMatches.length; i++) {
+      final m = leafMatches[i];
+      final x = (roundMax - m.round) * roundWidth + nodeSize / 2;
+      final y = nodeSpacing + i * cellH + nodeSize / 2;
+      positions[m.uuid] = Offset(x, y);
+    }
+
+    for (var r = roundMax - 1; r >= 1; r--) {
+      final roundMatches = _matchesByRound(r);
+      for (final m in roundMatches) {
+        final children = _childrenOf(m.uuid);
+        if (children.length == 2 &&
+            positions.containsKey(children[0].uuid) &&
+            positions.containsKey(children[1].uuid)) {
+          final y1 = positions[children[0].uuid]!.dy;
+          final y2 = positions[children[1].uuid]!.dy;
+          final x = (roundMax - r) * roundWidth + nodeSize / 2;
+          positions[m.uuid] = Offset(x, (y1 + y2) / 2);
+        }
+      }
+    }
+
+    return positions;
+  }
+
   Color _nodeColor(MatchDto m, bool isTopHalf) {
     if (m.uuid == selectedMatchId) return Colors.amber;
     final isSfOrF = m.round <= 2;
@@ -92,33 +167,7 @@ class _TreeMapPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     _nodePositions.clear();
 
-    final totalLeaves = _matchesInRound(roundMax);
-    final cellH = nodeSize + nodeSpacing;
-
-    // Calcola le posizioni dei nodi foglia (round == roundMax)
-    final leafMatches = _matchesByRound(roundMax);
-    for (var i = 0; i < leafMatches.length; i++) {
-      final m = leafMatches[i];
-      final x = (roundMax - m.round) * roundWidth + nodeSize / 2;
-      final y = nodeSpacing + i * cellH + nodeSize / 2;
-      _nodePositions[m.uuid] = Offset(x, y);
-    }
-
-    // Calcola posizioni per round intermedi usando il midpoint dei figli
-    for (var r = roundMax - 1; r >= 1; r--) {
-      final roundMatches = _matchesByRound(r);
-      for (final m in roundMatches) {
-        final children = matches.where((c) => c.fatherId == m.uuid).toList();
-        if (children.length == 2 &&
-            _nodePositions.containsKey(children[0].uuid) &&
-            _nodePositions.containsKey(children[1].uuid)) {
-          final y1 = _nodePositions[children[0].uuid]!.dy;
-          final y2 = _nodePositions[children[1].uuid]!.dy;
-          final x = (roundMax - r) * roundWidth + nodeSize / 2;
-          _nodePositions[m.uuid] = Offset(x, (y1 + y2) / 2);
-        }
-      }
-    }
+    _nodePositions.addAll(_buildNodePositions());
 
     // Disegna linee di connessione
     final linePaint = Paint()
@@ -213,30 +262,16 @@ class _TournamentTreeMapInteractiveState extends State<TournamentTreeMapInteract
     if (id == null) return;
     final match = widget.matches.firstWhere((m) => m.uuid == id, orElse: () => widget.matches.first);
 
-    // Calcola posizione nodo (stessa logica di _TreeMapPainter)
-    final cellH = _nodeSize + _nodeSpacing;
-    final leafMatches = widget.matches.where((m) => m.round == widget.roundMax).toList();
-    final Map<String, Offset> positions = {};
-    for (var i = 0; i < leafMatches.length; i++) {
-      final m = leafMatches[i];
-      final x = (widget.roundMax - m.round) * _roundWidth + _nodeSize / 2;
-      final y = _nodeSpacing + i * cellH + _nodeSize / 2;
-      positions[m.uuid] = Offset(x, y);
-    }
-    for (var r = widget.roundMax - 1; r >= 1; r--) {
-      final rms = widget.matches.where((m) => m.round == r).toList();
-      for (final m in rms) {
-        final children = widget.matches.where((c) => c.fatherId == m.uuid).toList();
-        if (children.length == 2 &&
-            positions.containsKey(children[0].uuid) &&
-            positions.containsKey(children[1].uuid)) {
-          final y1 = positions[children[0].uuid]!.dy;
-          final y2 = positions[children[1].uuid]!.dy;
-          final x = (widget.roundMax - r) * _roundWidth + _nodeSize / 2;
-          positions[m.uuid] = Offset(x, (y1 + y2) / 2);
-        }
-      }
-    }
+    final painter = _TreeMapPainter(
+      matches: widget.matches,
+      roundMax: widget.roundMax,
+      selectedMatchId: widget.selectedMatchId,
+      onTapMatch: widget.onTapMatch,
+      nodeSize: _nodeSize,
+      nodeSpacing: _nodeSpacing,
+      roundWidth: _roundWidth,
+    );
+    final positions = painter._buildNodePositions();
 
     final pos = positions[match.uuid];
     if (pos == null) return;
@@ -332,6 +367,19 @@ class _TappableTreeMapState extends State<_TappableTreeMap> {
     }
   }
 
+  Map<String, Offset> _computePositions() {
+    final painter = _TreeMapPainter(
+      matches: widget.matches,
+      roundMax: widget.roundMax,
+      selectedMatchId: widget.selectedMatchId,
+      onTapMatch: widget.onTapMatch,
+      nodeSize: _nodeSize,
+      nodeSpacing: _nodeSpacing,
+      roundWidth: _roundWidth,
+    );
+    return painter._buildNodePositions();
+  }
+
   @override
   Widget build(BuildContext context) {
     final painter = _TreeMapPainter(
@@ -346,7 +394,8 @@ class _TappableTreeMapState extends State<_TappableTreeMap> {
 
     return GestureDetector(
       onTapUp: (details) {
-        _buildHitRects(painter._nodePositions);
+        final positions = _computePositions();
+        _buildHitRects(positions);
         final tap = details.localPosition;
         for (final entry in _hitRects.entries) {
           if (entry.value.contains(tap)) {

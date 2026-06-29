@@ -17,6 +17,10 @@ module.exports = (sequelize, DataTypes) => {
     player1Id: DataTypes.INTEGER,
     player2Id: DataTypes.INTEGER,
     fatherId: DataTypes.UUID,
+    childIndex: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+    },
     p1Wins: DataTypes.BOOLEAN,
     p2Wins: DataTypes.BOOLEAN,
     date: DataTypes.DATE,

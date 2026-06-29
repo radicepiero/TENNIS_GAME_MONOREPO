@@ -62,6 +62,7 @@ async function createTree(treeData) {
       player1Id: match.player1,
       player2Id: match.player2,
       fatherId: match.fatherId,
+      childIndex: match.childIndex ?? null,
       p1Wins: match.p1Wins,
       p2Wins: match.p2Wins,
       date: match.date,
@@ -112,6 +113,14 @@ async function getTree(options = {}) {
   return await Tree.findAll({
     include,
     where,
+    order: shouldIncludeMatches
+      ? [
+          [{ model: Match, as: "Matches" }, "round", "ASC"],
+          [{ model: Match, as: "Matches" }, "fatherId", "ASC"],
+          [{ model: Match, as: "Matches" }, "childIndex", "ASC"],
+          [{ model: Match, as: "Matches" }, "uuid", "ASC"],
+        ]
+      : undefined,
   });
 }
 
@@ -120,45 +129,80 @@ async function updateTree(id, treeData) {
   const transaction = await Tree.sequelize.transaction();
 
   try {
-    const tournamentIdNum =
-      typeof treeData.tournamentId === "number"
-        ? treeData.tournamentId
-        : Number(treeData.tournamentId);
+    const updatePayload = {};
+    if (treeData && treeData.name != null) updatePayload.name = treeData.name;
+    if (treeData && treeData.roundMax != null) updatePayload.roundMax = treeData.roundMax;
+    if (treeData && treeData.tournamentId != null) {
+      const tournamentIdNum =
+        typeof treeData.tournamentId === "number"
+          ? treeData.tournamentId
+          : Number(treeData.tournamentId);
+      updatePayload.tournament_id = Number.isFinite(tournamentIdNum) ? tournamentIdNum : null;
+      updatePayload.tournament = String(treeData.tournamentId);
+    }
 
-    // Aggiorna il tree
-    const [updated] = await Tree.update(
-      {
-        name: treeData.name,
-        tournament_id: Number.isFinite(tournamentIdNum) ? tournamentIdNum : null,
-        tournament: treeData.tournamentId != null ? String(treeData.tournamentId) : null,
-        roundMax: treeData.roundMax,
-      },
-      {
-        where: { id },
-        transaction,
-      }
-    );
+    const [updated] =
+      Object.keys(updatePayload).length === 0
+        ? [1]
+        : await Tree.update(updatePayload, {
+            where: { id },
+            transaction,
+          });
 
     if (!updated) {
       throw new Error("Tree not found");
     }
 
-    // Aggiorna i matches (implementazione base)
-    await Match.destroy({ where: { treeId: id }, transaction });
+    const matches = (treeData && treeData.matches) || [];
+    if (!Array.isArray(matches)) {
+      throw new Error("matches non valido");
+    }
 
-    const matchesToCreate = treeData.matches.map((match) => ({
-      uuid: match.uuid,
-      treeId: id, // Forza l'ID del tree
-      round: match.round,
-      player1Id: match.player1,
-      player2Id: match.player2,
-      fatherId: match.fatherId,
-      p1Wins: match.p1Wins,
-      p2Wins: match.p2Wins,
-      date: match.date,
-    }));
+    // Se arrivano solo uuid + p1Wins/p2Wins (mobile), NON dobbiamo ricreare le righe,
+    // altrimenti perdiamo player1Id/player2Id/round/fatherId.
+    const isPartialWinsOnly =
+      matches.length > 0 &&
+      matches.every(
+        (m) =>
+          m &&
+          typeof m === "object" &&
+          m.uuid &&
+          (typeof m.p1Wins === "boolean" || typeof m.p2Wins === "boolean") &&
+          m.round == null &&
+          m.player1 == null &&
+          m.player2 == null &&
+          m.player1Id == null &&
+          m.player2Id == null
+      );
 
-    await Match.bulkCreate(matchesToCreate, { transaction });
+    if (isPartialWinsOnly) {
+      for (const m of matches) {
+        await Match.update(
+          {
+            p1Wins: Boolean(m.p1Wins),
+            p2Wins: Boolean(m.p2Wins),
+          },
+          { where: { uuid: String(m.uuid), treeId: id }, transaction }
+        );
+      }
+    } else {
+      // Aggiornamento completo (web): replace totale matches.
+      await Match.destroy({ where: { treeId: id }, transaction });
+
+      const matchesToCreate = matches.map((match) => ({
+        uuid: match.uuid,
+        treeId: id, // Forza l'ID del tree
+        round: match.round,
+        player1Id: match.player1,
+        player2Id: match.player2,
+        fatherId: match.fatherId,
+        p1Wins: match.p1Wins,
+        p2Wins: match.p2Wins,
+        date: match.date,
+      }));
+
+      await Match.bulkCreate(matchesToCreate, { transaction });
+    }
     await transaction.commit();
 
     const result = await getTree({ treeId: id });
