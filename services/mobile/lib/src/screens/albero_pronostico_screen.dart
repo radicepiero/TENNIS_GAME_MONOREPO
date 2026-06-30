@@ -198,7 +198,9 @@ class _AlberoPronosticoScreenState extends State<AlberoPronosticoScreen> {
             }
             tree = TreeDto.fromJson(found.first);
           } else {
-            tree = TreeDto.fromJson(data.last as Map<String, dynamic>);
+            // Non esiste ancora un albero per l'utente: clona quello del superuser.
+            await _cloneTree(api);
+            return;
           }
         } else {
           tree = TreeDto.fromJson(data.last as Map<String, dynamic>);
@@ -653,23 +655,33 @@ class _AlberoPronosticoScreenState extends State<AlberoPronosticoScreen> {
       appBar: AppBar(
         title: const Text('Tabellone pronostico'),
         actions: [
-          if (_dirty)
-            IconButton(
-              icon: _saving
-                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                  : const Icon(Icons.save),
-              onPressed: _saving ? null : _save,
-              tooltip: 'Salva tabellone',
-            ),
         ],
       ),
       bottomNavigationBar: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(12),
-          child: FilledButton.icon(
-            onPressed: _predictionReady ? _generatePrediction : null,
-            icon: const Icon(Icons.auto_awesome),
-            label: Text(_predictionReady ? 'Genera pronostico' : 'Semifinali e finale incomplete'),
+          child: Row(
+            children: [
+              Expanded(
+                child: FilledButton.icon(
+                  onPressed: _predictionReady ? _generatePrediction : null,
+                  icon: const Icon(Icons.auto_awesome),
+                  label: Text(
+                    _predictionReady ? 'Genera pronostico' : 'Semifinali e finale incomplete',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              IconButton(
+                icon: _saving
+                    ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                    : const Icon(Icons.save),
+                onPressed: (!_dirty || _saving) ? null : () => _save(),
+                tooltip: 'Salva tabellone',
+              ),
+            ],
           ),
         ),
       ),
