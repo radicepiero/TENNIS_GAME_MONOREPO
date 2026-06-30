@@ -22,7 +22,7 @@ export function toTreantNodeStructure(tree, fromRound = null, toRound = null) {
     const bC = typeof b.childIndex === "number" ? b.childIndex : null;
 
     if (aC !== null && bC !== null) {
-      const by = bC - aC;
+      const by = aC - bC;
       if (by !== 0) return by;
     } else if (aC !== null) {
       return -1;
