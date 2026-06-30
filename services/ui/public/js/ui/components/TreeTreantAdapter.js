@@ -17,6 +17,22 @@ export function toTreantNodeStructure(tree, fromRound = null, toRound = null) {
     }
   }
 
+  const compareChildren = (a, b) => {
+    const aC = typeof a.childIndex === "number" ? a.childIndex : null;
+    const bC = typeof b.childIndex === "number" ? b.childIndex : null;
+
+    if (aC !== null && bC !== null) {
+      const by = aC - bC;
+      if (by !== 0) return by;
+    } else if (aC !== null) {
+      return -1;
+    } else if (bC !== null) {
+      return 1;
+    }
+
+    return String(a.uuid).localeCompare(String(b.uuid));
+  };
+
   const buildNode = (match) => {
     if (fromRound !== null && toRound !== null) {
       if (match.round < toRound || match.round > fromRound) {
@@ -35,6 +51,8 @@ export function toTreantNodeStructure(tree, fromRound = null, toRound = null) {
 
     if (childrenMap[match.uuid]) {
       const filteredChildren = childrenMap[match.uuid]
+        .slice()
+        .sort(compareChildren)
         .map(buildNode)
         .filter((child) => child !== null);
 

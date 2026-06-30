@@ -25,6 +25,7 @@ class _AlberoSuperuserScreenState extends State<AlberoSuperuserScreen> {
   String? _error;
   TreeDto? _tree;
   List<MatchDto> _matches = [];
+  Map<String, int> _matchLeafStartIndex = {};
   Map<int, PlayerDto> _playerById = {};
 
   int _currentRound = 0;
@@ -116,6 +117,7 @@ class _AlberoSuperuserScreenState extends State<AlberoSuperuserScreen> {
   void _setTree(TreeDto tree) {
     _tree = tree;
     _matches = List.of(tree.matches);
+    _matchLeafStartIndex = _computeMatchLeafStartIndex(_matches, tree.roundMax);
     final roundMax = tree.roundMax;
     _currentRound = roundMax;
     _currentMatchIndexInRound = 0;
@@ -135,7 +137,81 @@ class _AlberoSuperuserScreenState extends State<AlberoSuperuserScreen> {
   }
 
   List<MatchDto> _matchesForRound(int round) =>
-      _matches.where((m) => m.round == round).toList();
+      _matches.where((m) => m.round == round).toList()
+        ..sort((a, b) {
+          final aKey = _matchLeafStartIndex[a.uuid] ?? 1 << 30;
+          final bKey = _matchLeafStartIndex[b.uuid] ?? 1 << 30;
+          final byKey = aKey.compareTo(bKey);
+          if (byKey != 0) return byKey;
+          final aC = a.childIndex;
+          final bC = b.childIndex;
+          if (aC != null && bC != null) {
+            final byChild = aC.compareTo(bC);
+            if (byChild != 0) return byChild;
+          }
+          return a.uuid.compareTo(b.uuid);
+        });
+
+  Map<String, int> _computeMatchLeafStartIndex(List<MatchDto> matches, int roundMax) {
+    List<MatchDto> childrenOf(String fatherUuid) {
+      final kids = matches.where((m) => m.fatherId == fatherUuid).toList();
+      kids.sort((a, b) {
+        final aC = a.childIndex;
+        final bC = b.childIndex;
+        if (aC != null && bC != null) {
+          final by = aC.compareTo(bC);
+          if (by != 0) return by;
+        }
+        return a.uuid.compareTo(b.uuid);
+      });
+      return kids;
+    }
+
+    final root = matches.where((m) => m.fatherId == null).fold<MatchDto?>(null, (best, m) {
+      if (best == null) return m;
+      if (m.round < best.round) return m;
+      return best;
+    });
+
+    final leafStart = <String, int>{};
+    int leafCursor = 0;
+
+    void walk(MatchDto node) {
+      if (node.round == roundMax) {
+        leafStart[node.uuid] = leafCursor;
+        leafCursor += 1;
+        return;
+      }
+      final kids = childrenOf(node.uuid);
+      if (kids.isEmpty) {
+        leafStart[node.uuid] = leafCursor;
+        leafCursor += 1;
+        return;
+      }
+      leafStart[node.uuid] = leafCursor;
+      for (final k in kids) {
+        walk(k);
+      }
+    }
+
+    if (root != null) {
+      walk(root);
+    } else {
+      final leaves = matches.where((m) => m.round == roundMax).toList()..sort((a, b) => a.uuid.compareTo(b.uuid));
+      for (final m in leaves) {
+        leafStart[m.uuid] = leafCursor;
+        leafCursor += 1;
+      }
+    }
+
+    for (final m in matches) {
+      if (!leafStart.containsKey(m.uuid)) {
+        leafStart[m.uuid] = m.uuid.hashCode;
+      }
+    }
+
+    return leafStart;
+  }
 
   MatchDto? get _currentMatch {
     if (_selectedMatchId == null) return null;
