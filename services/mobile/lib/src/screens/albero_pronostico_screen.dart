@@ -46,6 +46,44 @@ class _AlberoPronosticoScreenState extends State<AlberoPronosticoScreen> {
   bool _initialized = false;
   PageController _pageController = PageController(initialPage: 0, viewportFraction: 0.55);
 
+  Future<void> _resetTreeFromSuperuser() async {
+    final api = ApiContext.of(context);
+    final treeId = _tree?.id;
+    if (treeId == null || treeId.trim().isEmpty) return;
+
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Ricarica tabellone'),
+        content: const Text(
+          'Vuoi cancellare il tuo tabellone e ricaricarlo dai risultati ufficiali? Le modifiche non salvate andranno perse.',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Annulla')),
+          FilledButton(onPressed: () => Navigator.of(ctx).pop(true), child: const Text('Ricarica')),
+        ],
+      ),
+    );
+    if (ok != true) return;
+
+    setState(() {
+      _loading = true;
+      _error = null;
+      _dirty = false;
+    });
+
+    try {
+      await api.deleteTree(treeId: treeId);
+      await _cloneTree(api);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _error = 'Impossibile ricaricare il tabellone: $e');
+    } finally {
+      if (!mounted) return;
+      setState(() => _loading = false);
+    }
+  }
+
   void _resetPageController({required int initialPage}) {
     _pageController.dispose();
     _pageController = PageController(initialPage: initialPage, viewportFraction: 0.55);
@@ -655,6 +693,11 @@ class _AlberoPronosticoScreenState extends State<AlberoPronosticoScreen> {
       appBar: AppBar(
         title: const Text('Tabellone pronostico'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            tooltip: 'Ricarica da risultati ufficiali',
+            onPressed: (_loading || _saving) ? null : _resetTreeFromSuperuser,
+          ),
         ],
       ),
       bottomNavigationBar: SafeArea(

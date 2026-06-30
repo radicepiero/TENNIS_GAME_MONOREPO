@@ -145,6 +145,10 @@ class ApiClient {
     return _requestJsonWithAuth('PUT', '/trees', query: {'treeId': treeId}, body: {'matches': matches});
   }
 
+  Future<Map<String, dynamic>> deleteTree({required String treeId}) async {
+    return _requestJsonWithAuth('DELETE', '/trees', query: {'treeId': treeId});
+  }
+
   Future<bool> predictionExistsByTournament({required String tournamentId, String? roomId}) async {
     try {
       final query = <String, String>{'tournament_id': tournamentId};
