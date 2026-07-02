@@ -200,6 +200,12 @@
         e.stopPropagation();
         if (!match.fatherId) return;
 
+        const scrollContainer = document.getElementById("scroll-container");
+        const prevScrollTop = scrollContainer ? scrollContainer.scrollTop : 0;
+        const prevScrollLeft = scrollContainer ? scrollContainer.scrollLeft : 0;
+        const prevWindowX = window.scrollX;
+        const prevWindowY = window.scrollY;
+
         const siblings = tree.matches.filter((m) => String(m.fatherId || "") === String(match.fatherId || ""));
         if (siblings.length !== 2) return;
         const a = siblings[0];
@@ -209,6 +215,21 @@
         b.childIndex = tmp;
 
         renderFromDropdowns();
+
+        const restoreScroll = () => {
+          if (scrollContainer) {
+            scrollContainer.scrollTop = prevScrollTop;
+            scrollContainer.scrollLeft = prevScrollLeft;
+          }
+          window.scrollTo(prevWindowX, prevWindowY);
+        };
+        requestAnimationFrame(() => {
+          restoreScroll();
+          requestAnimationFrame(restoreScroll);
+        });
+        setTimeout(restoreScroll, 0);
+        setTimeout(restoreScroll, 50);
+        setTimeout(restoreScroll, 200);
       });
 
       box.append(label, btn);

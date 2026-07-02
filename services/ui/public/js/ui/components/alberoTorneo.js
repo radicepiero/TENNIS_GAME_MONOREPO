@@ -295,6 +295,10 @@ function getRoundTreantNode(treantNode) {
 
 function destinazioneVincitore(destinationNodeId, startingNodeId) {
   const father = albero.matches.find((el) => el.uuid === destinationNodeId);
+  const child = albero.matches.find((el) => el.uuid === startingNodeId);
+  const childIndex = child && typeof child.childIndex === "number" ? child.childIndex : null;
+  if (childIndex === 0) return 1;
+  if (childIndex === 1) return 2;
   return father?.children[0]?.uuid === startingNodeId ? 1 : 2;
 }
 
