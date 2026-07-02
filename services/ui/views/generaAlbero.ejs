@@ -78,6 +78,7 @@
     genera,
     getAlberoMatches,
     getAlberi,
+    getCurrentTree,
     setEditable,
     setWinnersEditable,
   } from "/js/ui/components/alberoTorneo.js?v=<%= Date.now() %>";
@@ -158,6 +159,61 @@
       return;
     }
     renderTree(fromRound, toRound);
+    if (isAdmin) injectChildIndexControls();
+  }
+
+  function injectChildIndexControls() {
+    const tree = getCurrentTree();
+    if (!tree || !Array.isArray(tree.matches)) return;
+    const matchById = new Map(tree.matches.map((m) => [String(m.uuid), m]));
+
+    const nodes = document.querySelectorAll(".treant-node");
+    for (const node of nodes) {
+      if (!(node instanceof HTMLElement)) continue;
+      if (node.querySelector("[data-childindex-ui='1']")) continue;
+
+      const matchId = String(node.id || "");
+      const match = matchById.get(matchId);
+      if (!match) continue;
+
+      const box = document.createElement("div");
+      box.dataset.childindexUi = "1";
+      box.style.display = "flex";
+      box.style.alignItems = "center";
+      box.style.justifyContent = "space-between";
+      box.style.gap = "8px";
+      box.style.marginBottom = "6px";
+
+      const label = document.createElement("span");
+      label.style.fontSize = "12px";
+      label.style.opacity = "0.75";
+      label.textContent = `childIndex: ${match.childIndex === null || typeof match.childIndex === "undefined" ? "null" : match.childIndex}`;
+
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.textContent = "swap";
+      btn.style.fontSize = "12px";
+      btn.style.padding = "2px 6px";
+      btn.disabled = !match.fatherId;
+      btn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!match.fatherId) return;
+
+        const siblings = tree.matches.filter((m) => String(m.fatherId || "") === String(match.fatherId || ""));
+        if (siblings.length !== 2) return;
+        const a = siblings[0];
+        const b = siblings[1];
+        const tmp = a.childIndex;
+        a.childIndex = b.childIndex;
+        b.childIndex = tmp;
+
+        renderFromDropdowns();
+      });
+
+      box.append(label, btn);
+      node.prepend(box);
+    }
   }
 
   const containerElencolberi = document.getElementById("elenco alberi");
@@ -193,6 +249,8 @@
     setWinnersEditable(true);
     setUiState({ visible: true, _mode: "new", _canEdit: true });
   }
+
+  if (isAdmin) injectChildIndexControls();
 
   fromRoundSelect.addEventListener("change", renderFromDropdowns);
   toRoundSelect.addEventListener("change", renderFromDropdowns);
