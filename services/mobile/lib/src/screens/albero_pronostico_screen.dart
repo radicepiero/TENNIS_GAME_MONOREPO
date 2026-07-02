@@ -693,11 +693,6 @@ class _AlberoPronosticoScreenState extends State<AlberoPronosticoScreen> {
       appBar: AppBar(
         title: const Text('Tabellone pronostico'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            tooltip: 'Ricarica da risultati ufficiali',
-            onPressed: (_loading || _saving) ? null : _resetTreeFromSuperuser,
-          ),
         ],
       ),
       bottomNavigationBar: SafeArea(
@@ -723,6 +718,11 @@ class _AlberoPronosticoScreenState extends State<AlberoPronosticoScreen> {
                     : const Icon(Icons.save),
                 onPressed: (!_dirty || _saving) ? null : () => _save(),
                 tooltip: 'Salva tabellone',
+              ),
+              IconButton(
+                icon: const Icon(Icons.refresh),
+                tooltip: 'Ricarica da risultati ufficiali',
+                onPressed: (_loading || _saving) ? null : _resetTreeFromSuperuser,
               ),
             ],
           ),

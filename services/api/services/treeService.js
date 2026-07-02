@@ -196,6 +196,7 @@ async function updateTree(id, treeData) {
         player1Id: match.player1,
         player2Id: match.player2,
         fatherId: match.fatherId,
+        childIndex: match.childIndex ?? null,
         p1Wins: match.p1Wins,
         p2Wins: match.p2Wins,
         date: match.date,
