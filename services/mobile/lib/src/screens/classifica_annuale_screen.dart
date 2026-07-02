@@ -56,6 +56,7 @@ class _ClassificaAnnualeScreenState extends State<ClassificaAnnualeScreen> {
 
   final ScrollController _rowsController = ScrollController();
   final ScrollController _pinnedController = ScrollController();
+  final ScrollController _horizontalController = ScrollController();
 
   @override
   void initState() {
@@ -77,6 +78,7 @@ class _ClassificaAnnualeScreenState extends State<ClassificaAnnualeScreen> {
   void dispose() {
     _rowsController.dispose();
     _pinnedController.dispose();
+    _horizontalController.dispose();
     super.dispose();
   }
 
@@ -371,6 +373,7 @@ class _ClassificaAnnualeScreenState extends State<ClassificaAnnualeScreen> {
                       headerCell('TORNEO', tournamentColW),
                       Expanded(
                         child: SingleChildScrollView(
+                          controller: _horizontalController,
                           scrollDirection: Axis.horizontal,
                           child: SizedBox(
                             width: tableW,
@@ -404,6 +407,7 @@ class _ClassificaAnnualeScreenState extends State<ClassificaAnnualeScreen> {
                       ),
                       Expanded(
                         child: SingleChildScrollView(
+                          controller: _horizontalController,
                           scrollDirection: Axis.horizontal,
                           child: SizedBox(
                             width: tableW,
