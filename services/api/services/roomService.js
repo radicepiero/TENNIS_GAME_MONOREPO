@@ -128,7 +128,8 @@ const inviteUserToRoom = async ({ room_id, inviter_uuid, invitee_uuid }) => {
     throw new Error("Inviti non necessari per Arena");
   }
 
-  const canInvite = await assertRoomOwner({ room_id: rid, user_uuid: inviter_uuid });
+  const isCreator = String(room.created_by_user_uuid || "") === String(inviter_uuid || "");
+  const canInvite = isCreator || (await assertRoomOwner({ room_id: rid, user_uuid: inviter_uuid }));
   if (!canInvite) throw new Error("Non autorizzato");
 
   const invitee = await User.findByPk(invitee_uuid);
