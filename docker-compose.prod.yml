@@ -90,6 +90,7 @@ services:
 
 networks:
   tennis_net:
+    external: true
 
 volumes:
   postgres_data:
