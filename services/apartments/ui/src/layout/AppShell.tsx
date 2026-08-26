@@ -2,12 +2,14 @@ import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
   AppBar,
   Box,
+  Button,
   Drawer,
   IconButton,
   List,
   ListItemButton,
   ListItemIcon,
   ListItemText,
+  Stack,
   Toolbar,
   Typography,
 } from '@mui/material'
@@ -19,6 +21,7 @@ import DirectionsBoatIcon from '@mui/icons-material/DirectionsBoat'
 import YardIcon from '@mui/icons-material/Yard'
 import { useMemo, useState } from 'react'
 import type React from 'react'
+import { useAuth } from '../auth/AuthContext'
 
 type NavItem = {
   label: string
@@ -32,6 +35,7 @@ export default function AppShell() {
   const navigate = useNavigate()
   const location = useLocation()
   const [mobileOpen, setMobileOpen] = useState(false)
+  const { user, logout } = useAuth()
 
   const navItems = useMemo<NavItem[]>(
     () => [
@@ -94,6 +98,22 @@ export default function AppShell() {
           <Typography variant="h6" noWrap component="div">
             {navItems.find((i) => i.path === selectedPath)?.label ?? 'Apartments'}
           </Typography>
+
+          <Box sx={{ flex: 1 }} />
+          <Stack direction="row" spacing={2} alignItems="center">
+            <Typography variant="body2" noWrap>
+              {user ? `${user.nickname} (${user.role})` : ''}
+            </Typography>
+            <Button
+              color="inherit"
+              onClick={() => {
+                logout()
+                navigate('/login', { replace: true })
+              }}
+            >
+              Logout
+            </Button>
+          </Stack>
         </Toolbar>
       </AppBar>
 

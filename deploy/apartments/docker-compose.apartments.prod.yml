@@ -9,6 +9,18 @@ services:
     networks:
       - tennis_net
 
+  apartments-api:
+    build:
+      context: ../../services/apartments/api
+    container_name: apartments-api
+    restart: unless-stopped
+    environment:
+      - PORT=9100
+    expose:
+      - "9100"
+    networks:
+      - tennis_net
+
 networks:
   tennis_net:
     external: true

@@ -1,4 +1,5 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
+import RequireAuth from './auth/RequireAuth'
 import LoginPage from './pages/LoginPage'
 import AppShell from './layout/AppShell'
 import HomePage from './pages/HomePage'
@@ -12,12 +13,14 @@ export default function App() {
     <Routes>
       <Route path="/login" element={<LoginPage />} />
 
-      <Route path="/" element={<AppShell />}>
-        <Route index element={<HomePage />} />
-        <Route path="presences" element={<PresencesPage />} />
-        <Route path="experiences" element={<ExperiencesPage />} />
-        <Route path="boat" element={<BoatPage />} />
-        <Route path="garden" element={<GardenPage />} />
+      <Route element={<RequireAuth />}>
+        <Route path="/" element={<AppShell />}>
+          <Route index element={<HomePage />} />
+          <Route path="presences" element={<PresencesPage />} />
+          <Route path="experiences" element={<ExperiencesPage />} />
+          <Route path="boat" element={<BoatPage />} />
+          <Route path="garden" element={<GardenPage />} />
+        </Route>
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />
