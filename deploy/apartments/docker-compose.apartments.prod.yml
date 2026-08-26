@@ -1,10 +1,9 @@
 services:
   apartments-ui:
-    image: nginx:1.27-alpine
+    build:
+      context: ../../services/apartments/ui
     container_name: apartments-ui
     restart: unless-stopped
-    volumes:
-      - ../../services/apartments/ui:/usr/share/nginx/html:ro
     expose:
       - "80"
     networks:

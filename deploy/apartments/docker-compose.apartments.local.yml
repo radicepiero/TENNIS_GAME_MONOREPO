@@ -1,0 +1,9 @@
+services:
+  apartments-ui:
+    networks:
+      - tennis_net
+
+networks:
+  tennis_net:
+    external: true
+    name: tennis_game_monorepo_tennis_net
