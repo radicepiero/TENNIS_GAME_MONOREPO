@@ -13,3 +13,4 @@ services:
 networks:
   tennis_net:
     external: true
+    name: tennis_game_monorepo_tennis_net
