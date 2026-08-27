@@ -3,12 +3,18 @@
   "version": "0.1.0",
   "main": "app.js",
   "scripts": {
-    "start": "node app.js"
+    "migrate:up": "node-pg-migrate up -m migrations -t apartments_pgmigrations",
+    "migrate:down": "node-pg-migrate down -m migrations -t apartments_pgmigrations",
+    "start": "npm run migrate:up && node app.js"
   },
   "dependencies": {
+    "bcrypt": "^5.1.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.18.2",
-    "jsonwebtoken": "^9.0.1"
+    "jsonwebtoken": "^9.0.1",
+    "node-pg-migrate": "^7.9.1",
+    "pg": "^8.13.3",
+    "uuid": "^11.1.0"
   }
 }

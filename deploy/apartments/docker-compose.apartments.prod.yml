@@ -16,6 +16,14 @@ services:
     restart: unless-stopped
     environment:
       - PORT=9100
+      - DB_CONNESSIONE=tennis-postgres
+      - DATABASE=apartments
+      - DB_USER=apartments_user
+      - DB_PSSW=${APARTMENTS_DB_PASSWORD}
+      - DATABASE_URL=postgresql://apartments_user:${APARTMENTS_DB_PASSWORD}@tennis-postgres:5432/apartments
+      - JWT_SECRET=${APARTMENTS_JWT_SECRET}
+      - APARTMENTS_ADMIN_NICKNAME=${APARTMENTS_ADMIN_NICKNAME}
+      - APARTMENTS_ADMIN_PASSWORD=${APARTMENTS_ADMIN_PASSWORD}
     expose:
       - "9100"
     networks:

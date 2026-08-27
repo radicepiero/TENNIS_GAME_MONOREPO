@@ -3,6 +3,13 @@ services:
     networks:
       - tennis_net
 
+  apartments-api:
+    environment:
+      - APARTMENTS_DB_PASSWORD=${POSTGRES_PASSWORD}
+      - APARTMENTS_JWT_SECRET=${JWT_SECRET}
+      - APARTMENTS_ADMIN_NICKNAME=${APARTMENTS_ADMIN_NICKNAME}
+      - APARTMENTS_ADMIN_PASSWORD=${APARTMENTS_ADMIN_PASSWORD}
+
 networks:
   tennis_net:
     external: true
